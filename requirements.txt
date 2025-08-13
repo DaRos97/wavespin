@@ -1,0 +1,8 @@
+numpy
+scipy
+tqdm
+matplotlib
+pathlib
+sys
+os
+

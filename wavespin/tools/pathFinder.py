@@ -36,11 +36,8 @@ def getFilename(*args,dirname='',extension='',floatPrecision=4):
             raise TypeError("Parameter %s has unsupported type: %s"%(a,t))
         if not i==len(args)-1:
             filename += '_'
-
-
     filename += extension
     return filename
-
 
 def getHomeDirname(cwd,subfolder=''):
     """ Find the home folder.

@@ -1,0 +1,17 @@
+# Input file for static correlator
+correlator_type: zz
+fourier_type: dat
+exclude_zero_mode: False
+use_experimental_parameters: False
+Lx: 7
+Ly: 8
+offSiteList: [(0,0), (0,1), (0,2), (0,3), (0,4), (0,5), (0,6), (0,7), (1,0), (2,0), (3,0), (4,0), (5,0), (6,0)]
+perturbationSite: (3,4)
+include_list: [2,4,6,8]
+plotSites: False
+save_wf: True
+plot_wf: True
+save_correlator: True
+save_bonds: False
+plot_correlator: True
+save_fig: False

@@ -1,18 +1,16 @@
+"""
+Here we have the functions to compute the lowest energy configuration for the classical spin model varying J2 and H.
+This is given by minimizing a function of 5 angles: orientation of two spins in the unit cell (3 angles),
+rotation angle of translation in the 2 directions. This is equivalent to a Regular Magnetic Order(RMO)
+construction considering only translations and the U(1) symmetry of the Hamiltonian.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from scipy.optimize import differential_evolution as D_E
 from tqdm import tqdm
-import os
-from wavespin.tools.filenames import getFilename
-from wavespin.tools.workingdir import getHomeDirname
-
-"""
-Here we compute the lowest energy configuration for the classical spin model varying J2 and h.
-This is given by minimizing a function of 5 angles: orientation of two spins in the unit cell (3 angles),
-rotation angle of translation in the 2 directions. This is equivalent to a Regular Magnetic Order(RMO)
-construction considering only translations and the U(1) symmetry of the Hamiltonian.
-"""
+from wavespin.tools.pathFinder import getFilename, getHomeDirname
 
 def classicalEnergyRMO(angles,*args):
     r""" Computes the classical energy of the considered RMO construction.
@@ -23,15 +21,20 @@ def classicalEnergyRMO(angles,*args):
         Three angles of the RMO: $\theta$ sublattice A, $\phi$ sublattice B, $\phi$ of translation along $a_2$.
     *args: Hamiltonian parameters.
         j1,j2,h -> 1st nn, 2nd nn, magnetic field.
+
+    Returns
+    -------
+    energy : float, classical energy.
     """
     thA,phB,ph2 = angles
     thB = np.pi-thA
     j1,j2,h = args
     ph1 = 0
-    return (j1/2*np.sin(thA)*np.sin(thB)*(np.cos(phB)+np.cos(phB+ph2)+np.cos(phB-ph1)+np.cos(phB-ph1-ph2))
-            + j2/2*(np.cos(ph1+ph2)+np.cos(ph2))*(np.sin(thA)**2+np.sin(thB)**2)
-            + h*(np.cos(thB)-np.cos(thA))
-           )
+    energy = (j1/2*np.sin(thA)*np.sin(thB)*(np.cos(phB)+np.cos(phB+ph2)+np.cos(phB-ph1)+np.cos(phB-ph1-ph2))
+             + j2/2*(np.cos(ph1+ph2)+np.cos(ph2))*(np.sin(thA)**2+np.sin(thB)**2)
+             + h*(np.cos(thB)-np.cos(thA))
+             )
+    return energy
 
 def computeClassicalGroundState(phaseDiagramParameters,**kwargs):
     """ Run the minimization algorithm for the classical ground state phase diagram.
@@ -41,7 +44,7 @@ def computeClassicalGroundState(phaseDiagramParameters,**kwargs):
     phaseDiagramParameters: tuple.
         J1, J2min, J2max, nJ2, Hmin, Hmax, nH
     **kwargs: keyword arguments.
-        'disp': bool, 'save': bool
+        'verbose': bool, 'save': bool
 
     Returns
     -------
@@ -57,7 +60,6 @@ def computeClassicalGroundState(phaseDiagramParameters,**kwargs):
     filenameArgs = ('energies_',) + phaseDiagramParameters
     dataFn = getFilename(*filenameArgs,dirname=getHomeDirname(str(Path.cwd()),'Data/classicalEnergies/'),extension='.npy')
 
-    print(dataFn)
     if not Path(dataFn).is_file():
         en = np.zeros((nJ2,nH,4))   #energy and 3 angles
         iterJ2 = tqdm(range(nJ2)) if verbose else range(nJ2)
@@ -99,6 +101,15 @@ def computeClassicalGroundState(phaseDiagramParameters,**kwargs):
 
 def plotClassicalPhaseDiagram(en,phaseDiagramParameters,**kwargs):
     """ Plot the classical phase diagram.
+
+    Parameters
+    ----------
+    en : (nJ2,nH,4)-array.
+        energy + 3 angles for each point of the phase diagram.
+    phaseDiagramParameters: tuple.
+        J1, J2min, J2max, nJ2, Hmin, Hmax, nH. Has to be consistent with en.
+    **kwargs: keyword arguments.
+        'show': bool, 'save': bool
     """
     J1,J2min,J2max,nJ2,Hmin,Hmax,nH = phaseDiagramParameters
     listJ2 = np.linspace(J2min,J2max,nJ2)
@@ -146,6 +157,15 @@ def plotClassicalPhaseDiagram(en,phaseDiagramParameters,**kwargs):
 
 def plotClassicalPhaseDiagramParameters(en,phaseDiagramParameters,**kwargs):
     """ Plot the classical phase diagram parameters.
+
+    Parameters
+    ----------
+    en : (nJ2,nH,4)-array.
+        energy + 3 angles for each point of the phase diagram.
+    phaseDiagramParameters: tuple.
+        J1, J2min, J2max, nJ2, Hmin, Hmax, nH. Has to be consistent with en.
+    **kwargs: keyword arguments.
+        'show': bool, 'save': bool
     """
     J1,J2min,J2max,nJ2,Hmin,Hmax,nH = phaseDiagramParameters
     listJ2 = np.linspace(J2min,J2max,nJ2)

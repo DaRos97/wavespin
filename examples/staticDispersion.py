@@ -1,10 +1,13 @@
+import numpy as np
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from wavespin.static.periodic import *
+import matplotlib.pyplot as plt
+
 """
 Here we show how to compute the static ground state from a set of Hamiltonian parameters in a periodic system.
 """
 
-import numpy as np
-from wavespin.static.periodic import *
-import matplotlib.pyplot as plt
 S = 0.5     #spin value
 #Lattice parameters
 Lx = 401

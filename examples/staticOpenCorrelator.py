@@ -1,5 +1,6 @@
 import numpy as np
 import sys, argparse
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.static.open import *
 from wavespin.tools.inputUtils import importOpenParametrs as importParameters
 from wavespin.tools.pathFinder import *

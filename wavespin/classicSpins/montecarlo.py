@@ -1,29 +1,23 @@
 """ Functions for montecarlo simulation of the classical ground state.
 
 """
-# xxz_j1j2_montecarlo.py
-# Classical 3D-spin (unit vector) Monte Carlo for square lattice with
-# J1/J2 XX+YY+g ZZ anisotropy and staggered field h along z.
-#
-# Hamiltonian (periodic boundaries):
-#   H = sum_<NN> J1 * (Sx_i Sx_j + Sy_i Sy_j + g Sz_i Sz_j)
-#     + sum_<NNN> J2 * (Sx_i Sx_j + Sy_i Sy_j + g Sz_i Sz_j)
-#     - h * sum_i eta_i * Sz_i,
-# where eta_i = (-1)^(x_i + y_i) encodes a (pi,pi) staggered field.
-#
+
 # Strategy: simulated annealing with local Metropolis updates + optional overrelaxation
-# (microcanonical reflections about the local effective field). Optional parallel tempering
-# is sketched at the bottom.
 
 import numpy as np
+
 from numpy.random import default_rng
+rng = default_rng()
+
 from dataclasses import dataclass
+
 @dataclass
 class Params:
     L: int = 24                    # linear system size; N = L*L
     J1: float = -1.0               # NN coupling (FM<0, AFM>0)
     J2: float = 0.5                # NNN coupling
-    g: float = 1.2                 # anisotropy on ZZ (g=1 is isotropic)
+    D1: float = 1.2                # anisotropy on 1st nn ZZ (D1=1 is isotropic)
+    D2: float = 1.2                # anisotropy on 2nd nn ZZ (D1=1 is isotropic)
     h: float = 0.2                 # staggered field strength along z
     T_max: float = 2.5             # start temperature
     T_min: float = 1e-3            # end temperature
@@ -33,10 +27,6 @@ class Params:
     overrelax_every: int = 1       # do 1 overrelax sweep per Metropolis sweep (0 disables)
     proposal_step: float = 0.35    # small rotation angle scale (~0.2–0.5)
     seed: int = 0
-
-
-rng = default_rng()
-
 
 class XXZJ1J2MC:
     def __init__(self, p: Params):
@@ -52,7 +42,8 @@ class XXZJ1J2MC:
         # Staggering factor eta_i = (-1)^(x+y)
         self.eta = self._staggering()
         # Anisotropy matrix A = diag(1,1,g) -> x,y,z
-        self.A = np.diag([1.0, 1.0, self.p.g])
+        self.A1 = np.diag([1.0, 1.0, self.p.D1])
+        self.A2 = np.diag([1.0, 1.0, self.p.D2])
 
     # ---------- lattice helpers ----------
     def _xy(self, i):
@@ -116,9 +107,13 @@ class XXZJ1J2MC:
         return ca * s + sa * np.cross(axis, s) + (1 - ca) * (axis * (axis @ s))
 
     # ---------- energy pieces ----------
-    def _pair_energy(self, si, sj):
+    def _pair_energy_nn(self, si, sj):
         # si^T A sj = SxSx + SySy + g SzSz
-        return si @ (self.A @ sj)
+        return si @ (self.A1 @ sj)
+
+    def _pair_energy_nnn(self, si, sj):
+        # si^T A sj = SxSx + SySy + g SzSz
+        return si @ (self.A2 @ sj)
 
     def local_energy(self, i, s=None):
         # Energy contributions involving site i only (avoid double counting by halving bonds elsewhere if you sum over all sites)
@@ -127,9 +122,9 @@ class XXZJ1J2MC:
         J1, J2, h = self.p.J1, self.p.J2, self.p.h
         e = 0.0
         for j in self.NN[i]:
-            e += J1 * self._pair_energy(s, self.S[j])
+            e += J1 * self._pair_energy_nn(s, self.S[j])
         for k in self.NNN[i]:
-            e += J2 * self._pair_energy(s, self.S[k])
+            e += J2 * self._pair_energy_nnn(s, self.S[k])
         e += -h * self.eta[i] * s[2]
         return e
 
@@ -139,8 +134,8 @@ class XXZJ1J2MC:
         # Bonds each counted twice -> multiply by 0.5
         for i in range(self.N):
             si = self.S[i]
-            E += 0.5 * J1 * sum(self._pair_energy(si, self.S[j]) for j in self.NN[i])
-            E += 0.5 * J2 * sum(self._pair_energy(si, self.S[k]) for k in self.NNN[i])
+            E += 0.5 * J1 * sum(self._pair_energy_nn(si, self.S[j]) for j in self.NN[i])
+            E += 0.5 * J2 * sum(self._pair_energy_nnn(si, self.S[k]) for k in self.NNN[i])
         E += -h * np.sum(self.eta * self.S[:,2])
         return E
 
@@ -149,8 +144,8 @@ class XXZJ1J2MC:
         J1, J2, h = self.p.J1, self.p.J2, self.p.h
         h_eff = np.zeros(3)
         # Anisotropic neighbor contribution
-        h_eff += J1 * (self.A @ self.S[self.NN[i]].T).sum(axis=1)
-        h_eff += J2 * (self.A @ self.S[self.NNN[i]].T).sum(axis=1)
+        h_eff += J1 * (self.A1 @ self.S[self.NN[i]].T).sum(axis=1)
+        h_eff += J2 * (self.A2 @ self.S[self.NNN[i]].T).sum(axis=1)
         # Staggered field term contributes (0,0,-h*eta)
         h_eff += np.array([0.0, 0.0, -h * self.eta[i]])
         return h_eff
@@ -239,4 +234,15 @@ class XXZJ1J2MC:
         if best_S is not None:
             self.S = best_S
         return np.array(history)
+
+
+
+
+
+
+
+
+
+
+
 

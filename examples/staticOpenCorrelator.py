@@ -12,20 +12,19 @@ parser.add_argument("-v","--verbose", help="Enable verbose output", action="stor
 inputArguments = parser.parse_args()
 verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,{'verbose':verbose})
-(correlatorType,
- fourierType,
+(correlatorType, fourierType,
  excludeZeromode,
- useExperimentalParameters,
- Lx,Ly,offSiteList,perturbationSite,
- includeList,plotSites,
- saveWf,plotWf,saveCorrelator,saveBonds,plotCorrelator,saveFig,
+ Lx, Ly,
+ offSiteList, perturbationSite,
+ includeList,
+ plotSites,
+ saveWf,plotWf,saveCorrelator,plotCorrelator,saveFig,
  ) = parameters.values()
 
 """ Derived parameters """
 indexesMap = mapSiteIndex(Lx,Ly,offSiteList)
 Ns = len(indexesMap)
 perturbationIndex = indexesMap.index(perturbationSite) #site_j[1] + site_j[0]*Ly
-excludeList,magnonText = getExcludeList(includeList)
 
 """ Plot circuit """
 if plotSites:
@@ -33,10 +32,9 @@ if plotSites:
 
 """ Parameters of the Hamiltonian """
 S = 0.5     #spin value
-nP = 11
-g_val = 20      #factor of 2 from experiment due to s^xs^x -> s^+s^-
-h_val = 15
-g1_t_i,g2_t_i,d1_t_i,h_t_i = getHamiltonianParameters(Lx,Ly,nP,g_val,h_val)   #parameters of Hamiltonian which depend on time
+nP = 11     #number of parameters computed in the "ramp" -> analogue to stop ratio
+gFinal = 20      #factor of 2 from experiment due to s^xs^x -> s^+s^-
+hInitial = 15
 
 """ Correlator parameters """
 site0 = 0 if h_t_i[0,0,0]<0 else 1     #decide sublattice A and B of reference lattice site
@@ -46,7 +44,7 @@ measureTimeList = np.linspace(0,fullTimeMeasure,nTimes)
 nOmega = 2000
 
 """ Bogoliubov transformation"""
-U_, V_, evals = bogoliubovTransformation()
+U_, V_, evals = bogoliubovTransformation(Lx,Ly,Ns,nP,gFinal,hInitial,S,offSiteList,{'saveWf':saveWf,'excludeZeroMode':excludeZeroMode})
 
 """ Computation of correlator"""
 correlator = computeCorrelator()

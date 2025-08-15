@@ -1,16 +1,14 @@
 # Input file for static correlator
-correlator_type: zz
-fourier_type: dat
-exclude_zero_mode: False
-use_experimental_parameters: False
+correlatorType: zz
+fourierType: dat
+excludeZeroMode: False
 Lx: 9
 Ly: 7
 perturbationSite: (2,3)
-include_list: [2,4,6,8]
+includeList: [2,4,6,8]
 plotSites: False
-save_wf: True
-plot_wf: False
-save_correlator: False
-save_bonds: False
-plot_correlator: True
-save_fig: False
+saveWf: True
+plotWf: False
+saveCorrelator: False
+plotCorrelator: True
+saveFig: False

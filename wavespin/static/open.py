@@ -1,15 +1,26 @@
 """ Functions used for the open boundary conditions.
 """
 
+import os
+import scipy
+import numpy
+from wavespin.tools import pathFinder as pf
+from wavespin.static import periodic as pe
+
 def mapSiteIndex(Lx,Ly,offSiteList):
     """ Here we define a map: from an index between 0 and Ns-1 to (ix,iy) between 0 and Lx/y-1.
     To each index in the actual used qubits assign the corresponding ix,iy.
 
     Parameters
     ----------
+    Lx,Ly : int, rectangular linear sizes.
+    offSiteList : list of 2-tuple.
+        Coordinates of sites which are turned off.
 
     Returns
     -------
+    indexesMap : list of 2-tuple.
+        Coordinates of sites which are been considered, in order of their index.
     """
     indexesMap = []
     for ix in range(Lx):
@@ -18,8 +29,8 @@ def mapSiteIndex(Lx,Ly,offSiteList):
                 indexesMap.append((ix,iy))
     return indexesMap
 
-def getExcludeList(includeList):
-    """ Get magnon terms to exclude from the list of included ones.
+def getMagnonText(includeList):     #not used yet
+    """ Get magnon text from list of included terms.
 
     Parameters
     ----------
@@ -27,11 +38,6 @@ def getExcludeList(includeList):
     Returns
     -------
     """
-    fullExcludeList = [2,4,6,8]
-    excludeList = []
-    for e in fullExcludeList:
-        if e not in includeList:
-            excludeList.append(e)
     if includeList ==  [2,4,6,8]:
         magnonText = 'allMagnon'
     else:
@@ -41,7 +47,7 @@ def getExcludeList(includeList):
             if i!=len(includeList)-1:
                 magnonText += ','
         magnonText += 'Magnon'
-    return excludeList, magnonText
+    return magnonText
 
 def plotSitesGrid(Lx,Ly,offSiteList,perturbationSite,indexesMap):
     """ Here we plot the grid structure to see which sites are considered in the calculation.
@@ -72,9 +78,21 @@ def plotSitesGrid(Lx,Ly,offSiteList,perturbationSite,indexesMap):
     fig.tight_layout()
     plt.show()
 
-def getHamiltonianParameters(Lx,Ly,nP,g_val,h_val):
-    """
-    Import Hamiltonian parameters either from file (experimental ones) or by uniform default values.
+def getHamiltonianParameters(Lx,Ly,nP,gFinal,hInitial):
+    """ Compute Hamiltonian parameters for real space.
+    Each terms is a Lx*Ly,Lx*Ly matrix.
+    In this way on-site terms like the magnetic field are diagonal,
+    while first or second nearest neighbor ones are not.
+
+    Parameters
+    ----------
+    Lx,Ly : int, rectangular linear sizes.
+    nP : int, number of steps from initial to final state.
+    gFinal, hInitial : floats
+
+    Returns
+    -------
+    List of nP,Lx*Ly,Lx*Ly matrices for each Hamiltonian term.
     """
     Ns = Lx*Ly
     g1In = np.zeros((Ns,Ns))
@@ -84,10 +102,10 @@ def getHamiltonianParameters(Lx,Ly,nP,g_val,h_val):
             ind = ix*Ly + iy
             ind_plus_y = ind+1
             if ind_plus_y//Ly==ind//Ly:
-                g1_fin[ind,ind_plus_y] = g1_fin[ind_plus_y,ind] = g_val
+                g1Fin[ind,ind_plus_y] = g1Fin[ind_plus_y,ind] = gFinal
             ind_plus_x = ind+Ly
             if ind_plus_x<Lx*Ly:
-                g1_fin[ind,ind_plus_x] = g1_fin[ind_plus_x,ind] = g_val
+                g1Fin[ind,ind_plus_x] = g1Fin[ind_plus_x,ind] = gFinal
     g2In = np.zeros((Ns,Ns))
     g2Fin = np.zeros((Ns,Ns))
     d1In = np.zeros((Ns,Ns))
@@ -95,7 +113,7 @@ def getHamiltonianParameters(Lx,Ly,nP,g_val,h_val):
     hIn = np.zeros((Ns,Ns))
     for ix in range(Lx):
         for iy in range(Ly):
-            h_in[iy+ix*Ly,iy+ix*Ly] = -(-1)**(ix+iy) * h_val
+            hIn[iy+ix*Ly,iy+ix*Ly] = -(-1)**(ix+iy) * hInitial
     hFin = np.zeros((Ns,Ns))
     t_values = np.linspace(0,1,nP).reshape(nP,1,1)
     g1_t_i = (1-t_values)*g1In + t_values*g1Fin
@@ -142,8 +160,8 @@ def computeHamiltonianRs(*parameters):
     ham = np.delete(ham,indexesToRemove,axis=1)
     return ham
 
-def bogoliubovTransformation():
-    """ Compute the Bogoliubov transformation for the real-sace Hamiltonian.
+def bogoliubovTransformation(Lx,Ly,Ns,nP,gFinal,hInitial,S,offSiteList,**kwargs):
+    """ Compute the Bogoliubov transformation for the real-space Hamiltonian.
 
     Parameters
     ----------
@@ -151,9 +169,13 @@ def bogoliubovTransformation():
     Returns
     -------
     """
-    argsFn = ('bogoliubov',Lx,Ly,Ns)
-    dataDn = getHomeDirname(Path.cwd(),'Data/')
-    transformationFn = getFilename(*argsFn,dirname=dataDn,extension='.npz')
+    g1_t_i,g2_t_i,d1_t_i,h_t_i = getHamiltonianParameters(Lx,Ly,nP,gFinal,hInitial)   #parameters of Hamiltonian which depend on time
+    saveWf = kwargs.get('saveWf',False)
+    excludeZeroMode = kwargs.get('excludeZeroMode',False)
+
+    argsFn = ('bogoliubov_rs',Lx,Ly,Ns)
+    dataDn = pf.getHomeDirname(Path.cwd(),'Data/')
+    transformationFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npz')
     if not Path(transformationFn).is_file():
         U_ = np.zeros((nP,Ns,Ns),dtype=complex)
         V_ = np.zeros((nP,Ns,Ns),dtype=complex)
@@ -164,8 +186,8 @@ def bogoliubovTransformation():
             J_i = (g1_t_i[i_sr,:,:],g2_t_i)  #site-dependent hopping
             D_i = (d1_t_i[i_sr,:,:],np.zeros((Ns,Ns)))
             h_i = h_t_i[i_sr,:,:]
-            theta,phi = quantizationAxis(S,J_i,D_i,h_i)
-            ts = computeTs(theta,phi)       #All t-parameters for A and B sublattice
+            theta,phi = pe.quantizationAxis(S,J_i,D_i,h_i)
+            ts = pe.computeTs(theta,phi)       #All t-parameters for A and B sublattice
             parameters = (S,Lx,Ly,h_i,ts,theta,phi,J_i,D_i,offSiteList)
             #
             hamiltonian = computeHamiltonianRs(*parameters)
@@ -191,12 +213,12 @@ def bogoliubovTransformation():
             if not dataDn.is_dir():
                 print("Creating 'Data/' folder in home directory.")
                 os.system('mkdir '+dataDn)
-            np.savez(transformationFn,amazingU=U_,amazingV=V_,evals=evals)
+            np.savez(transformationFn,awesomeU=U_,awesomeV=V_,evals=evals)
     else:
         if verbose:
             print("Loading Bogoliubov transformation from file")
-        U_ = np.load(transformationFn)['amazingU']
-        V_ = np.load(transformationFn)['amazingV']
+        U_ = np.load(transformationFn)['awesomeU']
+        V_ = np.load(transformationFn)['awesomeV']
         evals = np.load(transformationFn)['evals']
 
     if excludeZeroMode:       #Put to 0 the eigenstate corresponding to the zero energy mode -> a bit far fetched
@@ -578,7 +600,6 @@ def get_nn(ind,Lx,Ly):
     return result
 
 computeCorrelator = {'zz':correlator_zz,'xx':correlator_xx,'ze':correlator_ze,'ez':correlator_ez, 'ee':correlator_ee, 'jj':correlator_jj}
-
 
 def fourier_fft(correlator_xt,*args):
     """

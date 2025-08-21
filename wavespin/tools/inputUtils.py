@@ -1,5 +1,6 @@
 """ Functions to import parameters from input files.
 """
+import ast
 
 def importOpenParameters(filename,**kwargs):
     """ Function to import all the parameters for the calculation from the input file.
@@ -51,6 +52,17 @@ def importOpenParameters(filename,**kwargs):
         for key in params.keys():
             print(key,': ',params[key])
     return params
+
+def parse_value(value_str):
+    """
+    Try to evaluate as Python literal (works for bool, int, float, list, tuple, etc.)
+    If it fails, treat it as a raw string.
+    """
+    value_str = value_str.strip()
+    try:
+        return ast.literal_eval(value_str)
+    except (ValueError, SyntaxError):
+        return value_str
 
 def checkParameters(params):
     """ Check that each input parameters is of right type and of reasonable value.

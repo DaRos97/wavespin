@@ -1,6 +1,6 @@
 # Input file for static correlator
 correlatorType: zz
-fourierType: dat
+fourierType: dct
 excludeZeroMode: False
 Lx: 9
 Ly: 7
@@ -9,6 +9,6 @@ includeList: [2,4,6,8]
 plotSites: False
 saveWf: True
 plotWf: False
-saveCorrelator: False
+saveCorrelator: True
 plotCorrelator: True
 saveFig: False

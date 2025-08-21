@@ -3,9 +3,15 @@
 
 import os
 import scipy
-import numpy
+import numpy as np
+from pathlib import Path
+from tqdm import tqdm
+
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from wavespin.tools import pathFinder as pf
 from wavespin.static import periodic as pe
+from scipy.fft import fftfreq, fftshift, fft, fft2, dstn, dctn
 
 def mapSiteIndex(Lx,Ly,offSiteList):
     """ Here we define a map: from an index between 0 and Ns-1 to (ix,iy) between 0 and Lx/y-1.
@@ -125,16 +131,24 @@ def getHamiltonianParameters(Lx,Ly,nP,gFinal,hInitial):
 def computeHamiltonianRs(*parameters):
     """
     Compute the real space Hamiltonian -> (2Ns x 2Ns).
-    Conventions for the real space wavefunction and other things are in the notes.
+    Conventions for the real space wavefunction and parameters are in the notes.
     SECOND NEAREST-NEIGHBOR NOT IMPLEMENTED.
+
+    Parameters
+    ----------
+    *args
+
+    Returns
+    -------
+    ham : 2Ns,2Ns matrix of real space Hamiltonian.
     """
     S,Lx,Ly,h_i,ts,theta,phi,J_i,D_i,offSiteList = parameters
     Ns = Lx*Ly
     #
-    p_zz = get_ps(0,0,ts,J_i,D_i,offSiteList,Lx,Ly)
-    p_xx = get_ps(1,1,ts,J_i,D_i,offSiteList,Lx,Ly)
-    p_yy = get_ps(2,2,ts,J_i,D_i,offSiteList,Lx,Ly)
-    p_xy = get_ps(1,2,ts,J_i,D_i,offSiteList,Lx,Ly)
+    p_zz = pe.computePs(0,0,ts,J_i,D_i,offSiteList,Lx,Ly)
+    p_xx = pe.computePs(1,1,ts,J_i,D_i,offSiteList,Lx,Ly)
+    p_yy = pe.computePs(2,2,ts,J_i,D_i,offSiteList,Lx,Ly)
+    p_xy = pe.computePs(1,2,ts,J_i,D_i,offSiteList,Lx,Ly)
     fac0 = 1#2      #Need to change this in notes -> counting of sites from 2 to 1 sites per UC
     fac1 = 1#2
     fac2 = 2#4
@@ -165,16 +179,26 @@ def bogoliubovTransformation(Lx,Ly,Ns,nP,gFinal,hInitial,S,offSiteList,**kwargs)
 
     Parameters
     ----------
+    Lx,Ly : int, rectangular linear sizes.
+    Ns : int, number of sites.
+    nP : int, number of steps from initial to final state.
+    gFinal, hInitial : floats
+    S : float, spin size.
+    offSiteList : list of 2-tuple.
+        Coordinates of sites which are turned off.
+    **kwargs
 
     Returns
     -------
+    U_, V_, evals : bogoliubov transformation matrices U and V and eigenvalues.
     """
     g1_t_i,g2_t_i,d1_t_i,h_t_i = getHamiltonianParameters(Lx,Ly,nP,gFinal,hInitial)   #parameters of Hamiltonian which depend on time
     saveWf = kwargs.get('saveWf',False)
     excludeZeroMode = kwargs.get('excludeZeroMode',False)
+    verbose = kwargs.get('verbose',False)
 
     argsFn = ('bogoliubov_rs',Lx,Ly,Ns)
-    dataDn = pf.getHomeDirname(Path.cwd(),'Data/')
+    dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
     transformationFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npz')
     if not Path(transformationFn).is_file():
         U_ = np.zeros((nP,Ns,Ns),dtype=complex)
@@ -210,7 +234,7 @@ def bogoliubovTransformation(Lx,Ly,Ns,nP,gFinal,hInitial,S,offSiteList,**kwargs)
             V_[i_sr] = 1/2*(phi_-psi_)
         # Save
         if saveWf:
-            if not dataDn.is_dir():
+            if not Path(dataDn).is_dir():
                 print("Creating 'Data/' folder in home directory.")
                 os.system('mkdir '+dataDn)
             np.savez(transformationFn,awesomeU=U_,awesomeV=V_,evals=evals)
@@ -227,28 +251,47 @@ def bogoliubovTransformation(Lx,Ly,Ns,nP,gFinal,hInitial,S,offSiteList,**kwargs)
             V_[i_sr,:,0] *= 0
     return U_, V_, evals
 
-def computeCorrelator():
+def extendFunction(func,Lx,Ly,offSiteList,indexesMap):
+    """
+    Here is for plotting:
+        We take an Ns-sized vector and map it to Lx,Ly grid putting nans in offSites.
+    """
+    fullFunc = np.zeros(Lx*Ly)
+    for ix in range(Lx):
+        for iy in range(Ly):
+            if (ix,iy) in offSiteList:
+                fullFunc[ix*Ly+iy] = np.nan
+            else:
+                fullFunc[ix*Ly+iy] = func[indexesMap.index((ix,iy))]
+    return fullFunc.reshape(Lx,Ly)
+
+def computeCorrelator(Lx,Ly,Ns,nP,measureTimeList,gFinal,hInitial,S,U_,V_,evals,offSiteList,site0,perturbationSite,includeList,**kwargs):
     """ Compute real space correlator.
     """
-    correlator = np.zeros((len(stop_ratio_list),Lx,Ly,Ntimes),dtype=complex)
-    txt_0energy = 'without0energy' if exclude_zero_mode else 'with0energy'
-    args_fn = (correlator_type,Lx,Ly,txt_pars,txt_0energy,txt_magnon)
-    correlator_fn = 'Data/rs_corr_' + fs.get_fn(*args_fn) + '.npy'
-    if save_bonds:
-        corr_bonds_h = np.zeros((len(stop_ratio_list),Lx-1,Ly,Ntimes),dtype=complex)
-        corr_bonds_v = np.zeros((len(stop_ratio_list),Lx,Ly-1,Ntimes),dtype=complex)
-        corr_bonds_fn = 'Data/rs_corr_bonds_' + fs.get_fn(*args_fn) + '.npz'
-    if not Path(correlator_fn).is_file() or (save_bonds and not Path(corr_bonds_fn).is_file()):
-        for i_sr in tqdm(range(len(stop_ratio_list)),desc="Computing correlator"):
-            stop_ratio = stop_ratio_list[i_sr]
-            indt = int(time_steps*stop_ratio)
-            if indt==time_steps:    indt -= 1
+    excludeZeroMode = kwargs.get('excludeZeroMode',False)
+    correlatorType = kwargs.get('correlatorType','zz')
+    saveCorrelator = kwargs.get('saveCorrelator',False)
+    verbose = kwargs.get('verbose',False)
+
+    indexesMap = mapSiteIndex(Lx,Ly,offSiteList)
+    perturbationIndex = indexesMap.index(perturbationSite) #site_j[1] + site_j[0]*Ly
+    g1_t_i,g2_t_i,d1_t_i,h_t_i = getHamiltonianParameters(Lx,Ly,nP,gFinal,hInitial)   #parameters of Hamiltonian which depend on time
+    Ntimes = len(measureTimeList)
+    txtZeroEnergy = 'without0energy' if excludeZeroMode else 'with0energy'
+
+    argsFn = ('correlator_rs',Lx,Ly,Ns,txtZeroEnergy)
+    dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
+    correlatorFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npy')
+    if not Path(correlatorFn).is_file():
+        correlator = np.zeros((nP,Lx,Ly,Ntimes),dtype=complex)
+        iterCorr = tqdm(range(nP),desc="Computing correlator") if verbose else range(nP)
+        for i_sr in iterCorr:
             # Hamiltonian parameters
-            J_i = (g1_t_i[indt,:,:],np.zeros((Ns,Ns)))  #site-dependent hopping
-            D_i = (d1_t_i[indt,:,:],np.zeros((Ns,Ns)))
-            h_i = h_t_i[indt,:,:]
-            theta,phi = quantizationAxis(S,J_i,D_i,h_i)
-            ts = fs.computeTs(theta,phi)       #All t-parameters for A and B sublattice
+            J_i = (g1_t_i[i_sr,:,:],np.zeros((Ns,Ns)))  #site-dependent hopping
+            D_i = (d1_t_i[i_sr,:,:],np.zeros((Ns,Ns)))
+            h_i = h_t_i[i_sr,:,:]
+            theta,phi = pe.quantizationAxis(S,J_i,D_i,h_i)
+            ts = pe.computeTs(theta,phi)       #All t-parameters for A and B sublattice
             #
             U = np.zeros((2*Ns,2*Ns),dtype=complex)
             U[:Ns,:Ns] = U_[i_sr]
@@ -256,7 +299,7 @@ def computeCorrelator():
             U[Ns:,:Ns] = V_[i_sr]
             U[Ns:,Ns:] = U_[i_sr]
             #Correlator -> can make this faster, we actually only need U_ and V_
-            exp_e = np.exp(-1j*2*np.pi*measure_time_list[:,None]*evals[i_sr,None,:])
+            exp_e = np.exp(-1j*2*np.pi*measureTimeList[:,None]*evals[i_sr,None,:])
             A = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[Ns:,Ns:],optimize=True)
             B = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
             G = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
@@ -265,7 +308,7 @@ def computeCorrelator():
             for ind_i in range(Lx*Ly):
                 if (ind_i//Ly,ind_i%Ly) in offSiteList:
                     continue
-                correlator[i_sr,ind_i//Ly,ind_i%Ly] = computeCorrelator[correlator_type](
+                correlator[i_sr,ind_i//Ly,ind_i%Ly] = dicCorrelators[correlatorType](
                     S,Lx,Ly,
                     ts,
                     site0,
@@ -274,44 +317,19 @@ def computeCorrelator():
                     offSiteList,
                     indexesMap,
                     A,B,G,H,
-                    exclude_list
+                    includeList
                 )
-            if saveBonds:
-                print("Not implemented yet")
-                exit()
-                for ihx in range(Lx-1):
-                    for ihy in range(Ly):
-                        corr_bonds_h[i_sr,ihx,ihy] = fs.correlator_jj_bond(
-                            S,Lx,Ly,
-                            ts,
-                            site0,
-                            ihx*Ly+ihy,perturbationIndex,
-                            offSiteList,
-                            A,B,G,H,
-                            'h',        #orientation of bond
-                            exclude_list
-                        )
-                for ivx in range(Lx):
-                    for ivy in range(Ly-1):
-                        corr_bonds_v[i_sr,ivx,ivy] = fs.correlator_jj_bond(
-                            S,Lx,Ly,
-                            ts,
-                            site0,
-                            ivx*Ly+ivy,perturbationIndex,
-                            offSiteList,
-                            A,B,G,H,
-                            'v',        #orientation of bond
-                            exclude_list
-                        )
-        if save_correlator:
-            np.save(correlator_fn,correlator)
-        if save_bonds:
-            np.savez(corr_bonds_fn,horizontal_bonds=corr_bonds_h,vertical_bonds=corr_bonds_v)
+        if saveCorrelator:
+            if not Path(dataDn).is_dir():
+                print("Creating 'Data/' folder in home directory.")
+                os.system('mkdir '+dataDn)
+            np.save(correlatorFn,correlator)
     else:
         print("Loading real-space correlator from file")
-        correlator = np.load(correlator_fn)
+        correlator = np.load(correlatorFn)
+    return correlator
 
-def correlator_zz(S,Lx,Ly,ts,site0,measurementIndex,perturbationIndex,offSiteList,indexesMap,A,B,G,H,exclude_list=[]):
+def correlator_zz(S,Lx,Ly,ts,site0,measurementIndex,perturbationIndex,offSiteList,indexesMap,A,B,G,H,includeList=[2,4,6,8]):
     """
     Compute real space <[Z_i(t),Z_j(0)]> correlator.
     A,B,G and H are Ns,Ns.
@@ -326,10 +344,10 @@ def correlator_zz(S,Lx,Ly,ts,site0,measurementIndex,perturbationIndex,offSiteLis
         list_terms = compute_combinations(ops,[measurementIndex,perturbationIndex],'t0',S)
         coeff_t = compute_coeff_t(ops,original_op,ts_list)
         for t in list_terms:
-            ZZ += coeff_t * t[0] * compute_contraction(t[1],t[2],t[3],A,B,G,H,exclude_list)
+            ZZ += coeff_t * t[0] * compute_contraction(t[1],t[2],t[3],A,B,G,H,includeList)
     return 2*1j*np.imag(ZZ)
 
-def correlator_ze(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,exclude_list=[]):
+def correlator_ze(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,includeList=[2,4,6,8]):
     """
     Compute real space <[Z_i(t),E_j(0)]> correlator.
     """
@@ -350,10 +368,10 @@ def correlator_ze(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,e
             list_terms = compute_combinations(ops,[ind_i,perturbationIndex,ind_s],'t00',S)
             coeff_t = compute_coeff_t(ops,original_op,ts_list)
             for t in list_terms:
-                ZE += coeff_t * t[0] * compute_contraction(t[1],t[2],t[3],A,B,G,H,exclude_list)
+                ZE += coeff_t * t[0] * compute_contraction(t[1],t[2],t[3],A,B,G,H,includeList)
     return 2*1j/len(ind_nn_j)*np.imag(ZE)
 
-def correlator_ez(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,exclude_list=[]):
+def correlator_ez(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,includeList=[2,4,6,8]):
     """
     Compute real space <[E_i(t),Z_j(0)]> correlator.
     """
@@ -374,10 +392,10 @@ def correlator_ez(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,e
             list_terms = compute_combinations(ops,[ind_i,ind_r,perturbationIndex],'tt0',S)
             coeff_t = compute_coeff_t(ops,original_op,ts_list)
             for t in list_terms:
-                EZ += coeff_t * t[0] * compute_contraction(t[1],t[2],t[3],A,B,G,H,exclude_list)
+                EZ += coeff_t * t[0] * compute_contraction(t[1],t[2],t[3],A,B,G,H,includeList)
     return 2*1j/len(ind_nn_i)*np.imag(EZ)
 
-def correlator_ee(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,exclude_list=[]):
+def correlator_ee(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,includeList=[2,4,6,8]):
     """
     Compute real space <[E_i(t),E_j(0)]> correlator.
     Site j is where the E perturbation is applied -> we assume it is
@@ -411,11 +429,11 @@ def correlator_ee(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,e
                 list_terms = compute_combinations(ops,[ind_i,ind_r,perturbationIndex,ind_s],'tt00',S)
                 coeff_t = compute_coeff_t(ops,original_op,ts_list)
                 for t in list_terms:
-                    contraction = compute_contraction(t[1],t[2],t[3],A,B,G,H,exclude_list)
+                    contraction = compute_contraction(t[1],t[2],t[3],A,B,G,H,includeList)
                     EE += coeff_t * t[0] * contraction
     return 2*1j/len(ind_nn_i)/len(ind_nn_j)*np.imag(EE)
 
-def correlator_xx(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,exclude_list=[]):
+def correlator_xx(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,includeList=[2,4,6,8]):
     """
     Compute real space <[X_i(t),X_j(0)]> correlator.
     """
@@ -428,10 +446,10 @@ def correlator_xx(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,e
         list_terms = compute_combinations(ops,[ind_i,perturbationIndex],'t0',S)
         coeff_t = compute_coeff_t(ops,original_op,ts_list)
         for t in list_terms:
-            XX += coeff_t * t[0] * compute_contraction(t[1],t[2],t[3],A,B,G,H,exclude_list)
+            XX += coeff_t * t[0] * compute_contraction(t[1],t[2],t[3],A,B,G,H,includeList)
     return 2*1j*np.imag(XX)
 
-def correlator_jj(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,exclude_list=[]):
+def correlator_jj(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,includeList=[2,4,6,8]):
     """
     Compute real space <[J_i(t),J_j(0)]> correlator.
     Site j is where the J perturbation is applied -> we assume it is
@@ -462,35 +480,9 @@ def correlator_jj(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,e
                 if i in [2,3,4,5]:
                     coeff_t *= -1
                 for t in list_terms:
-                    contraction = compute_contraction(t[1],t[2],t[3],A,B,G,H,exclude_list)
+                    contraction = compute_contraction(t[1],t[2],t[3],A,B,G,H,includeList)
                     JJ += coeff_t * t[0] * contraction
     return 2*1j/len(ind_nn_i)/len(ind_nn_j)*np.imag(JJ)
-
-def correlator_jj_bond(S,Lx,Ly,ts,site0,ind_i,perturbationIndex,offSiteList,A,B,G,H,orientation,exclude_list=[]):
-    """
-    Compute real space <[J_i(t),J_j(0)]> correlator for a specific pair of bonds.
-    Applied bond is horizontal from perturbationIndex: perturbationIndex->perturbationIndex+Ly.
-    Measurement bond is specified by ind_i and orientation: h or v (right or up).
-    """
-    ts_i = ts[(site0+ind_i//Ly+ind_i%Ly)%2]
-    ts_j = ts[(site0+perturbationIndex//Ly+perturbationIndex%Ly)%2]
-    JJ = np.zeros(A[0,0].shape,dtype=complex)
-    ind_r = ind_i+1 if orientation=='v' else ind_i+Ly
-    ind_s = perturbationIndex+Ly #always horizontal
-    term_list = ['XYXY','ZYZY','XYYX','ZYYZ','YXXY','YZZY','YXYX','YZYZ']
-    ts_r = ts[(site0+ind_r//Ly+ind_r%Ly)%2]
-    ts_s = ts[(site0+ind_s//Ly+ind_s%Ly)%2]
-    ts_list = [ts_i,ts_r,ts_j,ts_s]
-    for i,ops in enumerate(term_list):
-        original_op = ops if i%2==0 else term_list[i-1]
-        list_terms = compute_combinations(ops,[ind_i,ind_r,perturbationIndex,ind_s],'tt00',S)
-        coeff_t = compute_coeff_t(ops,original_op,ts_list)
-        if i in [2,3,4,5]:
-            coeff_t *= -1
-        for t in list_terms:
-            contraction = compute_contraction(t[1],t[2],t[3],A,B,G,H,exclude_list)
-            JJ += coeff_t * t[0] * contraction
-    return 2*1j*np.imag(JJ)
 
 def generate_pairings(elements):
     """
@@ -511,7 +503,7 @@ permutation_lists = {}
 for i in range(2,16,2):
     permutation_lists[i] = generate_pairings(list(range(i)))
 
-def compute_contraction(op_list,ind_list,time_list,A,B,G,H,exclude_list=[]):
+def compute_contraction(op_list,ind_list,time_list,A,B,G,H,includeList=[2,4,6,8]):
     """
     Here we compute the contractions using Wick decomposition of the single operator list `op_list`, with the given sites and times.
     First we compute all the 2-operator terms.
@@ -522,20 +514,21 @@ def compute_contraction(op_list,ind_list,time_list,A,B,G,H,exclude_list=[]):
     etc..
     """
     ops_dic = {'aa':B,'bb':A,'ab':H,'ba':G}
-    if len(op_list) in [0,]+exclude_list:
+    if len(op_list) in includeList:
+        perm_list = permutation_lists[len(op_list)]
+        result = 0
+        for i in range(len(perm_list)):
+            temp = 1
+            for j in range(len(perm_list[i])):
+                op_ = op_list[perm_list[i][j][0]]+op_list[perm_list[i][j][1]]
+                ind_ =  [ ind_list[perm_list[i][j][0]], ind_list[perm_list[i][j][1]] ]
+                time_ = time_list[perm_list[i][j][0]]!=time_list[perm_list[i][j][1]]
+                op = ops_dic[op_][ind_[0],ind_[1]]
+                temp *= op if time_ else op[0]
+            result += temp
+        return result
+    else:
         return 0
-    perm_list = permutation_lists[len(op_list)]
-    result = 0
-    for i in range(len(perm_list)):
-        temp = 1
-        for j in range(len(perm_list[i])):
-            op_ = op_list[perm_list[i][j][0]]+op_list[perm_list[i][j][1]]
-            ind_ =  [ ind_list[perm_list[i][j][0]], ind_list[perm_list[i][j][1]] ]
-            time_ = time_list[perm_list[i][j][0]]!=time_list[perm_list[i][j][1]]
-            op = ops_dic[op_][ind_[0],ind_[1]]
-            temp *= op if time_ else op[0]
-        result += temp
-    return result
 
 def compute_coeff_t(op_t,op_o,ts_list):
     """
@@ -599,7 +592,7 @@ def get_nn(ind,Lx,Ly):
         result.append(ind-1)
     return result
 
-computeCorrelator = {'zz':correlator_zz,'xx':correlator_xx,'ze':correlator_ze,'ez':correlator_ez, 'ee':correlator_ee, 'jj':correlator_jj}
+dicCorrelators = {'zz':correlator_zz,'xx':correlator_xx,'ze':correlator_ze,'ez':correlator_ez, 'ee':correlator_ee, 'jj':correlator_jj}
 
 def fourier_fft(correlator_xt,*args):
     """
@@ -664,8 +657,10 @@ def fourier_dat(correlator_xt,*args):
     correlator_xt has shape (n_sr, Lx, Ly, Nt) with n_sr number of stop ratios (10) and Nt number of time steps (401) in the measurement
     U_ and V_ are (n_sr,Ns,Ns) matrices -> (x,m)
     """
-    N_omega, U_, V_, perturbationIndex, offSiteList, indexesMap = args
+    N_omega, U_, V_, perturbationSite, offSiteList = args
     n_sr, Lx, Ly, Ntimes = correlator_xt.shape
+    indexesMap = mapSiteIndex(Lx,Ly,offSiteList)
+    perturbationIndex = indexesMap.index(perturbationSite) #site_j[1] + site_j[0]*Ly
     correlator_xt = correlator_xt.reshape(n_sr,Lx*Ly,Ntimes)
     if 0:    #remove indeces for non-rectangular shape
         listRemovedInds = []
@@ -675,41 +670,23 @@ def fourier_dat(correlator_xt,*args):
         Ns = correlator_xt.shape[1]
     else:
         Ns = Lx*Ly
-    if 0:   #Using absolute value -> from diffusion equation
-        correlator_kt = np.zeros((n_sr,Ns,Ntimes),dtype=complex)
-        correlator_kw = np.zeros((n_sr,Ns,2,N_omega),dtype=complex)
-        for i_sr in range(n_sr):
-            A_ik = np.real(U_[i_sr] - V_[i_sr])
-            B_ik = np.real(U_[i_sr] + V_[i_sr])
-            Bj_k = B_ik[perturbationIndex]
-            phi_ik = A_ik #/ Bj_k[None,:]
-            for i in range(Ns):
+    correlator_kw = np.zeros((n_sr,Lx,Ly,N_omega),dtype=complex)
+    temp = np.zeros((n_sr,Lx,Ly,Ntimes),dtype=complex)
+    for i_sr in range(n_sr):
+        A_ik = np.real(U_[i_sr] - V_[i_sr])
+        B_ik = np.real(U_[i_sr] + V_[i_sr])
+        Bj_k = B_ik[perturbationIndex]
+        phi_ik = A_ik #/ Bj_k[None,:]
+        for i in range(Ns):
+            if len(indexesMap)==0:
+                ix,iy = i//Ly, i%Ly
+            else:
                 ix,iy = indexesMap[i]
-                phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
-            for k in range(Ns):
-                #f_in = extendFunction(phi_ik[:,k],Lx,Ly,offSiteList,indexesMap)
-                k_abs = get_momentum_Bogoliubov_Laplacian(phi_ik[:,k],Lx,Ly)
-                correlator_kw[i_sr,k,1] = k_abs
-                correlator_kt[i_sr,k] = np.sum(phi_ik[:,k,None]*correlator_xt[i_sr,:,:],axis=0)
-                correlator_kw[i_sr,k,0] = fftshift(fft(correlator_kt[i_sr,k],n=N_omega))
-    else:
-        correlator_kw = np.zeros((n_sr,Lx,Ly,N_omega),dtype=complex)
-        temp = np.zeros((n_sr,Lx,Ly,Ntimes),dtype=complex)
-        for i_sr in range(n_sr):
-            A_ik = np.real(U_[i_sr] - V_[i_sr])
-            B_ik = np.real(U_[i_sr] + V_[i_sr])
-            Bj_k = B_ik[perturbationIndex]
-            phi_ik = A_ik #/ Bj_k[None,:]
-            for i in range(Ns):
-                if len(indexesMap)==0:
-                    ix,iy = i//Ly, i%Ly
-                else:
-                    ix,iy = indexesMap[i]
-                phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
-            for k in range(Ns):
-                kx,ky = get_momentum_Bogoliubov3(phi_ik[:,k].reshape(Lx,Ly))
-                temp[i_sr,kx,ky] = np.sum(phi_ik[:,k,None]*correlator_xt[i_sr,:,:],axis=0)
-                correlator_kw[i_sr,kx,ky] = fftshift(fft(temp[i_sr,kx,ky],n=N_omega))
+            phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+        for k in range(Ns):
+            kx,ky = get_momentum_Bogoliubov3(phi_ik[:,k].reshape(Lx,Ly))
+            temp[i_sr,kx,ky] = np.sum(phi_ik[:,k,None]*correlator_xt[i_sr,:,:],axis=0)
+            correlator_kw[i_sr,kx,ky] = fftshift(fft(temp[i_sr,kx,ky],n=N_omega))
     return correlator_kw
 
 fourierTransform = {'fft':fourier_fft, 'dct':fourier_dct, 'dst':fourier_dst, 'dat':fourier_dat}
@@ -768,7 +745,7 @@ class SqrtNorm(mcolors.Normalize):
     def __call__(self, value, clip=None):
         return (super().__call__(value, clip))**(1/2)
 
-def plotCorrelator(correlator_kw, **kwargs):
+def correlatorPlot(correlator_kw, **kwargs):
     """
     Plot frequency over mod k for the different stop ratios.
     correlator_kw has shape (n_sr, Lx, Ly, Nomega) with n_sr number of stop ratios (10) and Nomega number of frequency stps (2000)
@@ -789,12 +766,8 @@ def plotCorrelator(correlator_kw, **kwargs):
         KX, KY = np.meshgrid(kx, ky, indexing='ij')
         K_mag = np.sqrt(KX**2 + KY**2)
         K_flat = K_mag.ravel()
-    elif f_type=='dat':
-        n_sr,Ns,_,N_omega = correlator_kw.shape
 
-
-#    freqs = fftshift(fftfreq(N_omega,0.8/400))
-    freqs = fftshift(fftfreq(N_omega,0.7/350*0.18))
+    freqs = fftshift(fftfreq(N_omega,0.8/400))
 
     # Define k bins
     if 'n_bins' in kwargs.keys():
@@ -847,8 +820,6 @@ def plotCorrelator(correlator_kw, **kwargs):
     #
     plt.subplots_adjust(wspace=0.112, hspace=0.116, left=0.035, right=0.982, bottom=0.076, top=0.94)
 
-    if 'figname' in kwargs.keys():
-        plt.savefig(kwargs['figname'])
     if 'showfig' in kwargs.keys():
         if kwargs['showfig']:
             plt.show()

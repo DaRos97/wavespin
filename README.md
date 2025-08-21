@@ -9,3 +9,6 @@ The tool used is a Holstein-Primakoff transformation with different levels of sp
 ## Code structure
 
 ## References
+
+## Requirements
+![Python](https://img.shields.io/badge/Python-3.7-blue?logo=python&logoColor=white)

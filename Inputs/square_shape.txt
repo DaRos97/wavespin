@@ -1,14 +1,15 @@
 # Input file for static correlator
-correlatorType: zz
-fourierType: dct
-excludeZeroMode: False
+# Use '#' to comment a line and ':' to assign a value
+correlatorType: xx
+transformType: dat
 Lx: 9
 Ly: 7
-perturbationSite: (2,3)
-includeList: [2,4,6,8]
+perturbationSite: (3,4)
+magnonModes: (1,2,3,4)
+excludeZeroMode: True
 plotSites: False
 saveWf: True
 plotWf: False
-saveCorrelator: True
-plotCorrelator: True
-saveFig: False
+saveCorrelatorXT: True
+saveCorrelatorKW: True
+plotCorrelatorKW: True

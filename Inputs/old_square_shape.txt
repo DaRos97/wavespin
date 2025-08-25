@@ -1,0 +1,16 @@
+# Input file for static correlator
+# Use '#' to comment a line and ':' to assign a value
+correlatorType: zz
+fourierType: dct
+excludeZeroMode: False
+Lx: 9
+Ly: 7
+perturbationSite: (2,3)
+includeList: [2,]
+plotSites: False
+saveWf: True
+plotWf: False
+saveCorrelator: False
+plotCorrelator: True
+saveFig: False
+

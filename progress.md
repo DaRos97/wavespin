@@ -17,6 +17,8 @@
 
 ## Static
 
+- Pass to hdf5 for saving data compactly
+
 ### Periodic boundary
 - Analysis on spin size S
 - Theta could change from site to site in a OBC setting
@@ -27,8 +29,8 @@
 
 ### Open boundary
 - Input of experimental parameters 
-- Need to pass to a class-based code, the parameter passing is too complicated
 - Implement the non-rectangular geometry
-- New sub-module for the Fourier transform
+- Add momentum identification plot when doing the dat
+- Add option for plotting the Bogoliubov wavefunctions
 
 ## Dynamic

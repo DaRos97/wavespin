@@ -11,4 +11,4 @@ The tool used is a Holstein-Primakoff transformation with different levels of sp
 ## References
 
 ## Requirements
-![Python](https://img.shields.io/badge/Python-3.7-blue?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.9-blue?logo=python&logoColor=white)

@@ -14,7 +14,7 @@ class openParameters:
     Ly: int = 7                         #
     offSiteList: tuple = ()             #
     perturbationSite: tuple = (2,3)     #
-    magnonModes: tuple = (2,4,6,8)      #
+    magnonModes: tuple = (1,2,3,4)      #
     excludeZeroMode: bool = False       #
     plotSites: bool = False             #
     saveWf: bool = False                #
@@ -51,7 +51,7 @@ def importOpenParameters(inputFn,**kwargs):
                 setattr(parameters,key,parseValue(value))
             else:
                 print(f"Warning: Unknown parameter '{key}' ignored.")
-    checkParametersClass(parameters)
+    checkParameters(parameters)
     if verbose:
         print("------------------ Chosen input parameters -----------------")
         print(parameters)

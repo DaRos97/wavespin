@@ -1,3 +1,8 @@
+""" Example script to compute and plot the zz correlator of a rectangular lattice.
+Use with input_4.txt
+"""
+
+
 import numpy as np
 import os, sys, argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))

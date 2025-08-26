@@ -8,6 +8,7 @@ from scipy.fft import fftfreq, fftshift
 import math
 import os
 from pathlib import Path
+from wavespin.static.momentumTransformation import extractMomentum
 
 class SqrtNorm(mcolors.Normalize):
     def __call__(self, value, clip=None):
@@ -98,7 +99,92 @@ def plotRampKW(ramp, **kwargs):
     if showFigure:
         plt.show()
 
-def createFigure(n_subplots, subplotSize=(4, 4)):
+def plotWf(system,nModes=16):
+    """ Here we plot just the wavefunctions (first n modes)
+    """
+    Lx = system.Lx
+    Ly = system.Ly
+    Ns = system.Ns
+    U_ = system.U_
+    V_ = system.V_
+    X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly))
+    phi_ik = np.real(U_ - V_)
+    for i in range(Ns):
+        ix,iy = system.indexesMap[i]
+        phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    fig, axes, rows, cols = createFigure(nModes,plot3D=True)
+    for ik in range(nModes):
+        kx, ky = system._xy(ik)
+        ax = axes[ik]
+        ax.plot_surface(X,Y,
+                        phi_ik[:,ik].reshape(Lx,Ly).T,
+                        cmap='plasma'
+                        )
+        ax.set_title("Mode: "+str(ik))
+    for ik in range(nModes,len(axes)):
+        axes[ik].axis('off')
+    plt.suptitle("Modes from bogoliubov transformation",size=20)
+    plt.show()
+
+def plotWfCos(system,nModes=6):
+    """ Here we plot the wavefunctions next to cosine functions (first n modes)
+    """
+    Lx = system.Lx
+    Ly = system.Ly
+    Ns = system.Ns
+    U_ = system.U_
+    V_ = system.V_
+    X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly))
+    phi_ik = np.real(U_ - V_)
+    for i in range(Ns):
+        ix,iy = system.indexesMap[i]
+        phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    fig, axes, rows, cols = createFigure(nModes,plot3D=True,nRows=2,nCols=nModes)
+    for ik in range(nModes):
+        kx, ky = system._xy(ik)
+        ax = axes[ik]
+        ax.plot_surface(X,Y,
+                        phi_ik[:,ik].reshape(Lx,Ly).T,
+                        cmap='plasma'
+                        )
+        ax.set_title("Mode: "+str(ik))
+        ax = axes[ik+nModes]
+        kx, ky = extractMomentum(phi_ik[:,ik].reshape(Lx,Ly))
+        ax.plot_surface(X,Y,
+                        np.cos(np.pi*kx*(2*X+1)/(2*Lx))*np.cos(np.pi*ky*(2*Y+1)/(2*Ly)),
+                        cmap='plasma'
+                        )
+        ax.set_title("Momentum: (%d,%d)"%(kx,ky))
+    plt.suptitle("Comparison of modes and cosine functions",size=20)
+    plt.show()
+
+def plotBogoliubovMomenta(system):
+    """ Here we plot the momenta obtained from the modes of the Bogoliubov tranformation.
+    """
+    Lx = system.Lx
+    Ly = system.Ly
+    Ns = system.Ns
+    U_ = system.U_
+    V_ = system.V_
+    fig = plt.figure(figsize=(20,15))
+    phi_ik = np.real(U_ - V_)
+    for i in range(Ns):
+        ix,iy = system.indexesMap[i]
+        phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    ax = fig.add_subplot()
+    ks = []
+    for k in range(Ns):
+        kx,ky = extractMomentum(phi_ik[:,k].reshape(Lx,Ly))
+        ax.scatter(kx,ky,color='r',alpha=0.3,s=100)
+        ax.text(kx,ky+0.2,"{:.3f}".format(system.evals[k]))
+    ax.set_xlabel("Kx",size=20)
+    ax.set_ylabel("Ky",size=20)
+    ax.set_aspect('equal')
+    ax.grid(True)
+    plt.suptitle("Momenta obtained from Bogoliubov modes and their energies",size=20)
+    plt.show()
+
+def createFigure(n_subplots, subplotSize=(4, 4), plot3D=False, nRows=-1, nCols=-1):
     """Create a figure with n_subplots, keeping each subplot the same size.
 
     Parameters
@@ -106,13 +192,17 @@ def createFigure(n_subplots, subplotSize=(4, 4)):
     n_subplots (int): number of subplots
     subplotSize (tuple): (width, height) of each subplot in inches
     """
-    # choose rows and cols as close as possible to a square
-    cols = math.ceil(math.sqrt(n_subplots)) if n_subplots!=10 else 5
-    rows = math.ceil(n_subplots / cols) if n_subplots!=10 else 2
+    if nRows==-1 and nCols==-1: # choose rows and cols as close as possible to a square
+        cols = math.ceil(math.sqrt(n_subplots)) if n_subplots!=10 else 5
+        rows = math.ceil(n_subplots / cols) if n_subplots!=10 else 2
+    else:
+        cols = nCols
+        rows = nRows
 
     fig, axes = plt.subplots(
         rows, cols,
-        figsize=(cols * subplotSize[0], rows * subplotSize[1])
+        figsize=(cols * subplotSize[0], rows * subplotSize[1]),
+        subplot_kw={"projection": "3d" if plot3D else "2d"}
     )
 
     # If only one subplot, axes is a single Axes object

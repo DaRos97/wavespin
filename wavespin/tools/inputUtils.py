@@ -34,7 +34,7 @@ def importOpenParameters(inputFn,**kwargs):
 
     Returns
     -------
-    openParameters : class of parameetrs for the calculation.
+    openParameters : class of parameters for the calculation.
     """
     verbose = kwargs.get('verbose',False)
     parameters = openParameters()
@@ -51,13 +51,13 @@ def importOpenParameters(inputFn,**kwargs):
                 setattr(parameters,key,parseValue(value))
             else:
                 print(f"Warning: Unknown parameter '{key}' ignored.")
-    checkParameters(parameters)
+    checkOpenParameters(parameters)
     if verbose:
         print("------------------ Chosen input parameters -----------------")
         print(parameters)
     return parameters
 
-def checkParameters(parameters):
+def checkOpenParameters(parameters):
     """ Check that each input parameters is of right type and of reasonable value.
     """
     if parameters.correlatorType not in ['zz','ee','jj','ze','ez','xx']:
@@ -77,6 +77,59 @@ def checkParameters(parameters):
     for t in parameters.magnonModes:
         if t not in [1,2,3,4]:
             raise ValueError("Term "+str(t)+" not an acceptable 'magnonModes' term: [1,2,3,4].")
+
+@typechecked
+@dataclass
+class periodicParameters:
+    correlatorType: str = 'zz'          #
+    transformType: str = 'fft'          #
+    Lx: int = 6                         #
+    Ly: int = 7                         #
+    plotSites: bool = False             #
+    saveCorrelatorXT: bool = False      #
+    saveCorrelatorKW: bool = False      #
+    plotCorrelatorKW: bool = False      #
+    saveFigureCorrelatorKW: bool = False#
+
+def importPeriodicParameters(inputFn,**kwargs):
+    """ Function to import all the parameters for the calculation from the input file and store the in the class openParameters.
+    Lines starting with '#' are skipped.
+
+    Parameters
+    ----------
+    inputFn : str, input filename.
+    **kwargs : 'verbose':bool.
+
+    Returns
+    -------
+    periodicParameters : class of parameters for the calculation.
+    """
+    verbose = kwargs.get('verbose',False)
+    parameters = periodicParameters()
+    with open(inputFn, 'r') as file:
+        for line in file:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            if ':' not in line:
+                raise ValueError(f"Invalid line (missing ':'): {line}")
+            key, value = line.split(':', 1)
+            key = key.strip()
+            if key in [f.name for f in fields(periodicParameters)]:
+                setattr(parameters,key,parseValue(value))
+            else:
+                print(f"Warning: Unknown parameter '{key}' ignored.")
+    checkPeriodicParameters(parameters)
+    if verbose:
+        print("------------------ Chosen input parameters -----------------")
+        print(parameters)
+    return parameters
+
+def checkPeriodicParameters(parameters):
+    """ Check that each input parameters is of right type and of reasonable value.
+    """
+    if parameters.correlatorType not in ['zz',]:
+        raise ValueError(f"Invalid correlator type: {parameters.correlatorType}")
 
 def parseValue(value_str):
     """

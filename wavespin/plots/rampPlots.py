@@ -15,7 +15,7 @@ class SqrtNorm(mcolors.Normalize):
         return (super().__call__(value, clip))**(1/2)
 
 def plotRampKW(ramp, **kwargs):
-    """ Plot frequency over mod k for the different stop ratios.
+    """ Plot frequency over mod k for the different ramp parameters.
     """
     sys0 = ramp.rampElements[0]
     transformType = sys0.transformType
@@ -53,12 +53,15 @@ def plotRampKW(ramp, **kwargs):
                 P_k_omega_p[iP, i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
     # Figure
     fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))
-    txtMagnon = ''
-    for i in sys0.magnonModes:
-        txtMagnon += str(i)
-        if not i==sys0.magnonModes[-1]:
-            txtMagnon += '-'
-    title = 'Commutator: ' + sys0.correlatorType + ', momentum transform: ' + transformType + ', magnons mode(s): ' + txtMagnon
+    if hasattr(sys0,'magnonModes'):
+        txtMagnon = ', magnons mode(s): '
+        for i in sys0.magnonModes:
+            txtMagnon += str(i)
+            if not i==sys0.magnonModes[-1]:
+                txtMagnon += '-'
+    else:
+        txtMagnon = ''
+    title = 'Commutator: ' + sys0.correlatorType + ', momentum transform: ' + transformType + txtMagnon
     plt.suptitle(title,fontsize=20)
     ylim = kwargs.get('ylim',70)
     vmax = np.max(P_k_omega_p)
@@ -83,7 +86,13 @@ def plotRampKW(ramp, **kwargs):
             ax.set_xlabel(r'$|k|$',fontsize=15)
     for i in range(nP,len(axes)):
         axes[i].set_axis('off')
+    plt.tight_layout()
     #
+    if transformType=='dat':
+        fig2, axes2, rows2, cols2 = createFigure(nP,subplotSize=(4,4))
+        for iP in range(nP):
+            kwargs = {'newFigure':False,'axis':axes2[iP],'showFigureMomentum':False,'printTitle':False,'printEnergies':False}
+            plotBogoliubovMomenta(ramp.rampElements[iP],**kwargs)
     plt.tight_layout()
     #
     saveFigure = kwargs.get('saveFigure',False)
@@ -95,6 +104,11 @@ def plotRampKW(ramp, **kwargs):
             print("Creating 'Figure/' folder in home directory.")
             os.system('mkdir '+dataDn)
         fig.savefig(figureFn)
+        if transformType=='dat':
+            argsFn = ('fig_correlatorKW_rs_momenta',self.correlatorType,self.transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy)
+            figureDn = pf.getHomeDirname(str(Path.cwd()),'Figure/')
+            figureFn = pf.getFilename(*argsFn,dirname=figureDn,extension='.png')
+            fig.savefig(figureFn)
     showFigure = kwargs.get('showFigure',True)
     if showFigure:
         plt.show()
@@ -158,7 +172,7 @@ def plotWfCos(system,nModes=6):
     plt.suptitle("Comparison of modes and cosine functions",size=20)
     plt.show()
 
-def plotBogoliubovMomenta(system):
+def plotBogoliubovMomenta(system,**kwargs):
     """ Here we plot the momenta obtained from the modes of the Bogoliubov tranformation.
     """
     Lx = system.Lx
@@ -166,23 +180,33 @@ def plotBogoliubovMomenta(system):
     Ns = system.Ns
     U_ = system.U_
     V_ = system.V_
-    fig = plt.figure(figsize=(20,15))
     phi_ik = np.real(U_ - V_)
     for i in range(Ns):
         ix,iy = system.indexesMap[i]
         phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
-    ax = fig.add_subplot()
+    newFigure = kwargs.get('newFigure',True)
+    if newFigure:
+        fig = plt.figure(figsize=(20,15))
+        ax = fig.add_subplot()
+    else:
+        ax = kwargs.get('axis')
     ks = []
+    printEnergies = kwargs.get('printEnergies',True)
     for k in range(Ns):
         kx,ky = extractMomentum(phi_ik[:,k].reshape(Lx,Ly))
         ax.scatter(kx,ky,color='r',alpha=0.3,s=100)
-        ax.text(kx,ky+0.2,"{:.3f}".format(system.evals[k]))
+        if printEnergies:
+            ax.text(kx,ky+0.2,"{:.3f}".format(system.evals[k]))
     ax.set_xlabel("Kx",size=20)
     ax.set_ylabel("Ky",size=20)
     ax.set_aspect('equal')
     ax.grid(True)
-    plt.suptitle("Momenta obtained from Bogoliubov modes and their energies",size=20)
-    plt.show()
+    printTitle = kwargs.get('printTitle',True)
+    if printTitle:
+        ax.set_title("Momenta obtained from Bogoliubov modes and their energies",size=20)
+    showFigure = kwargs.get('showFigureMomentum',True)
+    if showFigure:
+        plt.show()
 
 def createFigure(n_subplots, subplotSize=(4, 4), plot3D=False, nRows=-1, nCols=-1):
     """Create a figure with n_subplots, keeping each subplot the same size.
@@ -202,7 +226,7 @@ def createFigure(n_subplots, subplotSize=(4, 4), plot3D=False, nRows=-1, nCols=-
     fig, axes = plt.subplots(
         rows, cols,
         figsize=(cols * subplotSize[0], rows * subplotSize[1]),
-        subplot_kw={"projection": "3d" if plot3D else "2d"}
+        subplot_kw={"projection": "3d"} if plot3D else {}
     )
 
     # If only one subplot, axes is a single Axes object

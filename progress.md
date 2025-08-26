@@ -9,8 +9,8 @@
 - ZZ anisotropy -> changes the symmetry
 - Go back to RMO derivation, there are no notes on it
 
-### Montecarlo branch
-- Is it working correctly?
+### Montecarlo
+- Check if it is working correctly
 - Check parameters from theory -> how fast can I go keeping precision
 - Implement integration with RMO
 - Implement parameters path calculation for the ramp and somehow save results to use for LSW
@@ -24,13 +24,10 @@
 - Theta could change from site to site in a OBC setting
 - Need documentation for N11, N12, computePs, computeTs,computeEpsilon, computeGsE, computeE0
 - offsitelist in computePs goes in conflict with computeTs
-- computePs and computeTs needs to be extended for canted-Stripe order
-- correlator's computation
+- computePs and computeTs need to be extended for canted-Stripe order
 
 ### Open boundary
 - Input of experimental parameters 
 - Implement the non-rectangular geometry
-- Add momentum identification plot when doing the dat
-- Add option for plotting the Bogoliubov wavefunctions
 
 ## Dynamic

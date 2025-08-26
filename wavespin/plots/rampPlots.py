@@ -10,6 +10,32 @@ import os
 from pathlib import Path
 from wavespin.static.momentumTransformation import extractMomentum
 
+def createFigure(n_subplots, subplotSize=(4, 4), plot3D=False, nRows=-1, nCols=-1):
+    """Create a figure with n_subplots, keeping each subplot the same size.
+
+    Parameters
+    ----------
+    n_subplots (int): number of subplots
+    subplotSize (tuple): (width, height) of each subplot in inches
+    """
+    if nRows==-1 and nCols==-1: # choose rows and cols as close as possible to a square
+        cols = math.ceil(math.sqrt(n_subplots)) if n_subplots!=10 else 5
+        rows = math.ceil(n_subplots / cols) if n_subplots!=10 else 2
+    else:
+        cols = nCols
+        rows = nRows
+
+    fig, axes = plt.subplots(
+        rows, cols,
+        figsize=(cols * subplotSize[0], rows * subplotSize[1]),
+        subplot_kw={"projection": "3d"} if plot3D else {}
+    )
+
+    # If only one subplot, axes is a single Axes object
+    axes = axes.flatten() if isinstance(axes, (list, np.ndarray)) else [axes]
+
+    return fig, axes, rows, cols
+
 class SqrtNorm(mcolors.Normalize):
     def __call__(self, value, clip=None):
         return (super().__call__(value, clip))**(1/2)
@@ -208,30 +234,60 @@ def plotBogoliubovMomenta(system,**kwargs):
     if showFigure:
         plt.show()
 
-def createFigure(n_subplots, subplotSize=(4, 4), plot3D=False, nRows=-1, nCols=-1):
-    """Create a figure with n_subplots, keeping each subplot the same size.
-
-    Parameters
-    ----------
-    n_subplots (int): number of subplots
-    subplotSize (tuple): (width, height) of each subplot in inches
+def plotRampDispersions(ramp, **kwargs):
+    """ Plot the dispersions of each system in the ramp.
     """
-    if nRows==-1 and nCols==-1: # choose rows and cols as close as possible to a square
-        cols = math.ceil(math.sqrt(n_subplots)) if n_subplots!=10 else 5
-        rows = math.ceil(n_subplots / cols) if n_subplots!=10 else 2
-    else:
-        cols = nCols
-        rows = nRows
+    nP = ramp.nP
+    fig, axes, rows, cols = createFigure(nP,plot3D=True)
+    for iP in range(ramp.nP):
+        gridk = ramp.rampElements[iP].gridk
+        dispersion = ramp.rampElements[iP].dispersion
+        ax = axes[iP]
+        ax.plot_surface(gridk[:,:,0],gridk[:,:,1],dispersion,cmap='plasma')
+        ax.set_aspect('equalxy')
+        n_i = 6
+        ax.set_xticks([ik*2*np.pi/n_i for ik in range(n_i+1)],["{:.2f}".format(ik*2*np.pi/n_i) for ik in range(n_i+1)],size=8)
+        ax.set_yticks([ik*2*np.pi/n_i for ik in range(n_i+1)],["{:.2f}".format(ik*2*np.pi/n_i) for ik in range(n_i+1)],size=8)
+        if iP in [cols*i for i in range(0,rows)]:
+            ax.set_ylabel(r'$k_y$',fontsize=15)
+        if iP in np.arange((rows-1)*cols,rows*cols):
+            ax.set_xlabel(r'$k_x$',fontsize=15)
+    plt.suptitle("Dispersion relation of periodic system",size=20)
+    plt.show()
 
-    fig, axes = plt.subplots(
-        rows, cols,
-        figsize=(cols * subplotSize[0], rows * subplotSize[1]),
-        subplot_kw={"projection": "3d"} if plot3D else {}
-    )
+def plotRampValues(ramp, **kwargs):
+    """ Plot the values of the systems along the ramp.
+    """
+    nP = ramp.nP
+    thetas = np.zeros(nP)
+    gsEnergies = np.zeros(nP)
+    gaps = np.zeros(nP)
+    for iP in range(nP):
+        thetas[iP] = ramp.rampElements[iP].theta
+        gsEnergies[iP] = ramp.rampElements[iP].gsEnergy
+        gaps[iP] = np.min(ramp.rampElements[iP].dispersion)
+    #
+    fig = plt.figure(figsize=(12,10))
+    ax = fig.add_subplot()
+    xAxis = np.arange(nP)
+    l1 = ax.plot(xAxis,thetas,'b*-',label=r'$\theta$')
+    ax.set_yticks([i/6*np.pi/2 for i in range(7)],["{:.1f}".format(i/6*90)+'°' for i in range(7)],size=15,color='b')
 
-    # If only one subplot, axes is a single Axes object
-    axes = axes.flatten() if isinstance(axes, (list, np.ndarray)) else [axes]
+    ax_r = ax.twinx()
+    l2 = ax_r.plot(xAxis,gsEnergies,'r*-',label=r'$E_{GS}$')
+    ax_r.tick_params(axis='y',colors='r')
 
-    return fig, axes, rows, cols
+    ax_r = ax.twinx()
+    l3 = ax_r.plot(xAxis,gaps,'g*-',label='Gap')
+    ax_r.tick_params(axis='y',colors='g')
+
+    ax.set_xlabel("Ramp evolution",size=20)
+    #Legend
+    labels = [l.get_label() for l in l1+l2+l3]
+    ax.legend(l1+l2+l3,labels,fontsize=20,loc=(0.4,0.1))
+
+    plt.show()
+
+
 
 

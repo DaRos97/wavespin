@@ -1,76 +1,47 @@
+""" Here we compute the dispersion of a periodic system, together with quantization axis canting, GS energy and gap.
+"""
+
 import numpy as np
-import sys
+import os, sys, argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from wavespin.static.periodic import *
-import matplotlib.pyplot as plt
+from wavespin.tools.inputUtils import importPeriodicParameters as importParameters
+from wavespin.static.periodic import periodicSystem, periodicRamp
+from wavespin.plots import fancyLattice
+from wavespin.plots import rampPlots
 
-"""
-Here we show how to compute the static ground state from a set of Hamiltonian parameters in a periodic system.
-"""
+""" Parameters and options """
+parser = argparse.ArgumentParser(description="Static dispersion calculation in PBC")
+parser.add_argument("inputFile", help="Name of the file where computation parameters and options are stored")
+parser.add_argument("-v","--verbose", help="Enable verbose output", action="store_true")
+inputArguments = parser.parse_args()
+verbose = inputArguments.verbose
+parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
-S = 0.5     #spin value
-#Lattice parameters
-Lx = 401
-Ly = 401
-#Hamiltonian parameters
-nP = 101
-listJ1 = np.linspace(0,40,nP)
-listJ2 = np.zeros(nP)
-listD1 = np.zeros(nP)
-listD2 = np.zeros(nP)
-listH = np.linspace(30,0,nP)
+if parameters.plotSites:
+    simulation = openSystem(parameters)
+    fancyLattice.plotSitesGrid(simulation)
 
-plotValues = True
-plotDispersions = True
+""" Define the parameters of the system at different 'times' """
+nP = 100     #number of parameters computed in the "ramp" -> analogue to stop ratio
+gInitial = 0
+gFinal = 40      #factor of 2 from experiment due to s^xs^x -> s^+s^-
+hInitial = 30
+hFinal = 0
+pValues = np.linspace(0.1,1,nP)
+g_p = (1-pValues)*gInitial + pValues*gFinal
+h_p = (1-pValues)*hInitial + pValues*hFinal
 
-dispersions = np.zeros((nP,Lx,Ly))
-thetas = np.zeros(nP)
-gsEs = np.zeros(nP)
-gaps = np.zeros(nP)
-for iP in range(nP):
-    J = (listJ1[iP],listJ2[iP])
-    D = (listD1[iP],listD2[iP])
-    h = listH[iP]
-    HamiltonianParameters = (J,D,h)
-    dispersion, angles, gsE, gap = computeSolution(Lx,Ly,S,HamiltonianParameters)
-    dispersions[iP] = dispersion
-    thetas[iP] = angles[0]
-    gsEs[iP] = gsE
-    gaps[iP] = gap
+""" Initialize all the systems and store them in a ramp object """
+ramp = periodicRamp()
+for i in range(nP):
+    termsHamiltonian = (g_p[i],0,0,0,h_p[i])
+    ramp.addSystem(periodicSystem(parameters,termsHamiltonian))
 
-if plotDispersions:
-    gridk = momentumGrid(Lx,Ly)
-    fig = plt.figure(figsize=(15,10))
-    for i,iP in enumerate([10,30,50,60,80,100]):
-        ax = fig.add_subplot(2,3,i+1,projection='3d')
-        ax.plot_surface(gridk[:,:,0],gridk[:,:,1],dispersions[iP],cmap='plasma')
-        ax.set_aspect('equalxy')
-        ax.set_title("stop ratio="+"{:.1f}".format(iP/nP))
-        n_i = 6
-        ax.set_xticks([ik*2*np.pi/n_i for ik in range(n_i+1)],["{:.2f}".format(ik*2*np.pi/n_i) for ik in range(n_i+1)],size=8)
-        ax.set_yticks([ik*2*np.pi/n_i for ik in range(n_i+1)],["{:.2f}".format(ik*2*np.pi/n_i) for ik in range(n_i+1)],size=8)
-        ax.set_xlabel(r"$k_x$")
-        ax.set_ylabel(r"$k_y$")
-    plt.show()
+if parameters.plotValues:
+    """ Plot interesting values of the ramp """
+    rampPlots.plotRampValues(ramp)
 
-if plotValues:
-    fig = plt.figure(figsize=(12,10))
-    ax = fig.add_subplot()
-    xAxis = np.arange(nP)
-    l1 = ax.plot(xAxis,thetas,'b*-',label=r'$\theta$')
-    ax.set_yticks([i/6*np.pi/2 for i in range(7)],["{:.1f}".format(i/6*90)+'°' for i in range(7)],size=15,color='b')
+if parameters.plotDispersions:
+    """ Plot dispersions of the ramp """
+    rampPlots.plotRampDispersions(ramp)
 
-    ax_r = ax.twinx()
-    l2 = ax_r.plot(xAxis,gsEs,'r*-',label=r'$E_{GS}$')
-    ax_r.tick_params(axis='y',colors='r')
-
-    ax_r = ax.twinx()
-    l3 = ax_r.plot(xAxis,gaps,'g*-',label='Gap')
-    ax_r.tick_params(axis='y',colors='g')
-
-    ax.set_xlabel("stop ratio (time)",size=20)
-    #Legend
-    labels = [l.get_label() for l in l1+l2+l3]
-    ax.legend(l1+l2+l3,labels,fontsize=20,loc=(0.4,0.1))
-
-    plt.show()

@@ -28,24 +28,6 @@ def momentumGrid(Lx,Ly):
             gridk[i1,i2,1] = dy*(1+i2) #- np.pi
     return gridk
 
-def neighborDispersion(gridk):
-    r""" Compute the '$\Gamma$' dispersion at first and second nearest neighbor.
-
-    Parameters
-    ----------
-    gridk : (Lx,Ly,2)-array
-        Momenta of BZ.
-
-    Returns
-    -------
-    Gamma : 2-tuple
-        Dispersions at 1st and 2nd nearest neighbor.
-    """
-    Gamma1 = np.cos(gridk[:,:,0])+np.cos(gridk[:,:,1])  #cos(kx) + cos(ky)
-    Gamma2 = np.cos(gridk[:,:,0]+gridk[:,:,1])+np.cos(gridk[:,:,0]-gridk[:,:,1])  #cos(kx+ky) + cos(kx-ky)
-    Gamma = (Gamma1,Gamma2)
-    return Gamma
-
 def quantizationAxis(S,J_i,D_i,h_i):
     r""" Compute angles theta and phi of quantization axis depending on Hamiltonian parameters.
     Works for both uniform and site-dependent Hamiltonian parameters, where we take the average.
@@ -96,28 +78,6 @@ def quantizationAxis(S,J_i,D_i,h_i):
     angles = (theta, phi)
     return angles
 
-def computeN11(*pars):
-    """ Compute N_11 as in notes. """
-    S,Gamma,h,ts,theta,phi,J,D = pars
-    p_zz = computePs(0,0,ts,J,D)
-    p_xx = computePs(1,1,ts,J,D)
-    p_yy = computePs(2,2,ts,J,D)
-    result = h/2*np.cos(theta)
-    for i in range(2):
-        result += S*(Gamma[i]*(p_xx[i]+p_yy[i])/2-2*p_zz[i])
-    return result
-
-def computeN12(*pars):
-    """ Compute N_12 as in notes. """
-    S,Gamma,h,ts,theta,phi,J,D = pars
-    p_xx = computePs(1,1,ts,J,D)
-    p_yy = computePs(2,2,ts,J,D)
-    p_xy = computePs(1,2,ts,J,D)
-    result = 0
-    for i in range(2):
-        result += S/2*Gamma[i]*(p_xx[i]-p_yy[i]-2*1j*p_xy[i])
-    return result
-
 def computePs(alpha,beta,ts,J,D,offSiteList=[],Lx=0,Ly=0,order='c-Neel'):
     """ Compute coefficient p_gamma^{alpha,beta} for a given classical order.
     alpha,beta=0,1,2 -> z,x,y like for ts.
@@ -156,59 +116,6 @@ def computeTs(theta,phi):
     ]
     return result
 
-def computeEpsilon(*pars):
-    """
-    Compute dispersion epsilon as in notes.
-    Controls are neded for ZZ in k.
-    """
-    N_11 = computeN11(*pars)
-    N_12 = computeN12(*pars)
-    result = np.sqrt(N_11**2-np.absolute(N_12)**2,where=(N_11**2>=np.absolute(N_12)**2))
-#    result[N_11**2<np.absolute(N_12)**2] = 0
-    return result
-
-def computeGsE(epsilon,*pars):
-    """Compute ground state energy as in notes."""
-    E_0 = computeE0(*pars)
-    Ns = epsilon.shape[0]*epsilon.shape[1]
-#    return E_0 + np.sum(epsilon[~np.isnan(epsilon)])/Ns
-    return E_0 + np.sum(epsilon)/Ns
-
-def computeE0(*pars):
-    r""" Compute $E_0$ as in notes.
-    """
-    S,Gamma,h,ts,theta,phi,J,D = pars
-    p_zz = computePs(0,0,ts,J,D)
-    result = -h*(S+1/2)*np.cos(theta)
-    for i in range(2):
-        result += 2*S*(S+1)*p_zz[i]
-    return result
-
-def computeSolution(Lx,Ly,S,HamiltonianParameters):
-    """ Compute dispersion with a given set of Hamiltonian parameters
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-    epsilon : (Lx,Ly)-array, dispersion.
-    (theta,phi) : floats, quantizatio axis.
-    gsE : float, ground state energy.
-    gap : float, gap.
-    """
-    J,D,h = HamiltonianParameters
-    gridk = momentumGrid(Lx,Ly)
-    Gamma = neighborDispersion(gridk)
-    theta,phi = quantizationAxis(S,J,D,h)
-    ts = computeTs(theta,phi)
-    parameters = (S,Gamma,h,ts,theta,phi,J,D)
-    epsilon = computeEpsilon(*parameters)
-    gsE = computeGsE(epsilon,*parameters)
-    gap = np.min(epsilon)
-    return epsilon, (theta,phi), gsE, gap
-
-
 class periodicSystem:
     def __init__(self, p: iu.periodicParameters, termsHamiltonian):
         self.fullParameters = p
@@ -217,10 +124,7 @@ class periodicSystem:
         self.Ly = p.Ly
         self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
         self.gridk = momentumGrid(self.Lx,self.Ly)#BZ grid
-        self.Gamma = (
-            np.cos(self.gridk[:,:,0])+np.cos(self.gridk[:,:,1]),  #cos(kx) + cos(ky)
-            np.cos(self.gridk[:,:,0]+self.gridk[:,:,1])+np.cos(self.gridk[:,:,0]-self.gridk[:,:,1])  #cos(kx+ky) + cos(kx-ky)
-        )
+        self.Gamma = self._gamma()
         #Hamiltonian parameters
         self.g1,self.g2,self.d1,self.d2,self.h = termsHamiltonian
         self.J = (self.g1,self.g2)
@@ -229,6 +133,7 @@ class periodicSystem:
         self.theta,self.phi = quantizationAxis(self.S,self.J,self.D,self.h)
         self.ts = computeTs(self.theta,self.phi)       #All t-parameters for A and B sublattice
         self.dispersion = self._dispersion()
+        self.gsEnergy = np.sum(self.dispersion)/self.Lx/self.Ly + self._E0()
         self.rk = self._rk()
         self.phik = self._phik()
         #XT correlator parameters
@@ -260,6 +165,19 @@ class periodicSystem:
         result = np.sqrt(N_11**2-np.absolute(N_12)**2,where=(N_11**2>=np.absolute(N_12)**2))
     #    result[N_11**2<np.absolute(N_12)**2] = 0
         return result
+
+    def _gamma(self):
+        r""" Compute the '$\Gamma$' dispersion at first and second nearest neighbor.
+
+        Returns
+        -------
+        Gamma : 2-tuple
+            Dispersions at 1st and 2nd nearest neighbor.
+        """
+        gridk = self.gridk
+        Gamma1 = np.cos(gridk[:,:,0])+np.cos(gridk[:,:,1])  #cos(kx) + cos(ky)
+        Gamma2 = np.cos(gridk[:,:,0]+gridk[:,:,1])+np.cos(gridk[:,:,0]-gridk[:,:,1])  #cos(kx+ky) + cos(kx-ky)
+        return (Gamma1,Gamma2)
 
     def _N11(self):
         """ Compute N_11 as in notes. """
@@ -297,6 +215,15 @@ class periodicSystem:
         """Compute e^i*phik as in notes."""
         N_12 = self._N12()
         result = np.exp(1j*np.angle(N_12))
+        return result
+
+    def _E0(self):
+        r""" Compute $E_0$ as in notes.
+        """
+        p_zz = computePs(0,0,self.ts,self.J,self.D)
+        result = -self.h*(self.S+1/2)*np.cos(self.theta)
+        for i in range(2):
+            result += 2*self.S*(self.S+1)*p_zz[i]
         return result
 
     def realSpaceCorrelator(self,verbose=False):

@@ -86,6 +86,8 @@ class periodicParameters:
     Lx: int = 6                         #
     Ly: int = 7                         #
     plotSites: bool = False             #
+    plotValues: bool = False            #
+    plotDispersions: bool = False       #
     saveCorrelatorXT: bool = False      #
     saveCorrelatorKW: bool = False      #
     plotCorrelatorKW: bool = False      #

@@ -2,7 +2,7 @@
 """
 import matplotlib.pyplot as plt
 
-def plotSitesGrid(openSystem):
+def plotSitesGrid(openSystem,**kwargs):
     """ Here we plot the grid structure to see which sites are considered in the calculation.
 
     Parameters
@@ -14,6 +14,7 @@ def plotSitesGrid(openSystem):
     offSiteList = openSystem.offSiteList
     perturbationSite = openSystem.perturbationSite
     indexesMap = openSystem.indexesMap
+    printIndices = kwargs.get('indices',True)
     #
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot()
@@ -23,7 +24,8 @@ def plotSitesGrid(openSystem):
                 ax.scatter(ix,iy,c='r',marker='x',s=80,zorder=2)
             else:
                 ax.scatter(ix,iy,c='b',marker='o',s=80,zorder=2)
-                ax.text(ix+0.05,iy+0.15,str(indexesMap.index((ix,iy))),size=20)
+                if printIndices:
+                    ax.text(ix+0.05,iy+0.15,str(indexesMap.index((ix,iy))),size=20)
             if ix+1<Lx:
                 if (ix,iy) in offSiteList or (ix+1,iy) in offSiteList:
                     ax.plot([ix,ix+1],[iy,iy],c='y',ls='--',lw=0.5,zorder=-1)

@@ -190,7 +190,7 @@ def jjCorrelator(system,ind_i,A,B,G,H):
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
     JJ = np.zeros(A[0,0].shape,dtype=complex)
     ind_nn_i = get_nn(ind_i,Lx,Ly)
-    ind_nn_j = [perturbationIndex+Ly,]
+    ind_nn_j = [perturbationIndex+1,]
     for i in system.offSiteList:
         if system._idx(i) in ind_nn_i:
             ind_nn_i.remove(system._idx(i))

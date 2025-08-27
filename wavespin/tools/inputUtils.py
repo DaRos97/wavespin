@@ -22,6 +22,7 @@ class openParameters:
     saveCorrelatorXT: bool = False      #
     saveCorrelatorKW: bool = False      #
     plotCorrelatorKW: bool = False      #
+    savePlotCorrelatorKW: bool = False#
 
 def importOpenParameters(inputFn,**kwargs):
     """ Function to import all the parameters for the calculation from the input file and store the in the class openParameters.

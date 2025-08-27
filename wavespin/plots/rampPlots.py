@@ -9,6 +9,7 @@ import math
 import os
 from pathlib import Path
 from wavespin.static.momentumTransformation import extractMomentum
+from wavespin.tools import pathFinder as pf
 
 def createFigure(n_subplots, subplotSize=(4, 4), plot3D=False, nRows=-1, nCols=-1):
     """Create a figure with n_subplots, keeping each subplot the same size.
@@ -123,16 +124,17 @@ def plotRampKW(ramp, **kwargs):
     #
     saveFigure = kwargs.get('saveFigure',False)
     if saveFigure:
-        argsFn = ('fig_correlatorKW_rs',self.correlatorType,self.transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy)
-        figureDn = pf.getHomeDirname(str(Path.cwd()),'Figure/')
+        argsFn = ('fig_correlatorKW_rs',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
+        figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
+        print(figureDn)
         figureFn = pf.getFilename(*argsFn,dirname=figureDn,extension='.png')
         if not Path(figureDn).is_dir():
-            print("Creating 'Figure/' folder in home directory.")
+            print("Creating 'Figures/' folder in home directory.")
             os.system('mkdir '+dataDn)
         fig.savefig(figureFn)
         if transformType=='dat':
-            argsFn = ('fig_correlatorKW_rs_momenta',self.correlatorType,self.transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy)
-            figureDn = pf.getHomeDirname(str(Path.cwd()),'Figure/')
+            argsFn = ('fig_correlatorKW_rs_momenta',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
+            figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
             figureFn = pf.getFilename(*argsFn,dirname=figureDn,extension='.png')
             fig.savefig(figureFn)
     showFigure = kwargs.get('showFigure',True)

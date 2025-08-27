@@ -117,6 +117,8 @@ class openSystem:
             except:
                 K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-5)
             lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
+            if self.excludeZeroMode:
+                lam2[0] = 1
             self.evals = np.sqrt(lam2)         #dispersion -> positive
             #
             chi = chi_ / self.evals**(1/2)     #normalized eigenvectors: divide each column of chi_ by the corresponding eigenvalue -> of course for the gapless mode there is a problem here

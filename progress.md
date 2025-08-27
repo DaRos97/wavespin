@@ -10,10 +10,10 @@
 - Go back to RMO derivation, there are no notes on it
 
 ### Montecarlo
-- Check if it is working correctly
-- Check parameters from theory -> how fast can I go keeping precision
 - Implement integration with RMO
-- Implement parameters path calculation for the ramp and somehow save results to use for LSW
+- Implement parameters path calculation for the ramp
+- Add parent class of lattice and then derived classes for classical, open, periodic etc..
+- Same for input parameters
 
 ## Static
 
@@ -21,8 +21,8 @@
 
 ### Periodic boundary
 - Analysis on spin size S
-- Theta could change from site to site in a OBC setting
-- Need documentation for N11, N12, computePs, computeTs,computeEpsilon, computeGsE, computeE0
+- Implement site-dependent theta when using OBC -> from MC
+- Need documentation for N11, N12, computePs, computeTs, computeEpsilon, computeGsE, computeE0
 - offsitelist in computePs goes in conflict with computeTs
 - computePs and computeTs need to be extended for canted-Stripe order
 

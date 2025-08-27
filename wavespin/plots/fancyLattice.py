@@ -1,19 +1,21 @@
 """ My version of plotting a lattice.
 """
 import matplotlib.pyplot as plt
+import numpy as np
+from wavespin.tools import pathFinder as pf
+from pathlib import Path
 
-def plotSitesGrid(openSystem,**kwargs):
+def plotSitesGrid(system,**kwargs):
     """ Here we plot the grid structure to see which sites are considered in the calculation.
 
     Parameters
     ----------
-    openSystem : openSystem object.
+    system : object.
     """
-    Lx = openSystem.Lx
-    Ly = openSystem.Ly
-    offSiteList = openSystem.offSiteList
-    perturbationSite = openSystem.perturbationSite
-    indexesMap = openSystem.indexesMap
+    Lx = system.Lx
+    Ly = system.Ly
+    offSiteList = system.offSiteList
+    indexesMap = system.indexesMap
     printIndices = kwargs.get('indices',True)
     #
     fig = plt.figure(figsize=(12,12))
@@ -36,9 +38,83 @@ def plotSitesGrid(openSystem,**kwargs):
                     ax.plot([ix,ix],[iy,iy+1],c='y',ls='--',lw=0.5,zorder=-1)
                 else:
                     ax.plot([ix,ix],[iy,iy+1],c='darkgreen',lw=2,zorder=-1)
-    ax.scatter(perturbationSite[0],perturbationSite[1],c='w',edgecolor='m',lw=2,marker='o',s=200,zorder=1)
+    if hasattr(system,'perturbationSite'):
+        perturbationSite = system.perturbationSite
+        ax.scatter(perturbationSite[0],perturbationSite[1],c='w',edgecolor='m',lw=2,marker='o',s=200,zorder=1)
     ax.set_aspect('equal')
     ax.set_xlabel('x',size=30)
     ax.set_ylabel('y',size=30)
     fig.tight_layout()
     plt.show()
+
+def vector_to_polar_angles(v):
+    """
+    Compute polar angles (theta, phi) from a 3D unit vector.
+
+    Parameters:
+        v (array-like): unit vector [x, y, z]
+
+    Returns:
+        theta (float): polar angle (0 to pi)
+        phi (float): azimuthal angle (-pi to pi)
+    """
+    x, y, z = v
+    # theta = angle from z-axis
+    theta = np.arccos(z)
+    # phi = azimuth in xy-plane
+    phi = np.arctan2(y, x)
+    return theta, phi
+
+def solutionMC(sim,**kwargs):
+    """ Plot theta and phi of each site of the MC solution.
+    """
+    thetas = np.zeros(sim.Ns)
+    phis = np.zeros(sim.Ns)
+    for i in range(sim.Ns):
+        thetas[i], phis[i] = vector_to_polar_angles(sim.S[i])
+    fig = plt.figure(figsize=(15,10))
+    X,Y = np.meshgrid(np.arange(sim.Lx),np.arange(sim.Ly),indexing='ij')
+    # 1
+    ax = fig.add_subplot(221,projection='3d')
+    ax.plot_surface(X,Y,thetas.reshape(sim.Lx,sim.Ly),cmap='plasma')
+    ax.set_title("Polar angle",size=20)
+    #2
+    ax = fig.add_subplot(222,projection='3d')
+    ax.plot_surface(X,Y,phis.reshape(sim.Lx,sim.Ly),cmap='plasma')
+    ax.set_title("Azimuthal angle",size=20)
+    #3
+    ax = fig.add_subplot(223,projection='3d')
+    ax.plot_surface(X,Y,
+                    abs(thetas-np.pi/2).reshape(sim.Lx,sim.Ly),
+                    cmap='plasma',
+                    alpha=0.8
+                    )
+    theta = sim.periodicTheta
+    ax.plot_surface(X,Y,
+                    np.ones((sim.Lx,sim.Ly))*theta,
+                    color='green',
+                    alpha=0.3
+                    )
+    ax.set_title("Polar angle deviations from pi/2",size=20)
+    #4
+    ax = fig.add_subplot(224,projection='3d')
+    func = phis.reshape(sim.Lx,sim.Ly)
+    func -= (np.max(func)-np.min(func))/2 + np.min(func)
+    ax.plot_surface(X,Y,abs(func)-np.pi/2,cmap='plasma')
+    ax.set_title("Azimuthal angle deviations",size=20)
+
+    # Other stuff
+    plt.suptitle("Solution of Montecarlo simulation",size=20)
+    saveFigure = kwargs.get('saveFigure',False)
+    if saveFigure:
+        argsFn = ('MC_solution',sim.Lx,sim.Ly,sim.Ns,sim.g1,sim.g2,sim.d1,sim.d2,sim.h)
+        figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
+        figureFn = pf.getFilename(*argsFn,dirname=figureDn,extension='.png')
+        if not Path(figureDn).is_dir():
+            print("Creating 'Figures/' folder in home directory.")
+            os.system('mkdir '+dataDn)
+        fig.savefig(figureFn)
+
+    plt.show()
+
+

@@ -126,7 +126,6 @@ def plotRampKW(ramp, **kwargs):
     if saveFigure:
         argsFn = ('fig_correlatorKW_rs',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
         figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
-        print(figureDn)
         figureFn = pf.getFilename(*argsFn,dirname=figureDn,extension='.png')
         if not Path(figureDn).is_dir():
             print("Creating 'Figures/' folder in home directory.")

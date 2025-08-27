@@ -321,6 +321,20 @@ def get_nn(ind,Lx,Ly):
         result.append(ind-1)
     return result
 
+def get_nnn(ind,Lx,Ly):
+    """ Compute indices of next-nearest neighbors of site ind.
+    """
+    result= []
+    if ind//Ly!=Lx-1 and ind%Ly!=Ly-1:        #right-up neighbor
+        result.append(ind+Ly+1)
+    if ind//Ly!=Lx-1 and ind%Ly!=0:        #right-down neighbor
+        result.append(ind+Ly-1)
+    if ind//Ly!=0 and ind%Ly!=Ly-1:        #left-up neighbor
+        result.append(ind-Ly+1)
+    if ind//Ly!=0 and ind%Ly!=0:        #left-down neighbor
+        result.append(ind-Ly-1)
+    return result
+
 dicCorrelators = {
     'zz':zzCorrelator,
     'ze':zeCorrelator,

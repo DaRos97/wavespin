@@ -1,0 +1,15 @@
+# Input file for montecarlo simulation
+# Use '#' to comment a line and ':' to assign a value
+Lx:                 9
+Ly:                 7
+plotSites:          False
+T_max:              2.5
+T_min:              0.001
+alpha:              0.95
+sweeps_per_T_high:  100
+sweeps_per_T_low:   300
+overrelax_every:    1
+proposal_step:      0.35
+periodic:           False
+saveSolution:       True
+savePlotSolution:   True

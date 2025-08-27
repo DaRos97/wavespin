@@ -2,6 +2,7 @@ wavespin/static/external*
 
 Data/
 Figures/
+scripts
 
 
 __pycache__/

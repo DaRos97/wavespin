@@ -1,8 +1,11 @@
 """ My version of plotting a lattice.
 """
+
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from wavespin.tools import pathFinder as pf
+from wavespin.tools import functions as fs
 from pathlib import Path
 
 def plotSitesGrid(system,**kwargs):
@@ -47,31 +50,13 @@ def plotSitesGrid(system,**kwargs):
     fig.tight_layout()
     plt.show()
 
-def vector_to_polar_angles(v):
-    """
-    Compute polar angles (theta, phi) from a 3D unit vector.
-
-    Parameters:
-        v (array-like): unit vector [x, y, z]
-
-    Returns:
-        theta (float): polar angle (0 to pi)
-        phi (float): azimuthal angle (-pi to pi)
-    """
-    x, y, z = v
-    # theta = angle from z-axis
-    theta = np.arccos(z)
-    # phi = azimuth in xy-plane
-    phi = np.arctan2(y, x)
-    return theta, phi
-
 def solutionMC(sim,**kwargs):
     """ Plot theta and phi of each site of the MC solution.
     """
     thetas = np.zeros(sim.Ns)
     phis = np.zeros(sim.Ns)
     for i in range(sim.Ns):
-        thetas[i], phis[i] = vector_to_polar_angles(sim.S[i])
+        thetas[i], phis[i] = fs.vector_to_polar_angles(sim.Spins[i])
     fig = plt.figure(figsize=(15,10))
     X,Y = np.meshgrid(np.arange(sim.Lx),np.arange(sim.Ly),indexing='ij')
     # 1
@@ -112,7 +97,7 @@ def solutionMC(sim,**kwargs):
         figureFn = pf.getFilename(*argsFn,dirname=figureDn,extension='.png')
         if not Path(figureDn).is_dir():
             print("Creating 'Figures/' folder in home directory.")
-            os.system('mkdir '+dataDn)
+            os.system('mkdir '+figureDn)
         fig.savefig(figureFn)
 
     plt.show()

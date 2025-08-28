@@ -53,8 +53,8 @@ def getHomeDirname(cwd,subfolder=''):
     """
     if len(subfolder)>0 and subfolder[-1]!='/':
         raise ValueError("sub-directory name  %s must end with '/'"%subfolder)
-    pos = cwd.find('WaveSpin')
+    pos = cwd.find('scripts')
     if pos==-1:
         raise ValueError("Script is running outside the WaveSpin folder: "+cwd)
-    dirname = cwd[:pos]+'WaveSpin/'+subfolder
+    dirname = cwd[:pos]+'/'+subfolder
     return dirname

@@ -1,6 +1,8 @@
 # To-do list
 
 - Change the `__init__.py` files to have a clearer package structure.
+- Write tests -> should be easy, just use the example files.
+- Change pathFinder to be more stable in finding where to save data.
 
 ## Classical
 

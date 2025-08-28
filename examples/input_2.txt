@@ -10,6 +10,6 @@ sweeps_per_T_high:  100
 sweeps_per_T_low:   300
 overrelax_every:    1
 proposal_step:      0.35
-periodic:           False
+boundary:           open
 saveSolution:       True
 savePlotSolution:   True

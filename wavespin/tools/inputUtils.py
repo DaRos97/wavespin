@@ -168,7 +168,7 @@ class classicParameters:
     overrelax_every: int = 1            # do 1 overrelax sweep per Metropolis sweep (0 disables)
     proposal_step: float = 0.35         # small rotation angle scale (~0.2–0.5)
     seed: int = 42                      #
-    periodic: bool = False              #
+    boundary: str = 'open'              #
     saveSolution: bool = False          #
     savePlotSolution: bool = False      #
 
@@ -226,4 +226,6 @@ def checkClassicParameters(parameters):
         raise ValueError("Not acceptable values of sweeps : %, %"%(parameters.sweeps_per_T_low,parameters.sweeps_per_T_high))
     if parameters.overrelax_every < 0:
         raise ValueError("overrelax_every value not acceptable (>0): "+str(parameters.overrelax_every))
+    if parameters.boundary not in ['open','periodic']:
+        raise ValueError(f"Invalid boundary type: {parameters.boundary}")
 

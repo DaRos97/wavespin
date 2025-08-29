@@ -215,6 +215,44 @@ def jjCorrelator(system,ind_i,A,B,G,H):
                     JJ += coeff_t * t[0] * contraction
     return 2*1j/len(ind_nn_i)/len(ind_nn_j)*np.imag(JJ)
 
+def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
+    """
+    Compute real space <[J_i(t),J_j(0)]> correlator for a specific pair of bonds.
+    Applied bond is horizontal from perturbationIndex: perturbationIndex->perturbationIndex+Ly.
+    Measurement bond is specified by ind_i and orientation: h or v (right or up).
+    """
+    Lx = system.Lx
+    Ly = system.Ly
+    ts = system.ts
+    site0 = system.site0
+    indexesMap = system.indexesMap
+    measurementIndex = indexesMap.index(system._xy(ind_i))
+    perturbationIndex = system.perturbationIndex
+    S = system.S
+    magnonModes = system.magnonModes
+    #
+    ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
+    ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
+    JJ = np.zeros(A[0,0].shape,dtype=complex)
+    ind_r = ind_i+1 if orientation=='v' else ind_i+Ly   #-> from i
+    ind_s = perturbationIndex+1 #always vertical        -> from j
+    term_list = ['XYXY','ZYZY','XYYX','ZYYZ','YXXY','YZZY','YXYX','YZYZ']
+    irx,iry = system._xy(ind_r)
+    ts_r = ts[(site0+irx+iry)%2]
+    isx,isy = system._xy(ind_s)
+    ts_s = ts[(site0+isx+isy)%2]
+    ts_list = [ts_i,ts_r,ts_j,ts_s]
+    for i,ops in enumerate(term_list):
+        original_op = ops if i%2==0 else term_list[i-1]
+        list_terms = computeCombinations(ops,[ind_i,ind_r,perturbationIndex,ind_s],'tt00',S)
+        coeff_t = computeCoeffT(ops,original_op,ts_list)
+        if i in [2,3,4,5]:
+            coeff_t *= -1
+        for t in list_terms:
+            contraction = computeContraction(t[1],t[2],t[3],A,B,G,H,magnonModes)
+            JJ += coeff_t * t[0] * contraction
+    return 2*1j*np.imag(JJ)
+
 def generatePairings(elements):
     """
     Here we get all the possible permutation lists for the Wick contraction -> perfect matchings.

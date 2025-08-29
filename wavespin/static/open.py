@@ -7,32 +7,22 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 
+from wavespin.lattice.lattice import latticeClass, hamiltonianClass
 from wavespin.tools import pathFinder as pf
 from wavespin.tools import inputUtils as iu
 from wavespin.static import periodic as pe
 from wavespin.static import openCorrelators
 from wavespin.static import momentumTransformation
 
-class openSystem:
-    def __init__(self, p: iu.openParameters, termsHamiltonian):
-        self.fullParameters = p
-        #Lattice parameters
-        self.Lx = p.Lx
-        self.Ly = p.Ly
-        self.offSiteList = p.offSiteList
-        self.Ns = self.Lx*self.Ly - len(self.offSiteList)
-        self.indexesMap = self._mapSiteIndex()
-        #Hamiltonian parameters
-        self.g1,self.g2,self.d1,self.d2,self.h = termsHamiltonian
-        self.S = 0.5     #spin value
-        self.J_i = (self._get1NNterms(self.g1), self._get2NNterms(self.g2))
-        self.D_i = (self._get1NNterms(self.d1), self._get2NNterms(self.d2))
-        self.h_i = self._getHterms(self.h)
-        self.theta,self.phi = pe.quantizationAxis(self.S,self.J_i,self.D_i,self.h_i)
+class openSystem(hamiltonianClass):
+    def __init__(self, p: iu.openParameters, termsHamiltonian, **kwargs):
+        self.p = p
+        # Construct lattice and Hamiltonian
+        super().__init__(Lx=p.Lx,Ly=p.Ly,offSiteList=p.offSiteList,boundary='open',termsHamiltonian=termsHamiltonian,**kwargs)
+        #
+#        self.thetas,self.phis = self._quantizationAngles()
+        self.theta, self.phi = pe.quantizationAxis(self.S,self.J_i,self.D_i,self.h_i)
         self.ts = pe.computeTs(self.theta,self.phi)       #All t-parameters for A and B sublattice
-        self.excludeZeroMode = p.excludeZeroMode
-        self.saveWf = p.saveWf
-        self.plotWf = p.plotWf
         #XT correlator parameters
         self.correlatorType = p.correlatorType
         self.perturbationSite = p.perturbationSite
@@ -50,51 +40,23 @@ class openSystem:
         self.saveCorrelatorKW = p.saveCorrelatorKW
         self.plotCorrelatorKW = p.plotCorrelatorKW
 
-    def _xy(self, i):
-        return i // self.Ly, i % self.Ly
-
-    def _idx(self, x, y):
-        return x*self.Ly + y
-
-    def _mapSiteIndex(self):
-        """ Here we define a map: from an index between 0 and Ns-1 to (ix,iy) between 0 and Lx/y-1.
-        To each index in the actual used qubits assign the corresponding ix,iy.
-
-        Returns
-        -------
-        indexesMap : list of 2-tuple.
-            Coordinates of sites which are been considered, in order of their index.
+    def _quantizationAngles(self):
+        """ Import the angles from the MC simulation.
         """
-        indexesMap = []
-        for ix in range(self.Lx):
-            for iy in range(self.Ly):
-                if (ix,iy) not in self.offSiteList:
-                    indexesMap.append((ix,iy))
-        return indexesMap
-
-    def _get1NNterms(self,val):
-        vals = np.zeros((self.Lx*self.Ly,self.Lx*self.Ly))
-        for ix in range(self.Lx):
-            for iy in range(self.Ly):
-                ind = self._idx(ix,iy)
-                ind_plus_y = ind+1
-                if ind_plus_y//self.Ly==ind//self.Ly:
-                    vals[ind,ind_plus_y] = vals[ind_plus_y,ind] = val
-                ind_plus_x = ind+self.Ly
-                if ind_plus_x<self.Lx*self.Ly:
-                    vals[ind,ind_plus_x] = vals[ind_plus_x,ind] = val
-        return vals
-
-    def _get2NNterms(self,val):
-        return np.zeros((self.Lx*self.Ly,self.Lx*self.Ly))
-
-    def _getHterms(self,val):
-        vals = np.zeros((self.Lx*self.Ly,self.Lx*self.Ly))
-        for ix in range(self.Lx):
-            for iy in range(self.Ly):
-                ind = self._idx(ix,iy)
-                vals[ind,ind] = -(-1)**(ix+iy) * val
-        return vals
+        argsFn = ('MC',self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns, 'open')
+        dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
+        solutionFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npz')
+        if Path(solutionFn).is_file():
+            Spins = np.load(solutionFn)['Spins']
+            thetas = np.zeros(self.Ns)
+            phis = np.zeros(self.Ns)
+            for i in range(self.Ns):
+                thetas[i], phis[i] = fs.vector_to_polar_angles(self.Spins[i])
+        else:
+            print("Quantization angles for this system (lattice and/or Hamiltonian parameters) has not been computed yet")
+            print("First do the MC simulation, then come back")
+            exit()
+        return thetas, phis
 
     def bogoliubovTransformation(self,verbose=False):
         """ Compute the Bogoliubov transformation for the real-space Hamiltonian.
@@ -117,7 +79,7 @@ class openSystem:
             except:
                 K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-5)
             lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
-            if self.excludeZeroMode:
+            if self.p.excludeZeroMode:
                 lam2[0] = 1
             self.evals = np.sqrt(lam2)         #dispersion -> positive
             #
@@ -126,7 +88,7 @@ class openSystem:
             psi_ = (A+B)@phi_/self.evals       # Problem also here
             self.U_ = 1/2*(phi_+psi_)
             self.V_ = 1/2*(phi_-psi_)
-            if self.saveWf:
+            if self.p.saveWf:
                 if not Path(dataDn).is_dir():
                     print("Creating 'Data/' folder in home directory.")
                     os.system('mkdir '+dataDn)
@@ -138,7 +100,7 @@ class openSystem:
             self.V_ = np.load(transformationFn)['awesomeV']
             self.evals = np.load(transformationFn)['evals']
 
-        if self.excludeZeroMode:       #Put to 0 the eigenstate corresponding to the zero energy mode -> a bit far fetched
+        if self.p.excludeZeroMode:       #Put to 0 the eigenstate corresponding to the zero energy mode -> a bit far fetched
             self.U_[:,0] *= 0
             self.V_[:,0] *= 0
 
@@ -198,7 +160,7 @@ class openSystem:
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
-        txtZeroEnergy = 'without0energy' if self.excludeZeroMode else 'with0energy'
+        txtZeroEnergy = 'without0energy' if self.p.excludeZeroMode else 'with0energy'
         argsFn = ('correlatorXT_rs',self.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy)
         dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
         correlatorFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npy')
@@ -232,13 +194,61 @@ class openSystem:
                 print("Loading real-space correlator from file: "+correlatorFn)
             self.correlatorXT = np.load(correlatorFn)
 
+    def realSpaceCorrelatorBond(self,verbose=False):
+        """ Here we compute the correlator in real space for each bond, like for the jj.
+        """
+        Lx = self.Lx
+        Ly = self.Ly
+        Ns = self.Ns
+        txtZeroEnergy = 'without0energy' if self.p.excludeZeroMode else 'with0energy'
+        argsFn_h = ('correlator_horizontal_bonds',self.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy)
+        argsFn_v = ('correlator_vertical_bonds',self.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy)
+        dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
+        correlatorFn_h = pf.getFilename(*argsFn_h,dirname=dataDn,extension='.npy')
+        correlatorFn_v = pf.getFilename(*argsFn_v,dirname=dataDn,extension='.npy')
+        if not Path(correlatorFn_h).is_file() or Path(correlatorFn_v).is_file():
+            self.correlatorXT_h = np.zeros((Lx-1,Ly,self.nTimes),dtype=complex)
+            self.correlatorXT_v = np.zeros((Lx,Ly-1,self.nTimes),dtype=complex)
+            #
+            U = np.zeros((2*Ns,2*Ns),dtype=complex)
+            U[:Ns,:Ns] = self.U_
+            U[:Ns,Ns:] = self.V_
+            U[Ns:,:Ns] = self.V_
+            U[Ns:,Ns:] = self.U_
+            #Correlator -> can make this faster, we actually only need U_ and V_
+            exp_e = np.exp(-1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
+            A = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[Ns:,Ns:],optimize=True)
+            B = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
+            G = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
+            H = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[Ns:,Ns:],optimize=True)
+            #
+            for ihx in range(Lx-1):
+                for ihy in range(Ly):
+                    ind_i = self._idx(ihx,ihy)
+                    self.correlatorXT_h[ihx,ihy] = openCorrelators.jjCorrelatorBond(self,ind_i,A,B,G,H,'h')
+            for ivx in range(Lx):
+                for ivy in range(Ly-1):
+                    ind_i = self._idx(ivx,ivy)
+                    self.correlatorXT_v[ivx,ivy] = openCorrelators.jjCorrelatorBond(self,ind_i,A,B,G,H,'v')
+            if self.saveCorrelatorXT:
+                if not Path(dataDn).is_dir():
+                    print("Creating 'Data/' folder in home directory.")
+                    os.system('mkdir '+dataDn)
+                np.save(correlatorFn_h,self.correlatorXT_h)
+                np.save(correlatorFn_v,self.correlatorXT_v)
+        else:
+            if verbose:
+                print("Loading real-space bond correlator from file: "+correlatorFn_h)
+            self.correlatorXT_h = np.load(correlatorFn_h)
+            self.correlatorXT_v = np.load(correlatorFn_v)
+
     def momentumSpaceCorrelator(self,verbose=False):
         """ Here we simply Fourier transform the correlator.
         """
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
-        txtZeroEnergy = 'without0energy' if self.excludeZeroMode else 'with0energy'
+        txtZeroEnergy = 'without0energy' if self.p.excludeZeroMode else 'with0energy'
         argsFn = ('correlatorKW_rs',self.correlatorType,self.transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy)
         dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
         correlatorFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npy')
@@ -277,6 +287,8 @@ class openRamp():
             self.rampElements[i].bogoliubovTransformation()
             # Compute Correlators
             self.rampElements[i].realSpaceCorrelator()
+            # Bond correlators
+            self.rampElements[i].realSpaceCorrelatorBond()
 
     def correlatorsKW(self,verbose=False):
         """ Here we Fourier transform the XT correlators and plot them nicely.

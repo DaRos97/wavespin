@@ -1,9 +1,8 @@
-wavespin/static/external*
-
 Data/
 Figures/
-scripts
+scripts/
 
+wavespin/tools/homePath.txt
 
 __pycache__/
 */__pycache__/

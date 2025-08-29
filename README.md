@@ -10,5 +10,7 @@ The tool used is a Holstein-Primakoff transformation with different levels of sp
 
 ## References
 
-## Requirements
+## Requirements and setup
 ![Python](https://img.shields.io/badge/Python-3.9-blue?logo=python&logoColor=white)
+
+Add file `wavespin/tools/homeDn.txt` containing the directory name where to save the data, else it will be saved in the folder where the script is being computed.

@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 import numpy as np
 
 def getFilename(*args,dirname='',extension='',floatPrecision=4):
@@ -51,10 +53,14 @@ def getHomeDirname(cwd,subfolder=''):
     -------
     dirname : str, path of desired directory.
     """
+    scriptPath = os.path.dirname(os.path.abspath(__file__))
     if len(subfolder)>0 and subfolder[-1]!='/':
         raise ValueError("sub-directory name  %s must end with '/'"%subfolder)
-    pos = cwd.find('scripts')
-    if pos==-1:
-        raise ValueError("Script is running outside the WaveSpin folder: "+cwd)
-    dirname = cwd[:pos]+'/'+subfolder
-    return dirname
+    if Path(scriptPath+'/homePath.txt').is_file():
+        with open(scriptPath+'/homePath.txt','r') as f:
+            homeDn = f.readline()[:-1]
+    else:
+        homeDn = cwd
+    return homeDn + subfolder
+
+

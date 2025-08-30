@@ -50,56 +50,45 @@ def plotSitesGrid(system,**kwargs):
     fig.tight_layout()
     plt.show()
 
-def solutionMC(sim,**kwargs):
-    """ Plot theta and phi of each site of the MC solution.
+def plotQuantizationAngles(sim,thetas,phis,**kwargs):
+    """ Plot theta and phi of each site of the lattice.
     """
-    thetas = np.zeros(sim.Ns)
-    phis = np.zeros(sim.Ns)
-    for i in range(sim.Ns):
-        thetas[i], phis[i] = fs.vector_to_polar_angles(sim.Spins[i])
+    verbose = kwargs.get('verbose',False)
+    Lx,Ly = (sim.Lx,sim.Ly)
     fig = plt.figure(figsize=(15,10))
-    X,Y = np.meshgrid(np.arange(sim.Lx),np.arange(sim.Ly),indexing='ij')
-    # 1
-    ax = fig.add_subplot(221,projection='3d')
-    ax.plot_surface(X,Y,thetas.reshape(sim.Lx,sim.Ly),cmap='plasma')
-    ax.set_title("Polar angle",size=20)
-    #2
-    ax = fig.add_subplot(222,projection='3d')
-    ax.plot_surface(X,Y,phis.reshape(sim.Lx,sim.Ly),cmap='plasma')
-    ax.set_title("Azimuthal angle",size=20)
-    #3
-    ax = fig.add_subplot(223,projection='3d')
+    ax = fig.add_subplot(121,projection='3d')
+    func = thetas.reshape(Lx,Ly)
+    X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
+    ax.plot_surface(X,Y,func,cmap='plasma')
+    #
+    ax = fig.add_subplot(122,projection='3d')
+    for i in range(sim.Ns):
+        ix,iy = sim._xy(i)
+        if (ix+iy)%2==1:
+            thetas[i] += np.pi
+    func2 = thetas.reshape(Lx,Ly)
     ax.plot_surface(X,Y,
-                    np.pi/2-abs(thetas-np.pi/2).reshape(sim.Lx,sim.Ly),
+                    func2,
                     cmap='plasma',
                     alpha=0.8
                     )
-    theta = sim.periodicTheta
     ax.plot_surface(X,Y,
-                    np.ones((sim.Lx,sim.Ly))*theta,
-                    color='green',
-                    alpha=0.3
+                    np.ones((Lx,Ly))*sim.periodicTheta,
+                    color='g',
+                    alpha=0.4
                     )
-    ax.set_title("Polar angle compare to analytic",size=20)
-    #4
-    ax = fig.add_subplot(224,projection='3d')
-    func = phis.reshape(sim.Lx,sim.Ly)
-    func -= (np.max(func)-np.min(func))/2 + np.min(func)
-    ax.plot_surface(X,Y,abs(func)-np.pi/2,cmap='plasma')
-    ax.set_title("Azimuthal angle deviations",size=20)
-
-    # Other stuff
-    plt.suptitle("Solution of Montecarlo simulation",size=20)
-    saveFigure = kwargs.get('saveFigure',False)
-    if saveFigure:
-        argsFn = ('MC_solution',sim.Lx,sim.Ly,sim.Ns,sim.g1,sim.g2,sim.d1,sim.d2,sim.h)
-        figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
-        figureFn = pf.getFilename(*argsFn,dirname=figureDn,extension='.png')
-        if not Path(figureDn).is_dir():
+    if sim.p.savePlotSolution:
+        argsFn = (sim.txtSim+'_solution',sim.Lx,sim.Ly,sim.Ns,sim.g1,sim.g2,sim.d1,sim.d2,sim.h,sim.boundary)
+        figureFn = pf.getFilename(*argsFn,dirname=sim.figureDn,extension='.png')
+        if not Path(sim.figureDn).is_dir():
             print("Creating 'Figures/' folder in home directory.")
-            os.system('mkdir '+figureDn)
+            os.system('mkdir '+sim.figureDn)
+        if verbose:
+            print("Saving picture to file: "+figureFn)
         fig.savefig(figureFn)
 
-    plt.show()
+    showFig = kwargs.get('showFigure',False)
+    if showFig:
+        plt.show()
 
 

@@ -1,12 +1,11 @@
-""" Here we compute the classical arrangement of spins in a lattice using a Montecarlo simulation.
+""" Here we show how to perform the quantization angle minimization for a planar system.
 """
 
 import numpy as np
 import os, sys, argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.tools.inputUtils import importClassicParameters as importParameters
-from wavespin.lattice.lattice import latticeClass
-from wavespin.classicSpins.montecarlo import *
+from wavespin.classicSpins.minimization import *
 from wavespin.plots import fancyLattice
 
 """ Parameters and options """
@@ -26,24 +25,22 @@ gInitial = 0
 gFinal = 20      #factor of 2 from experiment due to s^xs^x -> s^+s^-
 hInitial = 15
 hFinal = 0
-pValue = 0.7
-g_p = (1-pValue)*gInitial + pValue*gFinal
-h_p = (1-pValue)*hInitial + pValue*hFinal
-parametersHamiltonian = (g_p,0,0,0,h_p)
+for pValue in np.linspace(0.1,1,10):
+    print('p_value = %.1f'%pValue)
+    g_p = (1-pValue)*gInitial + pValue*gFinal
+    h_p = (1-pValue)*hInitial + pValue*hFinal
+    parametersHamiltonian = (g_p,0,0,0,h_p)
 
-""" Initialize and run Montecarlo simulation """
-sim = XXZJ1J2MC(parameters,parametersHamiltonian)
-hist = sim.anneal(verbose=verbose)
-E_over_N = sim.total_energy() / sim.Ns
-m = sim.magnetization()
-ms = sim.staggered_mz()
-print("Final results:")
-print(f"E/N = {E_over_N:.8f}")
-print(f"m = {m}")
-print(f"m_staggered_z = {ms:.6f}")
+    sim = minHam(parameters,parametersHamiltonian)
 
-kwargs = {'saveFigure':parameters.savePlotSolution}
-fancyLattice.solutionMC(sim,**kwargs)
+    res = sim.minimization(verbose=verbose)
+
+    thetas = res
+    phis = np.zeros(sim.Ns)
+    options = {'showFigure':False,
+               'verbose':verbose
+               }
+    fancyLattice.plotQuantizationAngles(sim,thetas,phis,**options)
 
 
 

@@ -1,0 +1,8 @@
+# Input file for montecarlo simulation
+# Use '#' to comment a line and ':' to assign a value
+Lx:                 9
+Ly:                 7
+plotSites:          False
+boundary:           open
+saveSolution:       True
+savePlotSolution:   True

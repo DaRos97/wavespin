@@ -70,7 +70,7 @@ def solutionMC(sim,**kwargs):
     #3
     ax = fig.add_subplot(223,projection='3d')
     ax.plot_surface(X,Y,
-                    abs(thetas-np.pi/2).reshape(sim.Lx,sim.Ly),
+                    np.pi/2-abs(thetas-np.pi/2).reshape(sim.Lx,sim.Ly),
                     cmap='plasma',
                     alpha=0.8
                     )
@@ -80,7 +80,7 @@ def solutionMC(sim,**kwargs):
                     color='green',
                     alpha=0.3
                     )
-    ax.set_title("Polar angle deviations from pi/2",size=20)
+    ax.set_title("Polar angle compare to analytic",size=20)
     #4
     ax = fig.add_subplot(224,projection='3d')
     func = phis.reshape(sim.Lx,sim.Ly)

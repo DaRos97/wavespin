@@ -1,7 +1,8 @@
 # Input file for static wavefunction
 # Use '#' to comment a line and ':' to assign a value
-Lx: 9
-Ly: 7
+Lx: 15
+Ly: 16
 plotSites: False
-saveWf: True
+saveWf: False
 plotWf: True
+uniformQA: False

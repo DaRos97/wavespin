@@ -2,12 +2,12 @@
 Use with input_5.txt
 """
 
-
 import numpy as np
 import os, sys, argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.tools.inputUtils import importOpenParameters as importParameters
-from wavespin.static.open import openSystem, openRamp
+from wavespin.static.open import openHamiltonian
+from wavespin.lattice.lattice import latticeClass
 from wavespin.plots import fancyLattice
 from wavespin.plots import rampPlots
 
@@ -20,16 +20,16 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 if parameters.plotSites:
-    simulation = openSystem(parameters)
-    fancyLattice.plotSitesGrid(simulation)
+    lattice = latticeClass(parameters)
+    fancyLattice.plotSitesGrid(lattice)
 
 """ Initialie system """
 g1 = 20
 h = 0
-system = openSystem(parameters,(g1,0,0,0,h))
+system = openHamiltonian(parameters,(g1,0,0,0,h))
 
 """ Compute Bogoliubov wavefunctions """
-system.bogoliubovTransformation(verbose=verbose)
+system.diagonalize(verbose=verbose)
 
 if parameters.plotWf:
     """ Plot wavefunctions """

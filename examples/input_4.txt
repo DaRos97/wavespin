@@ -1,15 +1,17 @@
 # Input file for static correlator
 # Use '#' to comment a line and ':' to assign a value
 correlatorType: zz
-transformType: dat
+transformType: dct
 Lx: 9
 Ly: 7
 perturbationSite: (3,4)
 magnonModes: (1,2,3,4)
 excludeZeroMode: False
 plotSites: False
-saveWf: True
+saveWf: False
 plotWf: False
-saveCorrelatorXT: True
-saveCorrelatorKW: True
+saveCorrelatorXT: False
+saveCorrelatorKW: False
 plotCorrelatorKW: True
+savePlotCorrelatorKW: False
+uniformQA: True

@@ -24,7 +24,7 @@ class openParameters:
     Lx: int = 6                         #
     Ly: int = 7                         #
     offSiteList: tuple = ()             #
-    perturbationSite: tuple = (2,3)     #
+    perturbationSite: tuple = (0,0)     #
     magnonModes: tuple = (1,2,3,4)      #
     excludeZeroMode: bool = False       #
     plotSites: bool = False             #
@@ -33,7 +33,8 @@ class openParameters:
     saveCorrelatorXT: bool = False      #
     saveCorrelatorKW: bool = False      #
     plotCorrelatorKW: bool = False      #
-    savePlotCorrelatorKW: bool = False#
+    savePlotCorrelatorKW: bool = False  #
+    uniformQA: bool = True              #
 
 def importOpenParameters(inputFn,**kwargs):
     """ Function to import all the parameters for the calculation from the input file and store the in the class openParameters.

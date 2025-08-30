@@ -7,7 +7,9 @@ import numpy as np
 import os, sys, argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.tools.inputUtils import importOpenParameters as importParameters
+from wavespin.static.open import openHamiltonian
 from wavespin.static.open import openSystem, openRamp
+from wavespin.lattice.lattice import latticeClass
 from wavespin.plots import fancyLattice
 from wavespin.plots import rampPlots
 
@@ -20,8 +22,8 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 if parameters.plotSites:
-    simulation = openSystem(parameters)
-    fancyLattice.plotSitesGrid(simulation)
+    lattice = latticeClass(parameters)
+    fancyLattice.plotSitesGrid(lattice)
 
 """ Define the parameters of the system at different 'times' """
 nP = 10     #number of parameters computed in the "ramp" -> analogue to stop ratio
@@ -49,7 +51,7 @@ if parameters.plotCorrelatorKW:
                          kwargs={
                              'numKbins' : 50,
                              'ylim' : 70,            #MHz
-                             'saveFigure' : False,
+                             'saveFigure' : parameters.savePlotCorrelatorKW,
                              'showFigure' : True,
                          }
                          )

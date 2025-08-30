@@ -45,7 +45,7 @@ def plotRampKW(ramp, **kwargs):
     """ Plot frequency over mod k for the different ramp parameters.
     """
     sys0 = ramp.rampElements[0]
-    transformType = sys0.transformType
+    transformType = sys0.p.transformType
     nP = ramp.nP
     Lx = sys0.Lx
     Ly = sys0.Ly
@@ -88,7 +88,7 @@ def plotRampKW(ramp, **kwargs):
                 txtMagnon += '-'
     else:
         txtMagnon = ''
-    title = 'Commutator: ' + sys0.correlatorType + ', momentum transform: ' + transformType + txtMagnon
+    title = 'Commutator: ' + sys0.p.correlatorType + ', momentum transform: ' + transformType + txtMagnon
     plt.suptitle(title,fontsize=20)
     ylim = kwargs.get('ylim',70)
     vmax = np.max(P_k_omega_p)
@@ -125,16 +125,14 @@ def plotRampKW(ramp, **kwargs):
     saveFigure = kwargs.get('saveFigure',False)
     if saveFigure:
         argsFn = ('fig_correlatorKW_rs',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
-        figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
-        figureFn = pf.getFilename(*argsFn,dirname=figureDn,extension='.png')
-        if not Path(figureDn).is_dir():
+        figureFn = pf.getFilename(*argsFn,dirname=self.figureDn,extension='.png')
+        if not Path(self.figureDn).is_dir():
             print("Creating 'Figures/' folder in home directory.")
-            os.system('mkdir '+dataDn)
+            os.system('mkdir '+self.figureDn)
         fig.savefig(figureFn)
         if transformType=='dat':
             argsFn = ('fig_correlatorKW_rs_momenta',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
-            figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
-            figureFn = pf.getFilename(*argsFn,dirname=figureDn,extension='.png')
+            figureFn = pf.getFilename(*argsFn,dirname=self.figureDn,extension='.png')
             fig.savefig(figureFn)
     showFigure = kwargs.get('showFigure',True)
     if showFigure:

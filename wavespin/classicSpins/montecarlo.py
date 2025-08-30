@@ -1,32 +1,33 @@
 """ Functions for montecarlo simulation of the classical ground state.
-
 """
 
 import numpy as np
 from numpy.random import default_rng
 from pathlib import Path
 
-from wavespin.lattice.lattice import latticeClass, hamiltonianClass
+from wavespin.lattice.lattice import latticeClass
 from wavespin.tools.inputUtils import classicParameters
-from wavespin.static.openCorrelators import get_nn, get_nnn
 import wavespin.tools.pathFinder as pf
 from wavespin.static.periodic import quantizationAxis
 
 rng = default_rng()
 
-class XXZJ1J2MC(hamiltonianClass):
-    def __init__(self, p: classicParameters, termsHamiltonian, **kwargs):
+class XXZJ1J2MC(latticeClass):
+    def __init__(self, p: classicParameters, termsHamiltonian):
         self.p = p
         # Construct lattice and Hamiltonian
-        super().__init__(Lx=p.Lx,Ly=p.Ly,offSiteList=p.offSiteList,boundary=p.boundary,termsHamiltonian=termsHamiltonian,**kwargs)
+        super().__init__(p,boundary=p.boundary)
         # Random number generator
-        self.rng = default_rng(p.seed)
+        self.rng = default_rng(np.random.randint(1000))      #p.seed
+        # Hamiltonian parameters
+        self.g1,self.g2,self.d1,self.d2,self.h = termsHamiltonian
+        self.planar = True if (self.d1==0 and self.d2==0) else False
+        self.S = 1/2
+        self.periodicTheta, self.periodicPhi = quantizationAxis(self.S,(self.g1,self.g2),(self.d1,self.d2),self.h)
         # Spins as unit vectors (N,3)
         self.Spins = self._random_unit_vectors(self.Ns)
         # Staggering factor eta_i = (-1)^(x+y)
         self.eta = self._staggering()
-        # Hamiltonian parameters
-        self.periodicTheta, self.periodicPhi = quantizationAxis(0.5,(self.g1,self.g2),(self.d1,self.d2),self.h)
         # Anisotropy matrix A = diag(1,1,g) -> x,y,z
         self.A1 = np.diag([1.0, 1.0, self.d1])
         self.A2 = np.diag([1.0, 1.0, self.d2])
@@ -35,41 +36,65 @@ class XXZJ1J2MC(hamiltonianClass):
         eta = np.empty(self.Ns, dtype=np.int8)
         for i in range(self.Ns):
             x, y = self._xy(i)
-            eta[i] = 1 if ((x + y) % 2 == 0) else -1
+            eta[i] = (-1)**((x+y+1) % 2)
         return eta
 
     # ---------- spin helpers ----------
     def _random_unit_vectors(self, n):
-        v = self.rng.normal(size=(n,3))
-        v /= np.linalg.norm(v, axis=1, keepdims=True)
+        """ Initial random configuration.
+        """
+        if self.planar:
+            t = self.rng.normal(size=n)
+            if 0:
+                t = np.ones(n)*np.pi/2
+                for i in range(n):
+                    ix,iy = self._xy(i)
+                    t[i] *= (-1)**(ix+iy)
+            v = np.array([np.sin(t),np.zeros(n),np.cos(t)]).T
+        else:
+            v = self.rng.normal(size=(n,3))
+            v /= np.linalg.norm(v, axis=1, keepdims=True)
         return v
 
     def _random_small_rotation(self, s):
-        # Propose a random small rotation of vector s with angle ~ proposal_step
-        # Generate a random axis perpendicular to s
-        axis = self.rng.normal(size=3)
-        axis -= axis.dot(s) * s
-        n = np.linalg.norm(axis)
-        if n < 1e-12:
-            return s  # rare
-        axis /= n
-        # Small angle around this axis
-        angle = self.p.proposal_step * (1.0 + 0.2*self.rng.standard_normal())
+        """ Propose a random small rotation of vector s with angle ~ proposal_step
+        Generate a random axis perpendicular to s (if the system is not planar).
+        """
+        if self.planar:
+#            axis = np.array([0,1,0])    #y-axis rotation for planar systems
+            angle = np.random.rand()*np.pi*2*self.p.proposal_step
+            R = np.array([  [np.cos(angle),0,np.sin(angle)],
+                            [0,1,0],
+                            [-np.sin(angle),0,np.cos(angle)],
+                          ])
+            return R @ s
+        else:
+            axis = self.rng.normal(size=3)
+            axis -= axis.dot(s) * s
+            n = np.linalg.norm(axis)
+            if n < 1e-12:
+                return s  # rare
+            axis /= n
+            # Small angle around this axis
+            angle = self.p.proposal_step * (1.0 + 0.2*self.rng.standard_normal())
         ca, sa = np.cos(angle), np.sin(angle)
         # Rodrigues' formula: rotate s around 'axis' by 'angle'
         return ca * s + sa * np.cross(axis, s) + (1 - ca) * (axis * (axis @ s))
 
     # ---------- energy pieces ----------
     def _pair_energy_nn(self, si, sj):
-        # si^T A sj = SxSx + SySy + g SzSz
-        return si @ (self.A1 @ sj)
+        """ si^T A sj = SxSx + SySy + g SzSz.
+        """
+        return si @ (self.A1 @ sj) * self.S**2
 
     def _pair_energy_nnn(self, si, sj):
-        # si^T A sj = SxSx + SySy + g SzSz
-        return si @ (self.A2 @ sj)
+        """ si^T A sj = SxSx + SySy + g SzSz.
+        """
+        return si @ (self.A2 @ sj) * self.S**2
 
     def local_energy(self, i, s=None):
-        # Energy contributions involving site i only (avoid double counting by halving bonds elsewhere if you sum over all sites)
+        """ Energy contributions involving site i only (avoid double counting by halving bonds elsewhere if you sum over all sites).
+        """
         if s is None:
             s = self.Spins[i]
         g1, g2, h = self.g1, self.g2, self.h
@@ -78,33 +103,43 @@ class XXZJ1J2MC(hamiltonianClass):
             e += g1 * self._pair_energy_nn(s, self.Spins[j])
         for k in self.NNN[i]:
             e += g2 * self._pair_energy_nnn(s, self.Spins[k])
-        e += -h * self.eta[i] * s[2]
+        e += h * self.eta[i] * s[2] * self.S
         return e
 
     def total_energy(self):
+        """ Compute total energy.
+        Bonds each counted twice -> multiply by 1/2.
+        """
         g1, g2, h = self.g1, self.g2, self.h
         E = 0.0
-        # Bonds each counted twice -> multiply by 0.5
+#        nnE = 0
         for i in range(self.Ns):
             si = self.Spins[i]
-            E += 0.5 * g1 * sum(self._pair_energy_nn(si, self.Spins[j]) for j in self.NN[i])
-            E += 0.5 * g2 * sum(self._pair_energy_nnn(si, self.Spins[k]) for k in self.NNN[i])
+#            nnE += 1/2 * g1 * sum(self._pair_energy_nn(si, self.Spins[j]) for j in self.NN[i])
+            E += 1/2 * g1 * sum(self._pair_energy_nn(si, self.Spins[j]) for j in self.NN[i])
+            E += 1/2 * g2 * sum(self._pair_energy_nnn(si, self.Spins[k]) for k in self.NNN[i])
+#        print("nn energy: ",nnE)
+#        input()
         E += -h * np.sum(self.eta * self.Spins[:,2])
         return E
 
     def local_field(self, i):
-        # Effective field h_eff so that E_i = S_i · h_eff
+        """ Compute the local field:
+        Effective field h_eff so that E_i = S_i · h_eff
+        """
         g1, g2, h = self.g1, self.g2, self.h
         h_eff = np.zeros(3)
         # Anisotropic neighbor contribution
         h_eff += g1 * (self.A1 @ self.Spins[self.NN[i]].T).sum(axis=1)
         h_eff += g2 * (self.A2 @ self.Spins[self.NNN[i]].T).sum(axis=1)
         # Staggered field term contributes (0,0,-h*eta)
-        h_eff += np.array([0.0, 0.0, -h * self.eta[i]])
+        h_eff += np.array([0.0, 0.0, h * self.eta[i]])
         return h_eff
 
     # ---------- MC sweeps ----------
     def metropolis_sweep(self, T):
+        """ Single metropolis sweep.
+        """
         accepts = 0
         for _ in range(self.Ns):
             i = int(self.rng.integers(self.Ns))
@@ -117,7 +152,9 @@ class XXZJ1J2MC(hamiltonianClass):
         return accepts / self.Ns
 
     def overrelaxation_sweep(self):
-        # Reflect spin i about local field h_eff: s' = 2 (s·h) h/||h||^2 - s
+        """ Sweep of overrelaxation:
+        Reflect spin i about local field h_eff: s' = 2 (s·h) h/||h||^2 - s
+        """
         for i in range(self.Ns):
             h = self.local_field(i)
             hn2 = h @ h
@@ -128,44 +165,24 @@ class XXZJ1J2MC(hamiltonianClass):
             # normalize to be safe
             self.Spins[i] = s_new / np.linalg.norm(s_new)
 
-    # ---------- measurements ----------
-    def magnetization(self):
-        return self.Spins.mean(axis=0)
-
-    def staggered_mz(self):
-        return float((self.eta * self.Spins[:,2]).mean())
-
-    def structure_factor(self, component='z'):
-        # Compute S(q) for chosen component ('x','y','z' or 'tot')
-        Lx = self.Lx
-        Ly = self.Ly
-        coords = np.indices((Lx, Ly))
-        kx = 2*np.pi*np.fft.fftfreq(Lx)
-        ky = 2*np.pi*np.fft.fftfreq(Ly)
-        if component == 'tot':
-            field = np.linalg.norm(self.Spins.reshape(Lx, Ly, 3), axis=2)
-        else:
-            comp = {'x':0,'y':1,'z':2}[component]
-            field = self.Spins[:, comp].reshape(Lx, Ly)
-        F = np.fft.fft2(field)
-        S_q = (F * np.conj(F)).real / self.Ns
-        return np.fft.fftshift(S_q), np.fft.fftshift(kx), np.fft.fftshift(ky)
-
     # ---------- annealing runner ----------
     def sweeps_at_T(self, T):
-        # Increase sweeps as we cool
+        """ Compute number of sweeps at given temperature:
+        Increase sweeps as we cool.
+        Linear interpolation in log T
+        """
         hi, lo = self.p.sweeps_per_T_high, self.p.sweeps_per_T_low
-        # linear interpolation in log T
         t = (np.log(T) - np.log(self.p.T_min)) / (np.log(self.p.T_max) - np.log(self.p.T_min) + 1e-12)
         t = np.clip(t, 0.0, 1.0)
         return int(lo + (hi - lo) * t)
 
     def anneal(self, verbose=False):
-        """ Perform annealing to get the best configuration S.)
+        """ Perform annealing to get the best configuration S.
         """
-        argsFn = ('MC',self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns, self.p.boundary)
-        dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
-        solutionFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npz')
+        print("Analytic energy: ",-self.S**2*self.g1*2*np.sin(self.periodicTheta)**2-self.h*self.S*np.cos(self.periodicTheta))
+        #
+        argsFn = ('MC_',self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,self.p.boundary)
+        solutionFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
         if not Path(solutionFn).is_file():
             T = self.p.T_max
             best_E = np.inf
@@ -195,14 +212,43 @@ class XXZJ1J2MC(hamiltonianClass):
                 self.Spins = best_S
             history = np.array(history)
             if self.p.saveSolution:
-                if not Path(dataDn).is_dir():
+                if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in home directory.")
-                    os.system('mkdir '+dataDn)
+                    os.system('mkdir '+self.dataDn)
                 np.savez(solutionFn,Spins=self.Spins,history=history)
         else:
             self.Spins = np.load(solutionFn)['Spins']
             history = np.load(solutionFn)['history']
         return history
+
+    # ---------- measurements ----------
+    def magnetization(self):
+        """ Compute total magnetization.
+        """
+        return self.Spins.mean(axis=0)
+
+    def staggered_mz(self):
+        """ Compute staggered magnetization.
+        """
+        return float((self.eta * self.Spins[:,2]).mean())
+
+    def structure_factor(self, component='z'):
+        """ Compute static structure factor for chosen component of the spin ('x','y','z' or 'tot').
+        """
+        Lx = self.Lx
+        Ly = self.Ly
+        coords = np.indices((Lx, Ly))
+        kx = 2*np.pi*np.fft.fftfreq(Lx)
+        ky = 2*np.pi*np.fft.fftfreq(Ly)
+        if component == 'tot':
+            field = np.linalg.norm(self.Spins.reshape(Lx, Ly, 3), axis=2)
+        else:
+            comp = {'x':0,'y':1,'z':2}[component]
+            field = self.Spins[:, comp].reshape(Lx, Ly)
+        F = np.fft.fft2(field)
+        S_q = (F * np.conj(F)).real / self.Ns
+        return np.fft.fftshift(S_q), np.fft.fftshift(kx), np.fft.fftshift(ky)
+
 
 
 

@@ -2,19 +2,23 @@
 """
 
 import numpy as np
+from wavespin.tools import pathFinder as pf
+from pathlib import Path
 
 class latticeClass():
-    def __init__(self,Lx,Ly,offSiteList,boundary,**kwargs):
-        super().__init__(**kwargs)
-        self.Lx = Lx
-        self.Ly = Ly
-        self.offSiteList = offSiteList
+    def __init__(self,p,boundary='periodic'):
+        self.Lx = p.Lx
+        self.Ly = p.Ly
+        self.offSiteList = p.offSiteList
         self.indexesMap = self._mapSiteIndex()
-        self.Ns = Lx*Ly - len(offSiteList)
+        self.Ns = p.Lx*p.Ly - len(p.offSiteList)
         self.boundary = boundary
         # Precompute neighbors
         self.NN = self._build_nn()
         self.NNN = self._build_nnn()
+        # Directory names
+        self.dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
+        self.figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
 
     def _xy(self, i):
         return i // self.Ly, i % self.Ly
@@ -107,38 +111,4 @@ class latticeClass():
         return indexesMap
 
 
-class hamiltonianClass(latticeClass):
-    def __init__(self,termsHamiltonian,**kwargs):
-        super().__init__(**kwargs)
-        #Hamiltonian parameters
-        self.g1,self.g2,self.d1,self.d2,self.h = termsHamiltonian
-        self.S = 0.5     #spin value
-        self.J_i = (self._get1NNterms(self.g1), self._get2NNterms(self.g2))
-        self.D_i = (self._get1NNterms(self.d1), self._get2NNterms(self.d2))
-        self.h_i = self._getHterms(self.h)
-
-    def _get1NNterms(self,val):
-        """ Can probably substitute this with the functions in latticeClass. """
-        vals = np.zeros((self.Lx*self.Ly,self.Lx*self.Ly))
-        for ix in range(self.Lx):
-            for iy in range(self.Ly):
-                ind = self._idx(ix,iy)
-                ind_plus_y = ind+1
-                if ind_plus_y//self.Ly==ind//self.Ly:
-                    vals[ind,ind_plus_y] = vals[ind_plus_y,ind] = val
-                ind_plus_x = ind+self.Ly
-                if ind_plus_x<self.Lx*self.Ly:
-                    vals[ind,ind_plus_x] = vals[ind_plus_x,ind] = val
-        return vals
-
-    def _get2NNterms(self,val):
-        return np.zeros((self.Lx*self.Ly,self.Lx*self.Ly))
-
-    def _getHterms(self,val):
-        vals = np.zeros((self.Lx*self.Ly,self.Lx*self.Ly))
-        for ix in range(self.Lx):
-            for iy in range(self.Ly):
-                ind = self._idx(ix,iy)
-                vals[ind,ind] = -(-1)**(ix+iy) * val
-        return vals
 

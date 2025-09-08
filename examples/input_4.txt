@@ -8,10 +8,10 @@ perturbationSite: (3,4)
 magnonModes: (1,2,3,4)
 excludeZeroMode: False
 plotSites: False
-saveWf: False
+saveWf: True
 plotWf: False
 saveCorrelatorXT: False
 saveCorrelatorKW: False
 plotCorrelatorKW: True
 savePlotCorrelatorKW: False
-uniformQA: True
+uniformQA: False

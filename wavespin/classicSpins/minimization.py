@@ -94,7 +94,7 @@ class minHam(latticeClass):
                 x0 = x_initial,
                 bounds = bounds,
                 method = 'Nelder-Mead',
-                tol = 1e-3,
+                tol = 1e-4,
                 options= {
                     'disp':verbose,
                     'maxiter':1e10}

@@ -23,6 +23,7 @@ class openHamiltonian(latticeClass):
         self.J_i = (self._NNterms(self.g1), self._NNNterms(self.g2))
         self.D_i = (self._NNterms(self.d1), self._NNNterms(self.d2))
         self.h_i = self._Hterms(self.h)
+        self.realSpaceHamiltonian = self._realSpaceHamiltonian()
 
     def _NNterms(self,val):
         """ Construct Ns,Ns matrix for real space Hamiltonian using the lattice nn.
@@ -58,12 +59,15 @@ class openHamiltonian(latticeClass):
             self.thetas = np.ones(self.Ns)*self.theta
             self.phis = np.ones(self.Ns)*self.phi
         else:
-            argsFn = ('MC_solution',self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns)
-            anglesFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
+            argsFn = ('minimization_solution',self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,'open')
+            anglesFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
             if Path(anglesFn).is_file():
-                self.thetas = np.load(anglesFn)['thetas']
-                self.phis = np.load(anglesFn)['phis']
-                print("importing angles")
+                self.thetas = np.load(anglesFn)
+                for i in range(self.Ns):
+                    ix,iy = self._xy(i)
+                    if (ix+iy)%2==1:
+                        self.thetas[i] += np.pi
+                self.phis = np.zeros(self.Ns)
             else:
                 print("File of quantization axis angles not found: "+anglesFn)
                 print("Compute it then come back here.")
@@ -127,7 +131,7 @@ class openHamiltonian(latticeClass):
             nn[:,ind] *= 0
             nn[ind,:] *= 0
 
-    def realSpaceHamiltonian(self):
+    def _realSpaceHamiltonian(self):
         """
         Compute the real space Hamiltonian -> (2Ns x 2Ns).
         Conventions for the real space wavefunction and parameters are in the notes.
@@ -187,7 +191,7 @@ class openHamiltonian(latticeClass):
         argsFn = ('bogoliubov_rs',self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns)
         transformationFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
         if not Path(transformationFn).is_file():
-            hamiltonian = self.realSpaceHamiltonian()
+            hamiltonian = self.realSpaceHamiltonian
             if np.max(np.absolute(hamiltonian-hamiltonian.conj()))>1e-5:
                 raise ValueError("Hamiltonian is not real! Procedure might be wrong")
             # Para-diagonalization, see notes (appendix) for details
@@ -196,7 +200,7 @@ class openHamiltonian(latticeClass):
             try:
                 K = scipy.linalg.cholesky(A-B)
             except:
-                K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-5)
+                K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-4)
             lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
             if self.p.excludeZeroMode:
                 lam2[0] = 1

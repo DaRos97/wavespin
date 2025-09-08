@@ -24,20 +24,28 @@ if parameters.plotSites:
     fancyLattice.plotSitesGrid(lattice)
 
 """ Initialie system """
-g1 = 20
-h = 0
-system = openHamiltonian(parameters,(g1,0,0,0,h))
+""" Hamiltonian parameters """
+gInitial = 0
+gFinal = 20      #factor of 2 from experiment due to s^xs^x -> s^+s^-
+hInitial = 15
+hFinal = 0
+for pValue in np.linspace(0.1,1,10):
+    print('p_value = %.1f'%pValue)
+    g_p = (1-pValue)*gInitial + pValue*gFinal
+    h_p = (1-pValue)*hInitial + pValue*hFinal
+    parametersHamiltonian = (g_p,0,0,0,h_p)
+    system = openHamiltonian(parameters,parametersHamiltonian)
 
-""" Compute Bogoliubov wavefunctions """
-system.diagonalize(verbose=verbose)
+    """ Compute Bogoliubov wavefunctions """
+    system.diagonalize(verbose=verbose)
 
-if parameters.plotWf:
-    """ Plot wavefunctions """
-    rampPlots.plotWf(system,nModes=16)
-    """ Plot wavefunctions compared to cosines """
-    rampPlots.plotWfCos(system,nModes=6)
-    """ Plot extracted momentum points from Bogoliubov modes """
-    rampPlots.plotBogoliubovMomenta(system)
+    if parameters.plotWf:
+        """ Plot wavefunctions """
+        rampPlots.plotWf(system,nModes=16)
+        """ Plot wavefunctions compared to cosines """
+        rampPlots.plotWfCos(system,nModes=6)
+        """ Plot extracted momentum points from Bogoliubov modes """
+        rampPlots.plotBogoliubovMomenta(system)
 
 
 

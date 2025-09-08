@@ -37,7 +37,7 @@ for pValue in np.linspace(0.1,1,10):
 
     thetas = res
     phis = np.zeros(sim.Ns)
-    options = {'showFigure':False,
+    options = {'showFigure':True,
                'verbose':verbose
                }
     fancyLattice.plotQuantizationAngles(sim,thetas,phis,**options)

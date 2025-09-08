@@ -31,9 +31,9 @@ def getFilename(*args,dirname='',extension='',floatPrecision=4):
             filename += str(a)
         elif t in [float, np.float32, np.float64]:
             filename += f"{a:.{floatPrecision}f}"
-        elif t==dict and 0:
-            args2 = np.copy(list(a.values()))
-            filename += getFilename(*args2,floatPrecision)
+        elif t==tuple:
+            for it in a:
+                filename += str(it)
         else:
             raise TypeError("Parameter %s has unsupported type: %s"%(a,t))
         if not i==len(args)-1:

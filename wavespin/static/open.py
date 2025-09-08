@@ -55,7 +55,6 @@ class openHamiltonian(latticeClass):
         from wavespin.static.periodic import quantizationAxis
         self.theta, self.phi = quantizationAxis(self.S,self.J_i,self.D_i,self.h_i)
         if self.p.uniformQA:
-            print("Uniform angles")
             self.thetas = np.ones(self.Ns)*self.theta
             self.phis = np.ones(self.Ns)*self.phi
         else:
@@ -238,7 +237,7 @@ class openSystem(openHamiltonian):
         #
         self.site0 = 0 #if h_t_i[0,0,0]<0 else 1     #decide sublattice A and B of reference lattice site
         self.fullTimeMeasure = 0.8     #measure time in ms
-        self.nTimes = 401        #time steps after ramp for the measurement
+        self.nTimes = 801        #time steps after ramp for the measurement
         self.measureTimeList = np.linspace(0,self.fullTimeMeasure,self.nTimes)
         #KW correlator parameters
         self.nOmega = 2000
@@ -250,7 +249,7 @@ class openSystem(openHamiltonian):
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.excludeZeroMode else 'with0energy'
-        argsFn = ('correlatorXT_rs',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy)
+        argsFn = ('correlatorXT_rs',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.magnonModes)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorXT = np.zeros((Lx,Ly,self.nTimes),dtype=complex)
@@ -289,8 +288,8 @@ class openSystem(openHamiltonian):
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.excludeZeroMode else 'with0energy'
-        argsFn_h = ('correlator_horizontal_bonds',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy)
-        argsFn_v = ('correlator_vertical_bonds',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy)
+        argsFn_h = ('correlator_horizontal_bonds',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.magnonModes)
+        argsFn_v = ('correlator_vertical_bonds',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.magnonModes)
         correlatorFn_h = pf.getFilename(*argsFn_h,dirname=self.dataDn,extension='.npy')
         correlatorFn_v = pf.getFilename(*argsFn_v,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn_h).is_file() or Path(correlatorFn_v).is_file():
@@ -317,7 +316,7 @@ class openSystem(openHamiltonian):
                 for ivy in range(Ly-1):
                     ind_i = self._idx(ivx,ivy)
                     self.correlatorXT_v[ivx,ivy] = openCorrelators.jjCorrelatorBond(self,ind_i,A,B,G,H,'v')
-            if self.p.saveCorrelatorXT:
+            if self.p.saveCorrelatorXTbonds:
                 if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in home directory.")
                     os.system('mkdir '+dataDn)
@@ -336,7 +335,7 @@ class openSystem(openHamiltonian):
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.excludeZeroMode else 'with0energy'
-        argsFn = ('correlatorKW_rs',self.p.correlatorType,self.p.transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy)
+        argsFn = ('correlatorKW_rs',self.p.correlatorType,self.p.transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.magnonModes)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorKW = momentumTransformation.dicTransformType[self.p.transformType](self)
@@ -374,7 +373,8 @@ class openRamp():
             # Compute Correlators
             self.rampElements[i].realSpaceCorrelator(verbose=verbose)
             # Bond correlators
-            self.rampElements[i].realSpaceCorrelatorBond(verbose=verbose)
+            if self.rampElements[i].p.saveCorrelatorXTbonds:
+                self.rampElements[i].realSpaceCorrelatorBond(verbose=verbose)
 
     def correlatorsKW(self,verbose=False):
         """ Here we Fourier transform the XT correlators and plot them nicely.

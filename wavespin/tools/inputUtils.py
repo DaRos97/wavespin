@@ -31,6 +31,7 @@ class openParameters:
     saveWf: bool = False                #
     plotWf: bool = False                #
     saveCorrelatorXT: bool = False      #
+    saveCorrelatorXTbonds: bool = False #
     saveCorrelatorKW: bool = False      #
     plotCorrelatorKW: bool = False      #
     savePlotCorrelatorKW: bool = False  #

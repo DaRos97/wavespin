@@ -2,6 +2,7 @@
 
 - Change the `__init__.py` files to have a clearer package structure.
 - Write tests -> should be easy, just use the example files.
+- Remove plotSites from input arguments -> it's specific for the calculation.
 
 ## Classical
 
@@ -30,5 +31,8 @@
 ### Open boundary
 - Input of experimental parameters 
 - Implement the non-rectangular geometry
+- Pipeline momentum space correlator computation so one does not need to firts explicitly compute the real space one.
+- Switch correlators from x,y to ind=x*Ly+y
+- Handle the save correlator bonds -> I'm not plotting so its used just for saving data
 
 ## Dynamic

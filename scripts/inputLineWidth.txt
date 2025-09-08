@@ -1,0 +1,12 @@
+# Input file for line width computation
+# Use '#' to comment a line and ':' to assign a value
+correlatorType: zz
+transformType: dct
+Lx: 9
+Ly: 7
+perturbationSite: (3,4)
+excludeZeroMode: False
+saveWf: True
+saveCorrelatorXT: True
+saveCorrelatorKW: True
+uniformQA: True

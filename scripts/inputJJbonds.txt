@@ -4,13 +4,9 @@ correlatorType: jj
 transformType: dct
 Lx: 12
 Ly: 12
-perturbationSite: (5,5)
+perturbationSite: (5,0)
+plotSites: True
 magnonModes: (1,2,3,4)
 excludeZeroMode: True
-plotSites: False
 saveWf: True
-plotWf: False
-saveCorrelatorXT: True
-saveCorrelatorKW: False
-plotCorrelatorKW: True
-savePlotCorrelatorKW: True
+saveCorrelatorXTbonds: True

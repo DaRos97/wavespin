@@ -237,7 +237,7 @@ class openSystem(openHamiltonian):
         #
         self.site0 = 0 #if h_t_i[0,0,0]<0 else 1     #decide sublattice A and B of reference lattice site
         self.fullTimeMeasure = 0.8     #measure time in ms
-        self.nTimes = 801        #time steps after ramp for the measurement
+        self.nTimes = 401        #time steps after ramp for the measurement
         self.measureTimeList = np.linspace(0,self.fullTimeMeasure,self.nTimes)
         #KW correlator parameters
         self.nOmega = 2000

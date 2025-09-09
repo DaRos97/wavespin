@@ -184,12 +184,13 @@ def jjCorrelator(system,ind_i,A,B,G,H):
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
-    magnonModes = system.magnonModes
+    magnonModes = system.p.magnonModes
     #
     ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
     JJ = np.zeros(A[0,0].shape,dtype=complex)
     ind_nn_i = get_nn(ind_i,Lx,Ly)
+    Jbond = np.mean(system.J_i[0][ind_i,ind_nn_i])
     ind_nn_j = [perturbationIndex+1,]
     for i in system.offSiteList:
         if system._idx(i) in ind_nn_i:
@@ -213,7 +214,7 @@ def jjCorrelator(system,ind_i,A,B,G,H):
                 for t in list_terms:
                     contraction = computeContraction(t[1],t[2],t[3],A,B,G,H,magnonModes)
                     JJ += coeff_t * t[0] * contraction
-    return 2*1j/len(ind_nn_i)/len(ind_nn_j)*np.imag(JJ)
+    return 2*1j/len(ind_nn_i)/len(ind_nn_j)*np.imag(JJ)*Jbond**2
 
 def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
     """
@@ -223,6 +224,7 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
     """
     Lx = system.Lx
     Ly = system.Ly
+    Jbond = system.J_i[0][ind_i,(ind_i+1)%system.Ns] if orientation=='v' else system.J_i[0][ind_i,(ind_i+Ly)%system.Ns]
     ts = system.ts
     site0 = system.site0
     indexesMap = system.indexesMap
@@ -235,7 +237,7 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
     JJ = np.zeros(A[0,0].shape,dtype=complex)
     ind_r = ind_i+1 if orientation=='v' else ind_i+Ly   #-> from i
-    ind_s = perturbationIndex+1 #always vertical        -> from j
+    ind_s = perturbationIndex+Ly #always vertical        -> from j
     term_list = ['XYXY','ZYZY','XYYX','ZYYZ','YXXY','YZZY','YXYX','YZYZ']
     irx,iry = system._xy(ind_r)
     ts_r = ts[(site0+irx+iry)%2]
@@ -251,7 +253,7 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
         for t in list_terms:
             contraction = computeContraction(t[1],t[2],t[3],A,B,G,H,magnonModes)
             JJ += coeff_t * t[0] * contraction
-    return 2*1j*np.imag(JJ)
+    return 2*1j*np.imag(JJ)*Jbond**2
 
 def generatePairings(elements):
     """

@@ -212,8 +212,8 @@ class openHamiltonian(latticeClass):
             self.V_ = 1/2*(phi_-psi_)
             if self.p.saveWf:
                 if not Path(self.dataDn).is_dir():
-                    print("Creating 'Data/' folder in home directory.")
-                    os.system('mkdir '+dataDn)
+                    print("Creating 'Data/' folder in directory: "+self.dataDn)
+                    os.system('mkdir '+self.dataDn)
                 np.savez(transformationFn,awesomeU=self.U_,awesomeV=self.V_,evals=self.evals)
         else:
             if verbose:
@@ -273,8 +273,8 @@ class openSystem(openHamiltonian):
                 self.correlatorXT[ix,iy] = openCorrelators.dicCorrelators[self.p.correlatorType](self,ind_i,A,B,G,H)
             if self.p.saveCorrelatorXT:
                 if not Path(self.dataDn).is_dir():
-                    print("Creating 'Data/' folder in home directory.")
-                    os.system('mkdir '+dataDn)
+                    print("Creating 'Data/' folder in directory: "+self.dataDn)
+                    os.system('mkdir '+self.dataDn)
                 np.save(correlatorFn,self.correlatorXT)
         else:
             if verbose:
@@ -288,8 +288,8 @@ class openSystem(openHamiltonian):
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.excludeZeroMode else 'with0energy'
-        argsFn_h = ('correlator_horizontal_bonds',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.magnonModes)
-        argsFn_v = ('correlator_vertical_bonds',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.magnonModes)
+        argsFn_h = ('correlator_horizontal_bonds',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.magnonModes,self.perturbationSite)
+        argsFn_v = ('correlator_vertical_bonds',self.p.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.magnonModes,self.perturbationSite)
         correlatorFn_h = pf.getFilename(*argsFn_h,dirname=self.dataDn,extension='.npy')
         correlatorFn_v = pf.getFilename(*argsFn_v,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn_h).is_file() or Path(correlatorFn_v).is_file():
@@ -318,8 +318,8 @@ class openSystem(openHamiltonian):
                     self.correlatorXT_v[ivx,ivy] = openCorrelators.jjCorrelatorBond(self,ind_i,A,B,G,H,'v')
             if self.p.saveCorrelatorXTbonds:
                 if not Path(self.dataDn).is_dir():
-                    print("Creating 'Data/' folder in home directory.")
-                    os.system('mkdir '+dataDn)
+                    print("Creating 'Data/' folder in directory: "+self.dataDn)
+                    os.system('mkdir '+self.dataDn)
                 np.save(correlatorFn_h,self.correlatorXT_h)
                 np.save(correlatorFn_v,self.correlatorXT_v)
         else:
@@ -341,8 +341,8 @@ class openSystem(openHamiltonian):
             self.correlatorKW = momentumTransformation.dicTransformType[self.p.transformType](self)
             if self.p.saveCorrelatorKW:
                 if not Path(self.dataDn).is_dir():
-                    print("Creating 'Data/' folder in home directory.")
-                    os.system('mkdir '+dataDn)
+                    print("Creating 'Data/' folder in directory: "+self.dataDn)
+                    os.system('mkdir '+self.dataDn)
                 np.save(correlatorFn,self.correlatorKW)
         else:
             if verbose:

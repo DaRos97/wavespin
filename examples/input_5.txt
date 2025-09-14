@@ -4,5 +4,5 @@ Lx: 9
 Ly: 7
 plotSites: False
 saveWf: True
-plotWf: True
-uniformQA: False
+plotWf: False
+uniformQA: True

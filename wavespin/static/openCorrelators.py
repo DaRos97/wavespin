@@ -235,15 +235,15 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
     #
     ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
-    JJ = np.zeros(A[0,0].shape,dtype=complex)
     ind_r = ind_i+1 if orientation=='v' else ind_i+Ly   #-> from i
-    ind_s = perturbationIndex+Ly #always vertical        -> from j
+    ind_s = perturbationIndex+Ly #if system.perturbationDirection=='h' else perturbationIndex-Ly#always horizontal      -> from j
     term_list = ['XYXY','ZYZY','XYYX','ZYYZ','YXXY','YZZY','YXYX','YZYZ']
     irx,iry = system._xy(ind_r)
     ts_r = ts[(site0+irx+iry)%2]
     isx,isy = system._xy(ind_s)
     ts_s = ts[(site0+isx+isy)%2]
     ts_list = [ts_i,ts_r,ts_j,ts_s]
+    JJ = np.zeros(A[0,0].shape,dtype=complex)
     for i,ops in enumerate(term_list):
         original_op = ops if i%2==0 else term_list[i-1]
         list_terms = computeCombinations(ops,[ind_i,ind_r,perturbationIndex,ind_s],'tt00',S)

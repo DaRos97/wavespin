@@ -2,14 +2,19 @@ import numpy as np
 
 # General
 def theta_they(*pars):
-    J,S,D,H = pars
-    Hc = 4*J*S*(1-D)
-    return np.arcsin(H/Hc)
+    J,S,lam,H = pars
+    Hc = 4*J*S*(1-lam)
+    if abs(H/Hc)<1:
+        return np.arcsin(H/Hc)
+    else:
+        return np.pi/2
 def theta_my(*pars):
     J,S,D,H = pars
     Hc = 4*J*S*(1-D)
-    return np.arccos(H/Hc)
-
+    if abs(H/Hc)<1:
+        return np.arccos(H/Hc)
+    else:
+        return 0
 # Numeric
 def gamma(k,*pars):
     if len(k.shape)==1:
@@ -20,21 +25,19 @@ def gamma(k,*pars):
         print("error in gamma")
         exit()
 def epsilon_they(k,gk,*pars):
-    J,S,D,H = pars
+    J,S,lam,H = pars
     th = theta_they(*pars)
-    return 4*J*S*np.sqrt((1-gk)*(1-gk*(D*np.cos(th)**2+np.sin(th)**2)))
+    return 4*J*S*np.sqrt((1-gk)*(1-gk*(lam*np.cos(th)**2+np.sin(th)**2)))
 def epsilon_my(k,gk,*pars):
     J,S,D,H = pars
-    D *= -1
     th = theta_my(*pars)
     return 4*J*S*np.sqrt((1+gk)*(1-gk*(D*np.sin(th)**2+np.cos(th)**2)))
 def Ak_they(k,gk,*pars):
-    J,S,D,H = pars
+    J,S,lam,H = pars
     th = theta_they(*pars)
-    return 4*J*S*(1-1/2*gk*(1+D*np.cos(th)**2+np.sin(th)**2))
+    return 4*J*S*(1-1/2*gk*(1+lam*np.cos(th)**2+np.sin(th)**2))
 def Ak_my(k,gk,*pars):
     J,S,D,H = pars
-    D *= -1
     th = theta_my(*pars)
     return 4*J*S*(1+1/2*gk*np.sin(th)**2*(1-D))
 def uk_(k,gk,Ak_,epsilon_,*pars):
@@ -52,23 +55,22 @@ def vk_(k,gk,Ak_,epsilon_,*pars):
     mask = (ek != 0) & (absGk != 0) & (ak-ek>0)
     result[mask] = -np.sqrt((ak[mask] - ek[mask]) / (2 * ek[mask]))*gk[mask]/absGk[mask]
     return result
-def Gamma3_(k,eps_k,K_grid,eps_q,eta,Ak_,epsilon_,theta_,*pars):
+def Gamma3_(k,eps_k,K_grid,eps_q,eta,Ak_,epsilon_,th,*pars):
     L = int(np.sqrt(K_grid.shape[0]))
     gkmq = gamma(k-K_grid,*pars)
     eps_kmq = epsilon_(k-K_grid,gkmq,*pars)             # shape (L^2) -> can make this faster
     arg = eps_k - (eps_q + eps_kmq)         # shape (L^2)
     # evaluate delta and sum
     delta_vals = lorentz(arg, eta)            # shape (L^2)
-    V_k_q = V3(k,K_grid,Ak_,epsilon_,theta_,*pars)              # shape (L^2)
+    V_k_q = V3(k,K_grid,Ak_,epsilon_,th,*pars)              # shape (L^2)
     S = np.pi/2*np.sum(V_k_q**2 * delta_vals)
     return S
 def gauss(x,eta):
     return np.exp(-0.5*(x/eta)**2) / (np.sqrt(2*np.pi)*eta)
 def lorentz(x,eta):
     return (1.0/np.pi) * (eta / (x**2 + eta**2))
-def V3(k,q,Ak_,epsilon_,theta_,*pars):
-    J,S,D,H = pars
-    th = theta_(*pars)
+def V3(k,q,Ak_,epsilon_,th,*pars):
+    J,S,_,H = pars
     factor = np.cos(th) if Ak_==Ak_they else np.sin(th)
     #
     gk = gamma(k,*pars)

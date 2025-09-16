@@ -31,20 +31,28 @@ pValues = np.array([1,])#np.linspace(1,1,nP)
 g_p = (1-pValues)*gInitial + pValues*gFinal
 h_p = (1-pValues)*hInitial + pValues*hFinal
 
-""" Initialize all the systems and store them in a ramp object """
-ramp = openRamp()
-for i in range(nP):
-    termsHamiltonian = (g_p[i],0,0,0,h_p[i])
-    ramp.addSystem(openSystem(parameters,termsHamiltonian))
+data = []
+Lx = parameters.Lx
+Ly = parameters.Ly
+for ip,pS in enumerate([(0,0),(Lx-2,0)]):
+    parameters.perturbationSite=pS
+    """ Initialize all the systems and store them in a ramp object """
+    ramp = openRamp()
+    for i in range(nP):
+        termsHamiltonian = (g_p[i],0,0,0,h_p[i])
+        ramp.addSystem(openSystem(parameters,termsHamiltonian))
+#    ramp.rampElements[0].perturbationDirection = 'h' if ip==0 else 'v'
 
-""" Compute correlator XT and KW for all systems in the ramp """
-ramp.correlatorsXT(verbose=verbose)
-ramp.correlatorsKW(verbose=verbose)
+    """ Compute correlator XT and KW for all systems in the ramp """
+    ramp.correlatorsXT(verbose=verbose)
 
-if parameters.plotCorrelatorKW:
-    """ Plot the Fourier-transformed correlators of the ramp """
-    kwargs={'numKbins' : 50, 'ylim' : 70, 'saveFigure' : parameters.savePlotCorrelatorKW, 'showFigure' : True }
-    rampPlots.plotRampKW(ramp, **kwargs)
+    data.append(ramp.rampElements[0].correlatorXT_h)
 
+time = np.arange(ramp.rampElements[0].nTimes)
 
-
+import matplotlib.pyplot as plt
+fig = plt.figure(figsize=(15,10))
+ax = fig.add_subplot()
+ax.plot(time,np.imag(data[0][1,0,:]),color='r')
+ax.plot(time,np.imag(data[1][Lx-3,0,:]),color='b')
+plt.show()

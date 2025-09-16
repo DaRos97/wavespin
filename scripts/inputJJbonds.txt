@@ -2,10 +2,10 @@
 # Use '#' to comment a line and ':' to assign a value
 correlatorType: jj
 transformType: dct
-Lx: 12
-Ly: 12
-perturbationSite: (5,0)
-plotSites: True
+Lx: 10
+Ly: 10
+perturbationSite: (0,0)
+plotSites: False
 magnonModes: (1,2,3,4)
 excludeZeroMode: True
 saveWf: True

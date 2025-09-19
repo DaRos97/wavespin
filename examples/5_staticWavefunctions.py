@@ -39,7 +39,7 @@ for pValue in np.linspace(0.1,1,10):
     """ Compute Bogoliubov wavefunctions """
     system.diagonalize(verbose=verbose)
 
-    if parameters.plotWf:
+    if parameters.plotWf and pValue==1:
         """ Plot wavefunctions """
         rampPlots.plotWf(system,nModes=16)
         """ Plot wavefunctions compared to cosines """

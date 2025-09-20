@@ -12,6 +12,7 @@ from wavespin.tools import pathFinder as pf
 from wavespin.tools import inputUtils as iu
 from wavespin.static import openCorrelators
 from wavespin.static import momentumTransformation
+from wavespin.static.periodic import quantizationAxis
 
 class openHamiltonian(latticeClass):
     def __init__(self, p: iu.openParameters, termsHamiltonian):
@@ -52,7 +53,6 @@ class openHamiltonian(latticeClass):
     def quantizationAxisAngles(self):
         """ Here we get the quantization axis angles to use for the diagonalization.
         """
-        from wavespin.static.periodic import quantizationAxis
         self.theta, self.phi = quantizationAxis(self.S,self.J_i,self.D_i,self.h_i)
         if self.p.uniformQA:
             self.thetas = np.ones(self.Ns)*self.theta
@@ -76,24 +76,6 @@ class openHamiltonian(latticeClass):
         """ Compute the parameters t_z, t_x and t_y as in notes for sublattice A and B.
         Sublattice A has negative magnetic feld.
         """
-        theta = self.thetas[0]
-        phi = self.phis[0]
-        result = [
-            [   #sublattice A
-                (np.sin(theta)*np.cos(phi),np.sin(theta)*np.sin(phi),np.cos(theta)),  #t_zx,t_zy,t_zz
-                (np.cos(theta)*np.cos(phi),np.cos(theta)*np.sin(phi),-np.sin(theta)), #t_xx,t_xy,t_xz
-                (-np.sin(phi),np.cos(phi),0)  ],                                      #t_yx,t_yy,t_yz
-            [   #sublattice B
-                (-np.sin(theta)*np.cos(phi),-np.sin(theta)*np.sin(phi),-np.cos(theta)),  #t_zx,t_zy,t_zz
-                (-np.cos(theta)*np.cos(phi),-np.cos(theta)*np.sin(phi),np.sin(theta)),   #t_xx,t_xy,t_xz
-                (-np.sin(phi),np.cos(phi),0)  ],                                         #t_yx,t_yy,t_yz
-        ]
-        self.ts = result
-
-    def computeTsNew(self):
-        """ Compute the parameters t_z, t_x and t_y as in notes for sublattice A and B.
-        Sublattice A has negative magnetic feld.
-        """
         self.ts = np.zeros((self.Ns,3,3))
         for i in range(self.Ns):
             ix,iy = self._xy(i)
@@ -104,7 +86,7 @@ class openHamiltonian(latticeClass):
             self.ts[i,1] = sign*np.array([np.cos(th)*np.cos(ph),np.cos(th)*np.sin(ph),-np.sin(th)]) #t_xx,t_xy,t_xz
             self.ts[i,2] =      np.array([-np.sin(ph)          ,np.cos(ph)           ,0             ]) #t_yx,t_yy,t_yz
 
-    def computePsNew(self,order='c-Neel'):
+    def computePs(self,order='c-Neel'):
         """ Compute coefficient p_gamma^{alpha,beta}_ij for a given classical order.
         alpha,beta=0,1,2 -> z,x,y like for ts.
 
@@ -149,8 +131,8 @@ class openHamiltonian(latticeClass):
         h_i = self.h_i
         offSiteList = self.offSiteList
         self.quantizationAxisAngles()
-        self.computeTsNew()
-        self.computePsNew()
+        self.computeTs()
+        self.computePs()
         p_zz = self.Ps[0,:,:,0,0]
         p_xx = self.Ps[0,:,:,1,1]
         p_yy = self.Ps[0,:,:,2,2]
@@ -226,6 +208,8 @@ class openHamiltonian(latticeClass):
             self.U_[:,0] *= 0
             self.V_[:,0] *= 0
 
+##########################################################
+##########################################################
 
 class openSystem(openHamiltonian):
     def __init__(self, p: iu.openParameters, termsHamiltonian):

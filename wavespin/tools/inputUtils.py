@@ -36,6 +36,7 @@ class openParameters:
     plotCorrelatorKW: bool = False      #
     savePlotCorrelatorKW: bool = False  #
     uniformQA: bool = True              #
+    scatteringType: str = '1to2'        #
 
 def importOpenParameters(inputFn,**kwargs):
     """ Function to import all the parameters for the calculation from the input file and store the in the class openParameters.
@@ -95,6 +96,8 @@ def checkOpenParameters(parameters):
     for t in parameters.magnonModes:
         if t not in [1,2,3,4]:
             raise ValueError("Term "+str(t)+" not an acceptable 'magnonModes' term: [1,2,3,4].")
+    if parameters.scatteringType not in ['1to2','1to3','2to2']:
+        raise ValueError(f"Invalid scattering type: {parameters.scatteringType}")
 
 @typechecked
 @dataclass

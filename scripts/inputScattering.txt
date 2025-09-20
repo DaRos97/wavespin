@@ -1,0 +1,7 @@
+# Input file for scattering script
+# Use '#' to comment a line and ':' to assign a value
+Lx: 9
+Ly: 7
+saveWf: True
+scatteringType: 1to2
+excludeZeroMode: True

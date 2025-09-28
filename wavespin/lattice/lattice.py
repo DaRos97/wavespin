@@ -6,13 +6,13 @@ from wavespin.tools import pathFinder as pf
 from pathlib import Path
 
 class latticeClass():
-    def __init__(self,p,boundary='periodic'):
-        self.Lx = p.Lx
-        self.Ly = p.Ly
-        self.offSiteList = p.offSiteList
+    def __init__(self,p):
+        self.Lx = p.lat_Lx
+        self.Ly = p.lat_Ly
+        self.offSiteList = p.lat_offSiteList
         self.indexesMap = self._mapSiteIndex()
-        self.Ns = p.Lx*p.Ly - len(p.offSiteList)
-        self.boundary = boundary
+        self.Ns = self.Lx*self.Ly - len(self.offSiteList)
+        self.boundary = p.lat_boundary
         # Precompute neighbors
         self.NN = self._build_nn()
         self.NNN = self._build_nnn()

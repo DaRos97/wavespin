@@ -1,0 +1,18 @@
+# Input file for 8_magnonLifetime.py script
+# Use '#' to comment a line and ':' to assign a value
+Lx: 7
+Ly: 8
+#
+saveWf: True
+excludeZeroMode: True
+plotWf: False
+plotMomenta: False
+# (g1, g2, d1, d2, h, disorder_h)
+Hamiltonian: (20,0,0,0,0,0)
+# scattering options
+#types: ['1to2','1to3','2to2a']
+types: ['2to2a','2to2b']
+broadening: 0.5
+temperature: 8
+saveVertex: True
+plotVertex: False

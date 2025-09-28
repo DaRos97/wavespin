@@ -209,19 +209,25 @@ def plotBogoliubovMomenta(system,**kwargs):
     for i in range(Ns):
         ix,iy = system.indexesMap[i]
         phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
-    newFigure = kwargs.get('newFigure',True)
-    if newFigure:
-        fig = plt.figure(figsize=(20,15))
-        ax = fig.add_subplot()
-    else:
-        ax = kwargs.get('axis')
-    ks = []
+    #
     printEnergies = kwargs.get('printEnergies',True)
+    printIndexes = kwargs.get('printIndexes',True)
+    best_modes = kwargs.get('best_modes',[])
+    fig = plt.figure(figsize=(20,15))
+    ax = fig.add_subplot(121)
+    ks = []
+    ens = np.zeros((Lx,Ly))
     for k in range(Ns):
         kx,ky = extractMomentum(phi_ik[:,k].reshape(Lx,Ly))
-        ax.scatter(kx,ky,color='r',alpha=0.3,s=100)
+        ks.append([kx,ky])
+        ens[kx,ky] = system.evals[k]
+        ax.scatter(kx,ky,color='orange',alpha=0.6,s=100)
         if printEnergies:
             ax.text(kx,ky+0.2,"{:.3f}".format(system.evals[k]))
+        if printIndexes:
+            ax.text(kx,ky-0.2,str(k))
+        if k in best_modes:
+            ax.scatter(kx,ky,color='r',alpha=0.8,s=100)
     ax.set_xlabel("Kx",size=20)
     ax.set_ylabel("Ky",size=20)
     ax.set_aspect('equal')
@@ -229,9 +235,15 @@ def plotBogoliubovMomenta(system,**kwargs):
     printTitle = kwargs.get('printTitle',True)
     if printTitle:
         ax.set_title("Momenta obtained from Bogoliubov modes and their energies",size=20)
-    showFigure = kwargs.get('showFigureMomentum',True)
-    if showFigure:
-        plt.show()
+    #
+    KX,KY = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
+    ax = fig.add_subplot(122,projection='3d')
+    ax.plot_surface(KX,KY,ens,cmap='viridis',alpha=0.5,zorder=0)
+    #
+    for i in best_modes:
+        ax.scatter(ks[i][0],ks[i][1],system.evals[i],color='r',marker='*',s=60,zorder=1)
+
+    plt.show()
 
 def plotRampDispersions(ramp, **kwargs):
     """ Plot the dispersions of each system in the ramp.
@@ -286,6 +298,46 @@ def plotRampValues(ramp, **kwargs):
     ax.legend(l1+l2+l3,labels,fontsize=20,loc=(0.4,0.1))
 
     plt.show()
+
+def plotVertex(system,**kwargs):
+    """ Plot decay vertex at the end of openHamiltonian.decayRates()
+    """
+    title = {
+        '1to2':"1 to 2 decay process",
+        '1to3':"1 to 3 decay process",
+        '2to2':"2 to 2 scattering process",
+    }
+    best_modes = kwargs.get('best_modes',None)
+    fig = plt.figure(figsize=(18,6))
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    g_p,_,d_p,_,h_p,disorder = system.p.dia_Hamiltonian
+    T = system.p.sca_temperature
+    s_ = 20
+    for st, scatteringType in enumerate(system.p.sca_types):
+        Gamma_n = system.dataScattering[scatteringType]
+        ax = fig.add_subplot(1,3,st+1)
+        ax.scatter(np.arange(1,system.Ns),Gamma_n,marker='o',color='orange',s=70)
+        ax.set_xlabel("Mode number",size=s_)
+        ax.set_title(title[scatteringType],size=s_+5)
+        if not best_modes is None:
+            ax.scatter(best_modes,Gamma_n[best_modes-1],marker='o',color='red',s=70)
+        if st==0:
+            ax.text(0.03,0.795,"g=%s, H=%.1f\n"%(g_p/2,h_p)+r"$\Delta$=%.1f, $h_{dis}$=%.1f"%(d_p,disorder)+'\n'+r"$\gamma$=%.2f mEd"%system.p.sca_broadening,
+                    size=s_-3,transform=ax.transAxes, bbox=props)
+            ax.set_ylabel("Decay rate (MHz)",size=s_)
+        if st==2 and 1:
+            fac = (np.max(Gamma_n) - np.min(Gamma_n)) / 40
+            for i in range(1,system.Ns):
+                ax.text(i-0.6,Gamma_n[i-1]+fac,str(i))
+        if st==2 and T != 0:
+            ax.text(0.03,0.865,"T=%.2f MHz"%(T),
+                    size=s_-3,transform=ax.transAxes, bbox=props)
+
+    plt.suptitle("Grid: %d x %d, branch modes indices: %s"%(system.Lx,system.Ly,best_modes),size=s_)
+    fig.tight_layout()
+    plt.show()
+
+
 
 
 

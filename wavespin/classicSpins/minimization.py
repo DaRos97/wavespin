@@ -18,21 +18,22 @@ class minHam(latticeClass):
         # Construct lattice and Hamiltonian
         super().__init__(p,boundary=p.boundary)
         # Hamiltonian parameters
-        self.g1,self.g2,self.d1,self.d2,self.h = termsHamiltonian
-        self.planar = True if (self.d1==0 and self.d2==0) else False
+        self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = termsHamiltonian
+        self.planar = True #if (self.d1==0 and self.d2==0) else False
         self.S = 1/2
         self.periodicTheta, self.periodicPhi = quantizationAxis(self.S,(self.g1,self.g2),(self.d1,self.d2),self.h)
         # Staggering factor eta_i = (-1)^(x+y)
-        self.eta = self._staggering()
+        self.h_i = self._Hterms()
         # Anisotropy matrix A = diag(1,1,g) -> x,y,z
         self.A1 = np.diag([1.0, 1.0, self.d1])
         self.A2 = np.diag([1.0, 1.0, self.d2])
 
-    def _staggering(self):
+    def _Hterms(self):
         eta = np.empty(self.Ns, dtype=np.int8)
+        disorder = (np.random.rand(self.Ns)-0.5)*2 * self.h_disorder
         for i in range(self.Ns):
             x, y = self._xy(i)
-            eta[i] = (-1)**((x+y+1) % 2)
+            eta[i] = (-1)**((x+y+1) % 2) * self.h + disorder[i]
         return eta
 
     def getSpin(self,th,ph):
@@ -65,14 +66,14 @@ class minHam(latticeClass):
             si = self.getSpin(thetas[i],phis[i])
             E += 1/2 * self.g1 * sum(self._pair_energy_nn(si, self.getSpin(thetas[j],phis[j])) for j in self.NN[i])
 #            E += 1/2 * self.g2 * sum(self._pair_energy_nnn(si, self.getSpin(thetas[k],phis[k])) for k in self.NNN[i])
-        E += self.h * np.sum(self.eta * np.cos(thetas)) * self.S
+        E += np.sum(self.h_i * np.cos(thetas)) * self.S
         E /= self.Ns
         return E
 
     def minimization(self,verbose=False):
         """ Perform the energy minimization.
         """
-        argsFn = (self.txtSim+'_solution',self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,self.p.boundary)
+        argsFn = (self.txtSim+'_solution',self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder,self.Lx,self.Ly,self.Ns,self.p.boundary)
         solutionFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(solutionFn).is_file():
             if self.planar:

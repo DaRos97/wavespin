@@ -27,6 +27,8 @@ best_modes = np.array([17,18,19,20,24,25,26,27,30,31,32,34])
 kwargs = {'best_modes':best_modes}
 system.diagonalize(verbose=verbose,**kwargs)
 
+system.decayRates(temperature=parameters.sca_temperature,verbose=verbose)
+exit()
 """ Compute multiple temperatures """
 Ts = np.linspace(2,20,10)
 Ts = [8,]

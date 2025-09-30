@@ -21,7 +21,7 @@ def vector_to_polar_angles(v):
     phi = np.arctan2(y, x)
     return theta, phi
 
-def lorentz(arg,eta):
+def lorentz(arg,gamma):
     """ Lorentz distribution used for scattering and decay rates.
     """
-    return (1.0/np.pi) * (eta / (arg**2 + eta**2))
+    return (1.0/np.pi) * (gamma / (arg**2 + gamma**2))

@@ -305,35 +305,36 @@ def plotVertex(system,**kwargs):
     title = {
         '1to2':"1 to 2 decay process",
         '1to3':"1 to 3 decay process",
-        '2to2':"2 to 2 scattering process",
+        '2to2a':"2 to 2 scattering process",
     }
     best_modes = kwargs.get('best_modes',None)
-    fig = plt.figure(figsize=(18,6))
+    nS = len(system.dataScattering)
+    fig = plt.figure(figsize=(6*nS,6))
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     g_p,_,d_p,_,h_p,disorder = system.p.dia_Hamiltonian
     T = system.p.sca_temperature
     s_ = 20
     for st, scatteringType in enumerate(system.p.sca_types):
         Gamma_n = system.dataScattering[scatteringType]
-        ax = fig.add_subplot(1,3,st+1)
+        ax = fig.add_subplot(1,nS,st+1)
         ax.scatter(np.arange(1,system.Ns),Gamma_n,marker='o',color='orange',s=70)
         ax.set_xlabel("Mode number",size=s_)
         ax.set_title(title[scatteringType],size=s_+5)
         if not best_modes is None:
             ax.scatter(best_modes,Gamma_n[best_modes-1],marker='o',color='red',s=70)
         if st==0:
-            ax.text(0.03,0.795,"g=%s, H=%.1f\n"%(g_p/2,h_p)+r"$\Delta$=%.1f, $h_{dis}$=%.1f"%(d_p,disorder)+'\n'+r"$\gamma$=%.2f mEd"%system.p.sca_broadening,
+            ax.text(0.58,0.09,"g=%s, H=%.1f\n"%(g_p/2,h_p)+r"$\Delta$=%.1f, $h_{dis}$=%.1f"%(d_p,disorder)+'\n'+r"$\gamma$=%.2f mEd"%system.p.sca_broadening,
                     size=s_-3,transform=ax.transAxes, bbox=props)
             ax.set_ylabel("Decay rate (MHz)",size=s_)
-        if st==2 and 1:
+        if scatteringType=='2to2a':
             fac = (np.max(Gamma_n) - np.min(Gamma_n)) / 40
             for i in range(1,system.Ns):
                 ax.text(i-0.6,Gamma_n[i-1]+fac,str(i))
-        if st==2 and T != 0:
-            ax.text(0.03,0.865,"T=%.2f MHz"%(T),
+        if scatteringType=='2to2a' and T != 0:
+            ax.text(0.03,0.88,"T=%.2f MHz"%(T),
                     size=s_-3,transform=ax.transAxes, bbox=props)
 
-    plt.suptitle("Grid: %d x %d, branch modes indices: %s"%(system.Lx,system.Ly,best_modes),size=s_)
+    plt.suptitle("Grid: %d x %d"%(system.Lx,system.Ly),size=s_)
     fig.tight_layout()
     plt.show()
 

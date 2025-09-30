@@ -262,11 +262,11 @@ class myParameters:
     cor_plotKW: bool = False                    #
     cor_savePlotKW: bool = False                #
     # Decay and scattering
-    sca_types: tuple = ('1to2','2to2','1to3')   #
+    sca_types: tuple = ('1to2','2to2a','1to3')  #
     sca_temperature: float = 0.0                #
     sca_broadening: float = 0.5                 #
     sca_saveVertex: bool = True                 #
-    sca_plotVertex: bool = False                 #
+    sca_plotVertex: bool = False                #
 
 def importParameters(inputFn,**kwargs):
     """ Function to import all the parameters for the calculation from the input file and store the in the class myParameters.

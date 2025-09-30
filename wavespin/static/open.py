@@ -358,7 +358,7 @@ class openHamiltonian(latticeClass):
                     else:
                         bose_factor = 1
 
-                    Gamma_n = 2 * np.pi * np.sum(Vnr_lm**2 * delta_vals * bose_factor,axis=(1,2,3))
+                    Gamma_n = 4 * np.pi * np.sum(Vnr_lm**2 * delta_vals * bose_factor,axis=(1,2,3))
                 if scatteringType == '2to2b':
                     en = evals[:,None,None]
                     el = evals[None,:,None]

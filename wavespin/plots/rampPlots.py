@@ -305,34 +305,61 @@ def plotVertex(system,**kwargs):
     title = {
         '1to2':"1 to 2 decay process",
         '1to3':"1 to 3 decay process",
-        '2to2a':"2 to 2 scattering process",
+        '2to2a':"2 to 2: linear process",
+        '2to2b':"2 to 2: quadratic process",
     }
     best_modes = kwargs.get('best_modes',None)
-    nS = len(system.dataScattering)
-    fig = plt.figure(figsize=(6*nS,6))
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     g_p,_,d_p,_,h_p,disorder = system.p.dia_Hamiltonian
     T = system.p.sca_temperature
     s_ = 20
-    for st, scatteringType in enumerate(system.p.sca_types):
-        Gamma_n = system.dataScattering[scatteringType]
-        ax = fig.add_subplot(1,nS,st+1)
-        ax.scatter(np.arange(1,system.Ns),Gamma_n,marker='o',color='orange',s=70)
+    types = system.p.sca_types
+    data = system.dataScattering
+    print(types)
+    if '2to2a' in types and '2to2b' in types:
+        types.append('2to2all')
+        Amplitudes = [0.5,]
+        data['2to2all'] = []
+        for Amplitude in Amplitudes:
+            data['2to2all'].append(data['2to2a'] + Amplitude**2/4 * data['2to2b'])
+        title['2to2all'] = 'full 2 to 2'
+    nS = len(types)
+    nRows = 1 if nS<4 else 2
+    nCols = nS if nS<4 else nS//2 + 1
+    fig = plt.figure(figsize=(6*nCols,6*nRows))
+    col = ['navy','orange']
+    col2 = ['blue','red']
+    for st, scatteringType in enumerate(types):
+        Gamma_n = data[scatteringType]
+        ax = fig.add_subplot(nRows,nCols,st+1)
+        if not scatteringType=='2to2all':
+            ax.scatter(np.arange(1,system.Ns),Gamma_n,marker='o',color=col[0],s=70)
+        else:
+            for iA in range(len(Amplitudes)):
+                ax.scatter(np.arange(1,system.Ns),Gamma_n[iA],marker='o',color=col[iA],s=70,label="A=%.2f"%Amplitudes[iA])
         ax.set_xlabel("Mode number",size=s_)
         ax.set_title(title[scatteringType],size=s_+5)
-        if not best_modes is None:
-            ax.scatter(best_modes,Gamma_n[best_modes-1],marker='o',color='red',s=70)
+        # best modes
+        if not best_modes is None and scatteringType!='2to2all':
+            ax.scatter(best_modes,Gamma_n[best_modes-1],marker='o',color=col2[0],s=70)
         if st==0:
             ax.text(0.58,0.09,"g=%s, H=%.1f\n"%(g_p/2,h_p)+r"$\Delta$=%.1f, $h_{dis}$=%.1f"%(d_p,disorder)+'\n'+r"$\gamma$=%.2f mEd"%system.p.sca_broadening,
                     size=s_-3,transform=ax.transAxes, bbox=props)
+            txtT = "{:.2f}".format(T)+" MHz" if T!=0 else "inf"
+            ax.text(0.03,0.88,"T="+txtT,
+                    size=s_-3,transform=ax.transAxes, bbox=props)
             ax.set_ylabel("Decay rate (MHz)",size=s_)
-        if scatteringType=='2to2a':
+        # Print mode number
+        if not scatteringType=='2to2all':
             fac = (np.max(Gamma_n) - np.min(Gamma_n)) / 40
             for i in range(1,system.Ns):
                 ax.text(i-0.6,Gamma_n[i-1]+fac,str(i))
-        if scatteringType=='2to2a' and T != 0:
-            ax.text(0.03,0.88,"T=%.2f MHz"%(T),
-                    size=s_-3,transform=ax.transAxes, bbox=props)
+        else:   #numbers just on the first amplitude
+            fac = (np.max(Gamma_n[0]) - np.min(Gamma_n[0])) / 40
+            for i in range(1,system.Ns):
+                ax.text(i-0.6,Gamma_n[0][i-1]+fac,str(i))
+        if scatteringType=='2to2all':
+            ax.legend()
 
     plt.suptitle("Grid: %d x %d"%(system.Lx,system.Ly),size=s_)
     fig.tight_layout()

@@ -9,6 +9,7 @@ plotWf: False
 plotMomenta: False
 # (g1, g2, d1, d2, h, disorder_h)
 Hamiltonian: (20,0,0,0,0,0)
+
 # scattering options
 types: ['1to2','1to3','2to2a','2to2b']
 #types: ['2to2a','2to2b']

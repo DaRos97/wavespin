@@ -4,29 +4,11 @@
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
+
+from wavespin.lattice.lattice import latticeClass
 from wavespin.tools import pathFinder as pf
 from wavespin.tools import inputUtils as iu
 from wavespin.static import momentumTransformation
-
-def momentumGrid(Lx,Ly):
-    """ Compute momenta in the Brillouin zone for a (periodic) rectangular shape.
-
-    Parameters
-    ----------
-    Lx,Ly : int, linear size.
-
-    Returns
-    -------
-    gridk : (Lx,Ly,2)-array.
-    """
-    dx = 2*np.pi/Lx
-    dy = 2*np.pi/Ly
-    gridk = np.zeros((Lx,Ly,2))
-    for i1 in range(Lx):
-        for i2 in range(Ly):
-            gridk[i1,i2,0] = dx*(1+i1) #- np.pi
-            gridk[i1,i2,1] = dy*(1+i2) #- np.pi
-    return gridk
 
 def quantizationAxis(S,J_i,D_i,h_i):
     r""" Compute angles theta and phi of quantization axis depending on Hamiltonian parameters.
@@ -116,38 +98,31 @@ def computeTs(theta,phi):
     ]
     return result
 
-class periodicSystem:
-    def __init__(self, p: iu.periodicParameters, termsHamiltonian):
-        self.fullParameters = p
+class periodicHamiltonian(latticeClass):
+    def __init__(self, p: iu.myParameters):
+        super().__init__(p)
+        self.p = p
         #Lattice parameters
-        self.Lx = p.Lx
-        self.Ly = p.Ly
         self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
-        self.gridk = momentumGrid(self.Lx,self.Ly)#BZ grid
+        self._momentumGrid()
         self.Gamma = self._gamma()
         #Hamiltonian parameters
-        self.g1,self.g2,self.d1,self.d2,self.h = termsHamiltonian
+        self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = p.dia_Hamiltonian
         self.J = (self.g1,self.g2)
         self.D = (self.d1,self.d2)
         self.S = 0.5     #spin value
         self.theta,self.phi = quantizationAxis(self.S,self.J,self.D,self.h)
         self.ts = computeTs(self.theta,self.phi)       #All t-parameters for A and B sublattice
         self.dispersion = self._dispersion()
-        self.gsEnergy = np.sum(self.dispersion)/self.Lx/self.Ly + self._E0()
+        self.gsEnergy = np.sum(self.dispersion)/self.Ns + self._E0()
         self.rk = self._rk()
         self.phik = self._phik()
         #XT correlator parameters
-        self.correlatorType = p.correlatorType
         self.fullTimeMeasure = 0.8     #measure time in ms
         self.nTimes = 401        #time steps after ramp for the measurement
         self.measureTimeList = np.linspace(0,self.fullTimeMeasure,self.nTimes)
-        self.saveCorrelatorXT = p.saveCorrelatorXT
         #KW correlator parameters
-        self.transformType = p.transformType
         self.nOmega = 2000
-        self.saveCorrelatorKW = p.saveCorrelatorKW
-        self.plotCorrelatorKW = p.plotCorrelatorKW
-        self.saveFigureCorrelatorKW = p.saveFigureCorrelatorKW
 
     def _xy(self, i):
         return i // self.Ly, i % self.Ly
@@ -155,16 +130,21 @@ class periodicSystem:
     def _idx(self, x, y):
         return x*self.Ly + y
 
-    def _dispersion(self):
+    def _momentumGrid(self):
+        """ Compute momenta in the Brillouin zone for a (periodic) rectangular shape.
+
+        Parameters
+        ----------
+        Lx,Ly : int, linear size.
+
         """
-        Compute dispersion epsilon as in notes.
-        Controls are neded for ZZ in k.
-        """
-        N_11 = self._N11()
-        N_12 = self._N12()
-        result = np.sqrt(N_11**2-np.absolute(N_12)**2,where=(N_11**2>=np.absolute(N_12)**2))
-    #    result[N_11**2<np.absolute(N_12)**2] = 0
-        return result
+        dx = 2*np.pi/self.Lx
+        dy = 2*np.pi/self.Ly
+        self.gridk = np.zeros((self.Lx,self.Ly,2))
+        for i1 in range(self.Lx):
+            for i2 in range(self.Ly):
+                self.gridk[i1,i2,0] = dx*(1+i1) #- np.pi
+                self.gridk[i1,i2,1] = dy*(1+i2) #- np.pi
 
     def _gamma(self):
         r""" Compute the '$\Gamma$' dispersion at first and second nearest neighbor.
@@ -178,6 +158,17 @@ class periodicSystem:
         Gamma1 = np.cos(gridk[:,:,0])+np.cos(gridk[:,:,1])  #cos(kx) + cos(ky)
         Gamma2 = np.cos(gridk[:,:,0]+gridk[:,:,1])+np.cos(gridk[:,:,0]-gridk[:,:,1])  #cos(kx+ky) + cos(kx-ky)
         return (Gamma1,Gamma2)
+
+    def _dispersion(self):
+        """
+        Compute dispersion epsilon as in notes.
+        Controls are neded for ZZ in k.
+        """
+        N_11 = self._N11()
+        N_12 = self._N12()
+        result = np.sqrt(N_11**2-np.absolute(N_12)**2,where=(N_11**2>=np.absolute(N_12)**2))
+    #    result[N_11**2<np.absolute(N_12)**2] = 0
+        return result
 
     def _N11(self):
         """ Compute N_11 as in notes. """
@@ -300,7 +291,7 @@ class periodicSystem:
 #######################################################################
 
 class periodicRamp():
-    def __init__(self, systems : list[periodicSystem] = None):
+    def __init__(self, systems : list[periodicHamiltonian] = None):
         """ systems should be a list of openSystem objects. """
         self.rampElements = systems or []
         self.nP = len(self.rampElements)

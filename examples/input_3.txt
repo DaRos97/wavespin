@@ -1,7 +1,6 @@
 # Input file for static correlator
 # Use '#' to comment a line and ':' to assign a value
 Lx: 200
-Ly: 200
-plotSites: False
-plotValues: True
-plotDispersions: False
+Ly: 201
+boundary: periodic
+

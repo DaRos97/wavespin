@@ -8,17 +8,17 @@ from wavespin.tools import pathFinder as pf
 from wavespin.tools import functions as fs
 from pathlib import Path
 
-def plotSitesGrid(system,**kwargs):
+def plotSitesGrid(lattice,**kwargs):
     """ Here we plot the grid structure to see which sites are considered in the calculation.
 
     Parameters
     ----------
-    system : object.
+    lattice : object.
     """
-    Lx = system.Lx
-    Ly = system.Ly
-    offSiteList = system.offSiteList
-    indexesMap = system.indexesMap
+    Lx = lattice.Lx
+    Ly = lattice.Ly
+    offSiteList = lattice.offSiteList
+    indexesMap = lattice.indexesMap
     printIndices = kwargs.get('indices',True)
     #
     fig = plt.figure(figsize=(12,12))
@@ -41,8 +41,8 @@ def plotSitesGrid(system,**kwargs):
                     ax.plot([ix,ix],[iy,iy+1],c='y',ls='--',lw=0.5,zorder=-1)
                 else:
                     ax.plot([ix,ix],[iy,iy+1],c='darkgreen',lw=2,zorder=-1)
-    if hasattr(system,'perturbationSite'):
-        perturbationSite = system.perturbationSite
+    if hasattr(lattice,'perturbationSite'):
+        perturbationSite = lattice.perturbationSite
         ax.scatter(perturbationSite[0],perturbationSite[1],c='w',edgecolor='m',lw=2,marker='o',s=200,zorder=1)
     ax.set_aspect('equal')
     ax.set_xlabel('x',size=30)

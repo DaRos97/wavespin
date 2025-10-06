@@ -4,6 +4,7 @@
 import numpy as np
 from wavespin.tools import pathFinder as pf
 from pathlib import Path
+from wavespin.plots import fancyLattice
 
 class latticeClass():
     def __init__(self,p):
@@ -19,6 +20,9 @@ class latticeClass():
         # Directory names
         self.dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
         self.figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
+        # Plotting
+        if p.lat_plotLattice:
+            fancyLattice.plotSitesGrid(self)
 
     def _xy(self, i):
         return i // self.Ly, i % self.Ly

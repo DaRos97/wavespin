@@ -45,7 +45,7 @@ def plotRampKW(ramp, **kwargs):
     """ Plot frequency over mod k for the different ramp parameters.
     """
     sys0 = ramp.rampElements[0]
-    transformType = sys0.p.transformType
+    transformType = sys0.p.cor_transformType
     nP = ramp.nP
     Lx = sys0.Lx
     Ly = sys0.Ly
@@ -88,7 +88,7 @@ def plotRampKW(ramp, **kwargs):
                 txtMagnon += '-'
     else:
         txtMagnon = ''
-    title = 'Commutator: ' + sys0.p.correlatorType + ', momentum transform: ' + transformType + txtMagnon
+    title = 'Commutator: ' + sys0.p.cor_correlatorType + ', momentum transform: ' + transformType + txtMagnon
     plt.suptitle(title,fontsize=20)
     ylim = kwargs.get('ylim',70)
     vmax = np.max(P_k_omega_p)
@@ -152,9 +152,9 @@ def plotWf(system,nModes=16):
         ix,iy = system.indexesMap[i]
         phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
     fig, axes, rows, cols = createFigure(nModes,plot3D=True)
-    for ik in range(nModes):
+    for ik in range(50,55):#nModes):
         kx, ky = system._xy(ik)
-        ax = axes[ik]
+        ax = axes[ik-50]
         ax.plot_surface(X,Y,
                         phi_ik[:,ik].reshape(Lx,Ly).T,
                         cmap='plasma'
@@ -275,8 +275,8 @@ def plotRampValues(ramp, **kwargs):
     gaps = np.zeros(nP)
     for iP in range(nP):
         thetas[iP] = ramp.rampElements[iP].theta
-        gsEnergies[iP] = ramp.rampElements[iP].gsEnergy
-        gaps[iP] = np.min(ramp.rampElements[iP].dispersion)
+        gsEnergies[iP] = ramp.rampElements[iP].gsEnergy / ramp.rampElements[iP].g1
+        gaps[iP] = np.min(ramp.rampElements[iP].dispersion) / ramp.rampElements[iP].g1
     #
     fig = plt.figure(figsize=(12,10))
     ax = fig.add_subplot()
@@ -292,10 +292,12 @@ def plotRampValues(ramp, **kwargs):
     l3 = ax_r.plot(xAxis,gaps,'g*-',label='Gap')
     ax_r.tick_params(axis='y',colors='g')
 
-    ax.set_xlabel("Ramp evolution",size=20)
+    xvals = np.linspace(0,1,11)
+    ax.set_xticks([i for i in xvals*nP],["{:.1f}".format(i) for i in xvals],size=15)
+    ax.set_xlabel("Stop ratio",size=20)
     #Legend
     labels = [l.get_label() for l in l1+l2+l3]
-    ax.legend(l1+l2+l3,labels,fontsize=20,loc=(0.4,0.1))
+    ax.legend(l1+l2+l3,labels,fontsize=20,loc='center right')
 
     plt.show()
 

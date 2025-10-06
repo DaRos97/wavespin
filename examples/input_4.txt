@@ -1,17 +1,23 @@
 # Input file for static correlator
 # Use '#' to comment a line and ':' to assign a value
-correlatorType: zz
-transformType: dct
+
+# Lattice options
 Lx: 9
 Ly: 7
-perturbationSite: (3,4)
-magnonModes: (1,2,3,4)
-excludeZeroMode: False
 plotSites: False
+
+# Diagonalization options
+excludeZeroMode: True
+uniformQA: True
 saveWf: True
 plotWf: False
-saveCorrelatorXT: False
-saveCorrelatorKW: False
-plotCorrelatorKW: True
-savePlotCorrelatorKW: False
-uniformQA: False
+
+# Correlator options
+correlatorType: zz
+transformType: dct
+perturbationSite: (3,4)
+magnonModes: (1,2,3,4)
+saveXT: False
+saveKW: False
+plotKW: True
+savePlotKW: False

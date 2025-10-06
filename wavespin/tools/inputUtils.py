@@ -243,7 +243,7 @@ class myParameters:
     lat_Ly: int = 7                             #
     lat_offSiteList: tuple = ()                 #
     lat_boundary: str = 'open'                  #
-    lat_plotSites: bool = False                 #
+    lat_plotLattice: bool = False               #
     # Diagonalization
     dia_Hamiltonian: tuple = (0,0,0,0,0,0)      #
     dia_excludeZeroMode: bool = False           #
@@ -252,7 +252,7 @@ class myParameters:
     dia_plotWf: bool = False                    #
     dia_plotMomenta: bool = False               #
     # Correlators
-    cor_type: str = 'zz'                        #
+    cor_correlatorType: str = 'zz'                        #
     cor_transformType: str = 'dct'              #
     cor_perturbationSite: tuple = (0,0)         #
     cor_magnonModes: tuple = (1,2,3,4)          #
@@ -323,7 +323,7 @@ def checkParameters(parameters):
     if len(parameters.dia_Hamiltonian) != 6:
         raise ValueError("Hamiltonian parameters not of right legth: ",parameters.dia_Hamiltonian)
     # Correlator parameters
-    if parameters.cor_type not in ['zz','ee','jj','ze','ez','xx']:
+    if parameters.cor_correlatorType not in ['zz','ee','jj','ze','ez','xx']:
         raise ValueError(f"Invalid correlator type: {parameters.cor_type}")
     if parameters.cor_transformType not in ['fft','dst','dct','dat']:
         raise ValueError(f"Invalid momentum transform type: {parameters.cor_transformType}")

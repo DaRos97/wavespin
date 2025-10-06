@@ -432,9 +432,9 @@ class openHamiltonian(latticeClass):
 ##########################################################
 
 class openSystem(openHamiltonian):
-    def __init__(self, p: iu.openParameters, termsHamiltonian):
+    def __init__(self, p: iu.openParameters):
         # Construct lattice and Hamiltonian
-        super().__init__(p,termsHamiltonian=termsHamiltonian)
+        super().__init__(p)
         #XT correlator parameters
         self.perturbationSite = p.cor_perturbationSite
         self.perturbationIndex = self.indexesMap.index(self.perturbationSite)
@@ -474,7 +474,7 @@ class openSystem(openHamiltonian):
                 ix, iy = self._xy(ind_i)
                 if (ix,iy) in self.offSiteList:
                     continue
-                self.correlatorXT[ix,iy] = openCorrelators.dicCorrelators[self.p.cor_type](self,ind_i,A,B,G,H)
+                self.correlatorXT[ix,iy] = openCorrelators.dicCorrelators[self.p.cor_correlatorType](self,ind_i,A,B,G,H)
             if self.p.cor_saveXT:
                 if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in directory: "+self.dataDn)
@@ -492,8 +492,8 @@ class openSystem(openHamiltonian):
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn_h = ('correlator_horizontal_bonds',self.p.cor_type,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite)
-        argsFn_v = ('correlator_vertical_bonds',self.p.cor_type,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite)
+        argsFn_h = ('correlator_horizontal_bonds',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite)
+        argsFn_v = ('correlator_vertical_bonds',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite)
         correlatorFn_h = pf.getFilename(*argsFn_h,dirname=self.dataDn,extension='.npy')
         correlatorFn_v = pf.getFilename(*argsFn_v,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn_h).is_file() or Path(correlatorFn_v).is_file():
@@ -539,7 +539,7 @@ class openSystem(openHamiltonian):
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn = ('correlatorKW_rs',self.p.cor_type,self.p.cor_transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes)
+        argsFn = ('correlatorKW_rs',self.p.cor_correlatorType,self.p.cor_transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorKW = momentumTransformation.dicTransformType[self.p.cor_transformType](self)
@@ -577,7 +577,7 @@ class openRamp():
             # Compute Correlators
             self.rampElements[i].realSpaceCorrelator(verbose=verbose)
             # Bond correlators
-            if self.rampElements[i].p.saveCorrelatorXTbonds:
+            if self.rampElements[i].p.cor_saveXTbonds:
                 self.rampElements[i].realSpaceCorrelatorBond(verbose=verbose)
 
     def correlatorsKW(self,verbose=False):
@@ -586,6 +586,17 @@ class openRamp():
         iterKW = tqdm(range(self.nP),desc="Computing Fourier transformation of correlator") if verbose else range(self.nP)
         for i in iterKW:
             self.rampElements[i].momentumSpaceCorrelator()
+
+        if self.rampElements[0].p.cor_plotKW:
+            """ Plot the Fourier-transformed correlators of the ramp """
+            plotRampKW(self,
+                       kwargs={
+                           'numKbins' : 50,
+                           'ylim' : 70,            #MHz
+                           'saveFigure' : self.rampElements[0].p.cor_savePlotKW,
+                           'showFigure' : True,
+                       }
+                       )
 
 
 

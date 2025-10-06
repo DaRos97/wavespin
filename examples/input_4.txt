@@ -11,6 +11,7 @@ excludeZeroMode: True
 uniformQA: True
 saveWf: True
 plotWf: False
+plotMomenta: False
 
 # Correlator options
 correlatorType: zz

@@ -111,13 +111,14 @@ def eeCorrelator(system,ind_i,A,B,G,H):
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
-    magnonModes = system.magnonModes
+    magnonModes = system.p.cor_magnonModes
     #
     ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
     EE = np.zeros(A[0,0].shape,dtype=complex)
     ind_nn_i = get_nn(ind_i,Lx,Ly)
     ind_nn_j = [perturbationIndex+Ly,]
+    Jbond = np.mean(system.g_i[0][ind_i,ind_nn_i])
     for i in system.offSiteList:
         if system._idx(i) in ind_nn_i:
             ind_nn_i.remove(system._idx(i))
@@ -143,7 +144,7 @@ def eeCorrelator(system,ind_i,A,B,G,H):
                 for t in list_terms:
                     contraction = computeContraction(t[1],t[2],t[3],A,B,G,H,magnonModes)
                     EE += coeff_t * t[0] * contraction
-    return 2*1j/len(ind_nn_i)/len(ind_nn_j)*np.imag(EE)
+    return 2*1j/len(ind_nn_i)/len(ind_nn_j)*np.imag(EE) * Jbond**2
 
 def xxCorrelator(system,ind_i,A,B,G,H):
     """ Compute real space <[X_i(t),X_j(0)]> correlator.
@@ -190,7 +191,7 @@ def jjCorrelator(system,ind_i,A,B,G,H):
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
     JJ = np.zeros(A[0,0].shape,dtype=complex)
     ind_nn_i = get_nn(ind_i,Lx,Ly)
-    Jbond = np.mean(system.J_i[0][ind_i,ind_nn_i])
+    Jbond = np.mean(system.g_i[0][ind_i,ind_nn_i])
     ind_nn_j = [perturbationIndex+1,]
     for i in system.offSiteList:
         if system._idx(i) in ind_nn_i:
@@ -224,7 +225,7 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
     """
     Lx = system.Lx
     Ly = system.Ly
-    Jbond = system.J_i[0][ind_i,(ind_i+1)%system.Ns] if orientation=='v' else system.J_i[0][ind_i,(ind_i+Ly)%system.Ns]
+    Jbond = system.g_i[0][ind_i,(ind_i+1)%system.Ns] if orientation=='v' else system.g_i[0][ind_i,(ind_i+Ly)%system.Ns]
     ts = system.ts
     site0 = system.site0
     indexesMap = system.indexesMap

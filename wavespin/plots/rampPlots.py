@@ -79,7 +79,7 @@ def plotRampKW(ramp, **kwargs):
             if np.any(mask):
                 P_k_omega_p[iP, i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
     # Figure
-    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))
+    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))#,nRows=1,nCols=nP)
     if hasattr(sys0,'magnonModes'):
         txtMagnon = ', magnons mode(s): '
         for i in sys0.magnonModes:
@@ -111,8 +111,10 @@ def plotRampKW(ramp, **kwargs):
             ax.set_ylabel(r'$\omega$',fontsize=15)
         if iP in np.arange((rows-1)*cols,rows*cols):
             ax.set_xlabel(r'$|k|$',fontsize=15)
-    for i in range(nP,len(axes)):
-        axes[i].set_axis('off')
+        stopRatio = ramp.rampElements[iP].g1 / 10
+        ax.set_title(r"$\alpha=$%.2f"%stopRatio,size=20)
+    for i in range(nP,len(axes)):       #set to blank extra plots
+        axes[i].axis('off')
     plt.tight_layout()
     #
     if transformType=='dat':

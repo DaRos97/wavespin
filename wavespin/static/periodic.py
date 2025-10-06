@@ -10,7 +10,7 @@ from wavespin.tools import pathFinder as pf
 from wavespin.tools import inputUtils as iu
 from wavespin.static import momentumTransformation
 
-def quantizationAxis(S,J_i,D_i,h_i):
+def quantizationAxis(S,g_i,D_i,h_i):
     r""" Compute angles theta and phi of quantization axis depending on Hamiltonian parameters.
     Works for both uniform and site-dependent Hamiltonian parameters, where we take the average.
     In PBC each site has the same Q-axis, in OBC there could be border effects.
@@ -25,34 +25,36 @@ def quantizationAxis(S,J_i,D_i,h_i):
     angles : 2-tuple.
         $\theta$,$\phi$ : polar and azimuthal angle.
     """
-    if type(J_i[0]) in [float,int,np.float64]:   #if we give a single number for J1,J2,H etc.. -> static_dispersion.py
-        J = J_i
+    if type(g_i[0]) in [float,int,np.float64]:   #if we give a single number for J1,J2,H etc.. -> static_dispersion.py
+        g = g_i
         D = D_i
         h = h_i
     else:   #f we give a site dependent value of J1, J2 etc.., we need an average -> static_ZZ_*.py
-        J = []
+        g = []
         D = []
         for i in range(2):
-            if not (J_i[i] == np.zeros(J_i[i].shape)).all():
-                J.append(abs(float(np.sum(J_i[i])/(J_i[i][np.nonzero(J_i[i])]).shape)))
+            if not (g_i[i] == np.zeros(g_i[i].shape)).all():
+                g.append(abs(float(np.sum(g_i[i])/(g_i[i][np.nonzero(g_i[i])]).shape)))
             else:
-                J.append(0)
+                g.append(0)
             if not (D_i[i] == np.zeros(D_i[i].shape)).all():
                 D.append(float(np.sum(D_i[i])/(D_i[i][np.nonzero(D_i[i])]).shape))
             else:
                 D.append(0)
-        if J[0]!=0:
-            D[0] = D[0]/J[0]        #As we defined in notes
-        if J[1]!=0:
-            D[1] = D[1]/J[1]        #As we defined in notes
+        if g[0]!=0:
+            D[0] = D[0]/g[0]        #As we defined in notes
+        if g[1]!=0:
+            D[1] = D[1]/g[1]        #As we defined in notes
         if not (h_i == np.zeros(h_i.shape)).all():
             h_av = float(np.sum(h_i)/(h_i[np.nonzero(h_i)]).shape)
             h_stag = np.absolute(h_i[np.nonzero(h_i)]-h_av)
             h = float(np.sum(h_stag)/(h_stag[np.nonzero(h_stag)]).shape)
         else:
             h = 0
-    if J[1]<J[0]/2 and h<4*S*(J[0]*(1-D[0])-J[1]*(1-D[1])):
-        theta = np.arccos(h/(4*S*(J[0]*(1-D[0])-J[1]*(1-D[1]))))
+#    h_critical = 2*(g[0]*(1-D[0])-g[1]*(1-D[1]))
+    h_critical = 2*g[0]*(1-D[0])
+    if g[1]<g[0]/2 and h<h_critical:
+        theta = np.arccos(h/h_critical)
     else:
         theta = 0
     #
@@ -60,7 +62,7 @@ def quantizationAxis(S,J_i,D_i,h_i):
     angles = (theta, phi)
     return angles
 
-def computePs(alpha,beta,ts,J,D,offSiteList=[],Lx=0,Ly=0,order='c-Neel'):
+def computePs(alpha,beta,ts,g,D,offSiteList=[],Lx=0,Ly=0,order='c-Neel'):
     """ Compute coefficient p_gamma^{alpha,beta} for a given classical order.
     alpha,beta=0,1,2 -> z,x,y like for ts.
     J and D are tuple with 1st and 2nd nn.
@@ -74,8 +76,8 @@ def computePs(alpha,beta,ts,J,D,offSiteList=[],Lx=0,Ly=0,order='c-Neel'):
     """
     if order=='c-Neel': #nn: A<->B, nnn: A<->A
         #Nearest neighor
-        nn =  J[0]*ts[0][alpha][0]*ts[1][beta][0] + J[0]*ts[0][alpha][1]*ts[1][beta][1] + J[0]*D[0]*ts[0][alpha][2]*ts[1][beta][2]
-        nnn = J[1]*ts[0][alpha][0]*ts[0][beta][0] + J[1]*ts[0][alpha][1]*ts[0][beta][1] + J[1]*D[1]*ts[0][alpha][2]*ts[0][beta][2]
+        nn =  g[0]*ts[0][alpha][0]*ts[1][beta][0] + g[0]*ts[0][alpha][1]*ts[1][beta][1] + g[0]*D[0]*ts[0][alpha][2]*ts[1][beta][2]
+        nnn = g[1]*ts[0][alpha][0]*ts[0][beta][0] + g[1]*ts[0][alpha][1]*ts[0][beta][1] + g[1]*D[1]*ts[0][alpha][2]*ts[0][beta][2]
     for offTerm in offSiteList:
         ind = offTerm[0]*Ly + offTerm[1]
         nn[:,ind] *= 0
@@ -105,16 +107,16 @@ class periodicHamiltonian(latticeClass):
         #Lattice parameters
         self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
         self._momentumGrid()
-        self.Gamma = self._gamma()
+        self.gamma = self._gamma()
         #Hamiltonian parameters
         self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = p.dia_Hamiltonian
-        self.J = (self.g1,self.g2)
+        self.g = (self.g1,self.g2)
         self.D = (self.d1,self.d2)
         self.S = 0.5     #spin value
-        self.theta,self.phi = quantizationAxis(self.S,self.J,self.D,self.h)
+        self.theta,self.phi = quantizationAxis(self.S,self.g,self.D,self.h)
         self.ts = computeTs(self.theta,self.phi)       #All t-parameters for A and B sublattice
         self.dispersion = self._dispersion()
-        self.gsEnergy = np.sum(self.dispersion)/self.Ns + self._E0()
+        self.gsEnergy = np.sum(self.dispersion)/self.Ns/2 + self._E0()
         self.rk = self._rk()
         self.phik = self._phik()
         #XT correlator parameters
@@ -123,12 +125,6 @@ class periodicHamiltonian(latticeClass):
         self.measureTimeList = np.linspace(0,self.fullTimeMeasure,self.nTimes)
         #KW correlator parameters
         self.nOmega = 2000
-
-    def _xy(self, i):
-        return i // self.Ly, i % self.Ly
-
-    def _idx(self, x, y):
-        return x*self.Ly + y
 
     def _momentumGrid(self):
         """ Compute momenta in the Brillouin zone for a (periodic) rectangular shape.
@@ -155,7 +151,7 @@ class periodicHamiltonian(latticeClass):
             Dispersions at 1st and 2nd nearest neighbor.
         """
         gridk = self.gridk
-        Gamma1 = np.cos(gridk[:,:,0])+np.cos(gridk[:,:,1])  #cos(kx) + cos(ky)
+        Gamma1 = 1/2*( np.cos(gridk[:,:,0])+np.cos(gridk[:,:,1]) ) #cos(kx) + cos(ky)
         Gamma2 = np.cos(gridk[:,:,0]+gridk[:,:,1])+np.cos(gridk[:,:,0]-gridk[:,:,1])  #cos(kx+ky) + cos(kx-ky)
         return (Gamma1,Gamma2)
 
@@ -167,27 +163,18 @@ class periodicHamiltonian(latticeClass):
         N_11 = self._N11()
         N_12 = self._N12()
         result = np.sqrt(N_11**2-np.absolute(N_12)**2,where=(N_11**2>=np.absolute(N_12)**2))
-    #    result[N_11**2<np.absolute(N_12)**2] = 0
         return result
 
     def _N11(self):
         """ Compute N_11 as in notes. """
-        p_zz = computePs(0,0,self.ts,self.J,self.D)
-        p_xx = computePs(1,1,self.ts,self.J,self.D)
-        p_yy = computePs(2,2,self.ts,self.J,self.D)
-        result = self.h/2*np.cos(self.theta)
-        for i in range(2):
-            result += self.S*(self.Gamma[i]*(p_xx[i]+p_yy[i])/2-2*p_zz[i])
+        th = self.theta
+        result = self.g1/self.S * (2*np.sin(th)**2+2*self.d1*np.cos(th)**2 + self.gamma[0]*np.sin(th)**2*(1-self.d1))
+        result += self.h/self.S*np.cos(th)
         return result
 
     def _N12(self):
         """ Compute N_12 as in notes. """
-        p_xx = computePs(1,1,self.ts,self.J,self.D)
-        p_yy = computePs(2,2,self.ts,self.J,self.D)
-        p_xy = computePs(1,2,self.ts,self.J,self.D)
-        result = 0
-        for i in range(2):
-            result += self.S/2*self.Gamma[i]*(p_xx[i]-p_yy[i]-2*1j*p_xy[i])
+        result = - self.g[0] / self.S * self.gamma[0] * (np.cos(self.theta)**2 + 1 + self.D[0]*np.sin(self.theta)**2)
         return result
 
     def _rk(self):
@@ -211,10 +198,8 @@ class periodicHamiltonian(latticeClass):
     def _E0(self):
         r""" Compute $E_0$ as in notes.
         """
-        p_zz = computePs(0,0,self.ts,self.J,self.D)
-        result = -self.h*(self.S+1/2)*np.cos(self.theta)
-        for i in range(2):
-            result += 2*self.S*(self.S+1)*p_zz[i]
+        result = -self.g[0]/self.S * (np.sin(self.theta)**2+self.D[0]*np.cos(self.theta)**2) * (1 + self.S)
+        result += -self.h * np.cos(self.theta) * (1 + 1/self.S/2)
         return result
 
     def realSpaceCorrelator(self,verbose=False):

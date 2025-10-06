@@ -2,8 +2,8 @@
 # Use '#' to comment a line and ':' to assign a value
 
 # Lattice options
-Lx: 9
-Ly: 7
+Lx: 7
+Ly: 9
 plotSites: False
 
 # Diagonalization options

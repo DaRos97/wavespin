@@ -275,8 +275,8 @@ def plotRampValues(ramp, **kwargs):
     gaps = np.zeros(nP)
     for iP in range(nP):
         thetas[iP] = ramp.rampElements[iP].theta
-        gsEnergies[iP] = ramp.rampElements[iP].gsEnergy / ramp.rampElements[iP].g1
-        gaps[iP] = np.min(ramp.rampElements[iP].dispersion) / ramp.rampElements[iP].g1
+        gsEnergies[iP] = ramp.rampElements[iP].gsEnergy #/ ramp.rampElements[iP].g1 / 2
+        gaps[iP] = np.min(ramp.rampElements[iP].dispersion) #/ ramp.rampElements[iP].g1 / 2
     #
     fig = plt.figure(figsize=(12,10))
     ax = fig.add_subplot()
@@ -292,7 +292,7 @@ def plotRampValues(ramp, **kwargs):
     l3 = ax_r.plot(xAxis,gaps,'g*-',label='Gap')
     ax_r.tick_params(axis='y',colors='g')
 
-    xvals = np.linspace(0,1,11)
+    xvals = np.linspace(0.1,1,10)
     ax.set_xticks([i for i in xvals*nP],["{:.1f}".format(i) for i in xvals],size=15)
     ax.set_xlabel("Stop ratio",size=20)
     #Legend

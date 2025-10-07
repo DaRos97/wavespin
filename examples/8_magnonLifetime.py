@@ -26,13 +26,13 @@ system = openHamiltonian(parameters)
 best_modes = np.array([17,18,19,20,24,25,26,27,30,31,32,34])
 kwargs = {'best_modes':best_modes}
 system.diagonalize(verbose=verbose,**kwargs)
-rampPlots.plotWf(system)
-rampPlots.plotBogoliubovMomenta(system)
-exit()
+
+#rampPlots.plotWf(system)
+#rampPlots.plotBogoliubovMomenta(system)
 
 system.decayRates(temperature=parameters.sca_temperature,verbose=verbose)
 
-if 0:
+if 1:
     """ Decay vs amplitude """
     data = system.dataScattering
     evals = system.evals *2*np.pi / 1e3     #in GHz
@@ -67,14 +67,14 @@ if 0:
     cbar = fig.colorbar(sm,ax=ax)
     cbar.set_label("Mode freq. (GHz)")
     plt.show()
-    exit()
 
-if 0:
+if 1:
     """ Compute multiple temperatures """
     Ts = np.linspace(2,20,10)
-    Ts = [8,]
+#    Ts = [8,]
     dataT = np.zeros((len(Ts),system.Ns-1))
 
+    system.p.sca_plotVertex = False
     for it,T in enumerate(Ts):
         """ Scattering vertices """
         system.decayRates(temperature=T,verbose=verbose)

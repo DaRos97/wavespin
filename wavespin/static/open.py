@@ -225,7 +225,7 @@ class openHamiltonian(latticeClass):
         """ Compute decay rates.
         Use sca_broadening * mean energy difference for the broadening of the energy delta function.
         """
-        if (self.J_i[1] != 0).any() or (self.D_i[1] != 0).any():
+        if (self.g_i[1] != 0).any() or (self.D_i[1] != 0).any():
             raise ValueError("Decay rates are so far only implemented for first nearest neighbor couplings.")
         edif = self.evals[2:] - self.evals[1:-1]
         gamma = self.p.sca_broadening * np.mean(edif)
@@ -234,17 +234,22 @@ class openHamiltonian(latticeClass):
         U = np.real(self.U_)[:,1:]
         V = np.real(self.V_)[:,1:]
         # Parameters
-        p_xz = self.J_i[0] * np.sqrt(self.S/8) * (1-self.D_i[0]) * np.sin(2 * self.thetas)
-        p_x = -self.J_i[0] * self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2)
-        p_y = self.J_i[0] * self.S**2
-        p_z = -self.J_i[0] * self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
-        f1 = -(p_x+p_y)/(8*self.S**2)
-        f2 = (p_y-p_x)/(8*self.S**2)
-        f3 = p_z/self.S**2
+        p_xz = self.g_i[0] / np.sqrt(2*self.S)/4/self.S * (1-self.D_i[0]) * np.sin(2 * self.thetas)
+        #p_x = -self.g_i[0] * self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2)
+        #p_y = self.g_i[0] * self.S**2
+        #p_z = -self.g_i[0] * self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
+        #f1 = -(p_x+p_y)/(8*self.S**2)
+        #f2 = (p_y-p_x)/(8*self.S**2)
+        #f3 = p_z/self.S**2
+        f1 = -self.g_i[0] / 16 / self.S**2 * np.sin(self.thetas)**2 * (1-self.D_i[0])
+        f2 = self.g_i[0] / 16 / self.S**2 * (1 + np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2)
+        f3 = -self.g_i[0] / 4 / self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
         # Filename and looping types
         self.dataScattering = {}
         argsFn = ['scatteringVertex',temperature,self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder,self.Lx,self.Ly,self.Ns,self.p.sca_broadening]
         for scatteringType in self.p.sca_types:
+            if scatteringType=='2to2all':
+                continue
             argsFnS = argsFn.insert(1,scatteringType)
             if verbose:
                 print("\nScattering %s"%scatteringType)
@@ -313,12 +318,12 @@ class openHamiltonian(latticeClass):
                 Vn_lmr += np.einsum('ij,jjmn,ijlr->nlmr',f2,Kappa,KaS,optimize=True)
                 Vn_lmr += np.einsum('ij,jjrn,ijml->nlmr',f2,Kappa,KaS,optimize=True)
                 # f3                                   
-                Vn_lmr += np.einsum('ij,jjlm,iinr->nlmr',f3/2,Omega,Kappa,optimize=True)
-                Vn_lmr += np.einsum('ij,jjlr,iimn->nlmr',f3/2,Omega,Kappa,optimize=True)
-                Vn_lmr += np.einsum('ij,jjmr,iiln->nlmr',f3/2,Omega,Kappa,optimize=True)
-                Vn_lmr += np.einsum('ij,jjln,iimr->nlmr',f3/2,Kappa,Omega,optimize=True)
-                Vn_lmr += np.einsum('ij,jjmn,iilr->nlmr',f3/2,Kappa,Omega,optimize=True)
-                Vn_lmr += np.einsum('ij,jjrn,iiml->nlmr',f3/2,Kappa,Omega,optimize=True)
+                Vn_lmr += np.einsum('ij,jjlm,iinr->nlmr',f3,Omega,Kappa,optimize=True)
+                Vn_lmr += np.einsum('ij,jjlr,iimn->nlmr',f3,Omega,Kappa,optimize=True)
+                Vn_lmr += np.einsum('ij,jjmr,iiln->nlmr',f3,Omega,Kappa,optimize=True)
+                Vn_lmr += np.einsum('ij,jjln,iimr->nlmr',f3,Kappa,Omega,optimize=True)
+                Vn_lmr += np.einsum('ij,jjmn,iilr->nlmr',f3,Kappa,Omega,optimize=True)
+                Vn_lmr += np.einsum('ij,jjrn,iiml->nlmr',f3,Kappa,Omega,optimize=True)
                 # i <-> j and symmetrization
                 Vn_lmr /= 3
 
@@ -373,12 +378,12 @@ class openHamiltonian(latticeClass):
                 Vnr_lm += np.einsum('ij,jjln,ijrm->nrlm',f2,Kappa,OmS,optimize=True)
                 Vnr_lm += np.einsum('ij,jjmn,ijrl->nrlm',f2,Kappa,OmS,optimize=True)
                 # f3
-                Vnr_lm += np.einsum('ij,jjlm,iinr->nrlm',f3/2,Omega,Omega,optimize=True)
-                Vnr_lm += np.einsum('ij,jjnr,iilm->nrlm',f3/2,Omega,Omega,optimize=True)
-                Vnr_lm += np.einsum('ij,jjlr,iimn->nrlm',f3/2,Kappa,Kappa,optimize=True)
-                Vnr_lm += np.einsum('ij,jjmr,iiln->nrlm',f3/2,Kappa,Kappa,optimize=True)
-                Vnr_lm += np.einsum('ij,jjln,iimr->nrlm',f3/2,Kappa,Kappa,optimize=True)
-                Vnr_lm += np.einsum('ij,jjmn,iilr->nrlm',f3/2,Kappa,Kappa,optimize=True)
+                Vnr_lm += np.einsum('ij,jjlm,iinr->nrlm',f3,Omega,Omega,optimize=True)
+                Vnr_lm += np.einsum('ij,jjnr,iilm->nrlm',f3,Omega,Omega,optimize=True)
+                Vnr_lm += np.einsum('ij,jjlr,iimn->nrlm',f3,Kappa,Kappa,optimize=True)
+                Vnr_lm += np.einsum('ij,jjmr,iiln->nrlm',f3,Kappa,Kappa,optimize=True)
+                Vnr_lm += np.einsum('ij,jjln,iimr->nrlm',f3,Kappa,Kappa,optimize=True)
+                Vnr_lm += np.einsum('ij,jjmn,iilr->nrlm',f3,Kappa,Kappa,optimize=True)
                 # i <-> j and symmetrization
                 Vnr_lm *= 2
 
@@ -412,7 +417,7 @@ class openHamiltonian(latticeClass):
                     else:
                         bose_factor = 1
                     # Decay rate
-                    Gamma_n = np.einsum('lmii,ilm,ilm->i',Vnr_lm**2,delta_vals,bose_factor)
+                    Gamma_n = np.einsum('nnlm,nlm,nlm->n',Vnr_lm**2,delta_vals,bose_factor)
                     Gamma_n *= 2*np.pi
             if verbose:
                 print("Computation took: %.3f seconds"%(time()-ti))

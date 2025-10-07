@@ -251,21 +251,25 @@ def plotRampDispersions(ramp, **kwargs):
     """ Plot the dispersions of each system in the ramp.
     """
     nP = ramp.nP
-    fig, axes, rows, cols = createFigure(nP,plot3D=True)
+    fig, axes, rows, cols = createFigure(nP,plot3D=True,nCols=3,nRows=2)
     for iP in range(ramp.nP):
         gridk = ramp.rampElements[iP].gridk
         dispersion = ramp.rampElements[iP].dispersion
         ax = axes[iP]
         ax.plot_surface(gridk[:,:,0],gridk[:,:,1],dispersion,cmap='plasma')
         ax.set_aspect('equalxy')
-        n_i = 6
+        n_i = 2
         ax.set_xticks([ik*2*np.pi/n_i for ik in range(n_i+1)],["{:.2f}".format(ik*2*np.pi/n_i) for ik in range(n_i+1)],size=8)
         ax.set_yticks([ik*2*np.pi/n_i for ik in range(n_i+1)],["{:.2f}".format(ik*2*np.pi/n_i) for ik in range(n_i+1)],size=8)
-        if iP in [cols*i for i in range(0,rows)]:
-            ax.set_ylabel(r'$k_y$',fontsize=15)
-        if iP in np.arange((rows-1)*cols,rows*cols):
-            ax.set_xlabel(r'$k_x$',fontsize=15)
+        #if iP in [cols*i for i in range(0,rows)]:
+        #ax.set_ylabel(r'$k_y$',fontsize=15)
+        #if iP in np.arange((rows-1)*cols,rows*cols):
+        #ax.set_xlabel(r'$k_x$',fontsize=15)
+
+        stopRatio = ramp.rampElements[iP].g1 / 10
+        ax.set_title(r"$\alpha=$%.2f"%stopRatio,size=20)
     plt.suptitle("Dispersion relation of periodic system",size=20)
+    plt.tight_layout()
     plt.show()
 
 def plotRampValues(ramp, **kwargs):
@@ -277,29 +281,29 @@ def plotRampValues(ramp, **kwargs):
     gaps = np.zeros(nP)
     for iP in range(nP):
         thetas[iP] = ramp.rampElements[iP].theta
-        gsEnergies[iP] = ramp.rampElements[iP].gsEnergy #/ ramp.rampElements[iP].g1 / 2
-        gaps[iP] = np.min(ramp.rampElements[iP].dispersion) #/ ramp.rampElements[iP].g1 / 2
+        gsEnergies[iP] = ramp.rampElements[iP].gsEnergy / ramp.rampElements[-1].g1 / 2
+        gaps[iP] = np.min(ramp.rampElements[iP].dispersion) / ramp.rampElements[-1].g1 / 2
     #
     fig = plt.figure(figsize=(12,10))
     ax = fig.add_subplot()
-    xAxis = np.arange(nP)
+    xvals = np.linspace(0.1,1,10)
+    xAxis = np.linspace(xvals[0],xvals[-1],nP)
     l1 = ax.plot(xAxis,thetas,'b*-',label=r'$\theta$')
     ax.set_yticks([i/6*np.pi/2 for i in range(7)],["{:.1f}".format(i/6*90)+'°' for i in range(7)],size=15,color='b')
 
     ax_r = ax.twinx()
     l2 = ax_r.plot(xAxis,gsEnergies,'r*-',label=r'$E_{GS}$')
-    ax_r.tick_params(axis='y',colors='r')
+    ax_r.tick_params(axis='y',colors='r',pad=20,width=2,length=6)
 
     ax_r = ax.twinx()
     l3 = ax_r.plot(xAxis,gaps,'g*-',label='Gap')
     ax_r.tick_params(axis='y',colors='g')
 
-    xvals = np.linspace(0.1,1,10)
-    ax.set_xticks([i for i in xvals*nP],["{:.1f}".format(i) for i in xvals],size=15)
+    ax.set_xticks([i for i in xvals],["{:.1f}".format(i) for i in xvals],size=15)
     ax.set_xlabel("Stop ratio",size=20)
     #Legend
     labels = [l.get_label() for l in l1+l2+l3]
-    ax.legend(l1+l2+l3,labels,fontsize=20,loc='center right')
+    ax.legend(l1+l2+l3,labels,fontsize=20,loc=(0.75,0.1))
 
     plt.show()
 

@@ -1,6 +1,6 @@
 # Input file for static correlator
 # Use '#' to comment a line and ':' to assign a value
 Lx: 200
-Ly: 201
+Ly: 200
 boundary: periodic
 

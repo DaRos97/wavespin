@@ -162,7 +162,9 @@ class periodicHamiltonian(latticeClass):
         """
         N_11 = self._N11()
         N_12 = self._N12()
-        result = np.sqrt(N_11**2-np.absolute(N_12)**2,where=(N_11**2>=np.absolute(N_12)**2))
+        result = np.zeros(N_11.shape)
+        mask = (N_11**2>=np.absolute(N_12)**2)
+        result[mask] = np.sqrt(N_11[mask]**2-np.absolute(N_12[mask])**2)#,where=(N_11**2>=np.absolute(N_12)**2))
         return result
 
     def _N11(self):

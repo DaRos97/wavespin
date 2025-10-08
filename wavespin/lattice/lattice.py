@@ -18,8 +18,8 @@ class latticeClass():
         self.NN = self._build_nn()
         self.NNN = self._build_nnn()
         # Directory names
-        self.dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
-        self.figureDn = pf.getHomeDirname(str(Path.cwd()),'Figures/')
+        self.dataDn = pf.getHomeDirname(str(Path.cwd()),'/Data/')
+        self.figureDn = pf.getHomeDirname(str(Path.cwd()),'/Figures/')
         # Plotting
         if p.lat_plotLattice:
             fancyLattice.plotSitesGrid(self)

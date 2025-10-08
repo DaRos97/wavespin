@@ -3,7 +3,7 @@
 
 Lx: 7
 Ly: 9
-plotSites: False
+plotLattice: False
 uniformQA: True
 excludeZeroMode: True
 

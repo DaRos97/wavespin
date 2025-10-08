@@ -79,7 +79,7 @@ def plotRampKW(ramp, **kwargs):
             if np.any(mask):
                 P_k_omega_p[iP, i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
     # Figure
-    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))#,nRows=1,nCols=nP)
+    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4),nRows=1,nCols=nP)
     if hasattr(sys0,'magnonModes'):
         txtMagnon = ', magnons mode(s): '
         for i in sys0.magnonModes:
@@ -303,7 +303,7 @@ def plotRampValues(ramp, **kwargs):
     ax.set_xlabel("Stop ratio",size=20)
     #Legend
     labels = [l.get_label() for l in l1+l2+l3]
-    ax.legend(l1+l2+l3,labels,fontsize=20,loc=(0.75,0.1))
+    ax.legend(l1+l2+l3,labels,fontsize=20,loc=(0.5,0.1))
 
     plt.show()
 
@@ -311,10 +311,10 @@ def plotVertex(system,**kwargs):
     """ Plot decay vertex at the end of openHamiltonian.decayRates()
     """
     title = {
-        '1to2':"1 to 2 decay process",
-        '1to3':"1 to 3 decay process",
-        '2to2a':"2 to 2: linear process",
-        '2to2b':"2 to 2: quadratic process",
+        '1to2':r"$\Gamma^{1\leftrightarrow2}$",
+        '1to3':r"$\Gamma^{1\leftrightarrow3}$",
+        '2to2a':r"$\Gamma^{2\leftrightarrow2}_1$",
+        '2to2b':r"$\Gamma^{2\leftrightarrow2}_2$",
     }
     best_modes = kwargs.get('best_modes',None)
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
@@ -330,7 +330,7 @@ def plotVertex(system,**kwargs):
         data['2to2all'] = []
         for Amplitude in Amplitudes:
             data['2to2all'].append(data['2to2a'] + Amplitude**2/4 * data['2to2b'])
-        title['2to2all'] = 'full 2 to 2'
+        title['2to2all'] = r'full $\Gamma^{2\leftrightarrow2}$'
     nS = len(types)
     nRows = 1 if nS<4 else 2
     nCols = nS if nS<4 else nS//2 + 1
@@ -338,38 +338,39 @@ def plotVertex(system,**kwargs):
     col = ['navy','orange']
     col2 = ['blue','red']
     for st, scatteringType in enumerate(types):
-        Gamma_n = data[scatteringType]
+        Gamma_n = data[scatteringType]        #in MHz
         ax = fig.add_subplot(nRows,nCols,st+1)
         if not scatteringType=='2to2all':
-            ax.scatter(np.arange(1,system.Ns),Gamma_n,marker='o',color=col[0],s=70)
+            ax.scatter(np.arange(1,system.Ns),Gamma_n/1e3,marker='o',color=col[0],s=70)
         else:
             for iA in range(len(Amplitudes)):
-                ax.scatter(np.arange(1,system.Ns),Gamma_n[iA],marker='o',color=col[iA],s=70,label="A=%.2f"%Amplitudes[iA])
+                ax.scatter(np.arange(1,system.Ns),Gamma_n[iA]/1e3,marker='o',color=col[iA],s=70,label="A=%.2f"%Amplitudes[iA])
         ax.set_xlabel("Mode number",size=s_)
         ax.set_title(title[scatteringType],size=s_+5)
         # best modes
         if not best_modes is None and scatteringType!='2to2all':
-            ax.scatter(best_modes,Gamma_n[best_modes-1],marker='o',color=col2[0],s=70)
+            ax.scatter(best_modes,Gamma_n[best_modes-1]/1e3,marker='o',color=col2[0],s=70)
         if st==0:
-            ax.text(0.58,0.09,"g=%s, H=%.1f\n"%(g_p/2,h_p)+r"$\Delta$=%.1f, $h_{dis}$=%.1f"%(d_p,disorder)+'\n'+r"$\gamma$=%.2f mEd"%system.p.sca_broadening,
+            tx,ty = (0.58,0.09) if scatteringType=='2to2a' else (0.03,0.6)
+            ax.text(tx,ty,"g=%s, H=%.1f\n"%(g_p,h_p)+r"$\Delta$=%.1f, $h_{dis}$=%.1f"%(d_p,disorder)+'\n'+r"$\gamma$=%.2f mEd"%system.p.sca_broadening,
                     size=s_-3,transform=ax.transAxes, bbox=props)
             txtT = "{:.2f}".format(T)+" MHz" if T!=0 else "inf"
             ax.text(0.03,0.88,"T="+txtT,
                     size=s_-3,transform=ax.transAxes, bbox=props)
-            ax.set_ylabel("Decay rate (MHz)",size=s_)
+            ax.set_ylabel("Decay rate (GHz)",size=s_)
         # Print mode number
         if not scatteringType=='2to2all':
-            fac = (np.max(Gamma_n) - np.min(Gamma_n)) / 40
+            fac = (np.max(Gamma_n) - np.min(Gamma_n)) / 40 / 1e3
             for i in range(1,system.Ns):
-                ax.text(i-0.6,Gamma_n[i-1]+fac,str(i))
+                ax.text(i-0.6,Gamma_n[i-1]/1e3+fac,str(i))
         else:   #numbers just on the first amplitude
-            fac = (np.max(Gamma_n[0]) - np.min(Gamma_n[0])) / 40
+            fac = (np.max(Gamma_n[0]) - np.min(Gamma_n[0])) / 40 / 1e3
             for i in range(1,system.Ns):
-                ax.text(i-0.6,Gamma_n[0][i-1]+fac,str(i))
+                ax.text(i-0.6,Gamma_n[0][i-1]/1e3+fac,str(i))
         if scatteringType=='2to2all':
-            ax.legend()
+            ax.legend(fontsize=s_)
 
-    plt.suptitle("Grid: %d x %d"%(system.Lx,system.Ly),size=s_)
+    #plt.suptitle("Grid: %d x %d"%(system.Lx,system.Ly),size=s_)
     fig.tight_layout()
     plt.show()
 

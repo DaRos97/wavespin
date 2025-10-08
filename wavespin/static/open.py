@@ -151,8 +151,8 @@ class openHamiltonian(latticeClass):
         #
         ham = np.zeros((2*Lx*Ly,2*Lx*Ly),dtype=complex)
         #p_zz sums over nn but is on-site -> problem when geometry is not rectangular
-        ham[:Lx*Ly,:Lx*Ly] = abs(h_i)*np.cos(np.diag(self.thetas)) / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
-        ham[Lx*Ly:,Lx*Ly:] = abs(h_i)*np.cos(np.diag(self.thetas)) / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
+        ham[:Lx*Ly,:Lx*Ly] = abs(h_i)*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
+        ham[Lx*Ly:,Lx*Ly:] = abs(h_i)*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
         #off_diag 1 - nn
         off_diag_1_nn = (p_xx+p_yy) / 4 / S
         ham[:Lx*Ly,:Lx*Ly] += off_diag_1_nn

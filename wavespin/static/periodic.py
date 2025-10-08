@@ -52,7 +52,7 @@ def quantizationAxis(S,g_i,D_i,h_i):
         else:
             h = 0
 #    h_critical = 2*(g[0]*(1-D[0])-g[1]*(1-D[1]))
-    h_critical = 2*g[0]*(1-D[0])
+    h_critical = 4*g[0]*(1-D[0])
     if g[1]<g[0]/2 and h<h_critical:
         theta = np.arccos(h/h_critical)
     else:
@@ -170,8 +170,8 @@ class periodicHamiltonian(latticeClass):
     def _N11(self):
         """ Compute N_11 as in notes. """
         th = self.theta
-        result = self.g1/self.S * (2*np.sin(th)**2+2*self.d1*np.cos(th)**2 + self.gamma[0]*np.sin(th)**2*(1-self.d1))
-        result += self.h/self.S*np.cos(th)
+        result = 2*self.g1/self.S * (np.sin(th)**2+self.d1*np.cos(th)**2 + self.gamma[0] / 2 * np.sin(th)**2 * (1-self.d1))
+        result += self.h / 2 / self.S * np.cos(th)
         return result
 
     def _N12(self):
@@ -201,7 +201,7 @@ class periodicHamiltonian(latticeClass):
         r""" Compute $E_0$ as in notes.
         """
         result = -self.g[0]/self.S * (np.sin(self.theta)**2+self.D[0]*np.cos(self.theta)**2) * (1 + self.S)
-        result += -self.h * np.cos(self.theta) * (1 + 1/self.S/2)
+        result += -self.h / 2 * np.cos(self.theta) * (1 + 1/self.S/2)
         return result
 
     def realSpaceCorrelator(self,verbose=False):

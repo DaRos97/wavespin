@@ -152,7 +152,7 @@ class periodicHamiltonian(latticeClass):
         """
         gridk = self.gridk
         Gamma1 = 1/2*( np.cos(gridk[:,:,0])+np.cos(gridk[:,:,1]) ) #cos(kx) + cos(ky)
-        Gamma2 = np.cos(gridk[:,:,0]+gridk[:,:,1])+np.cos(gridk[:,:,0]-gridk[:,:,1])  #cos(kx+ky) + cos(kx-ky)
+        Gamma2 = 1/2*( np.cos(gridk[:,:,0]+gridk[:,:,1])+np.cos(gridk[:,:,0]-gridk[:,:,1]))  #cos(kx+ky) + cos(kx-ky)
         return (Gamma1,Gamma2)
 
     def _dispersion(self):

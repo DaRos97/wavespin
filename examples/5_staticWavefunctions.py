@@ -3,13 +3,10 @@ Use with input_5.txt
 """
 
 import numpy as np
-import os, sys, argparse
+import sys, os, argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from wavespin.tools.inputUtils import importOpenParameters as importParameters
+from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
-from wavespin.lattice.lattice import latticeClass
-from wavespin.plots import fancyLattice
-from wavespin.plots import rampPlots
 
 """ Parameters and options """
 parser = argparse.ArgumentParser(description="Static correlator calculation using Holstein-Primakoff formalism")
@@ -19,33 +16,22 @@ inputArguments = parser.parse_args()
 verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
-if parameters.plotSites:
-    lattice = latticeClass(parameters)
-    fancyLattice.plotSitesGrid(lattice)
-
-""" Initialie system """
-""" Hamiltonian parameters """
+""" Chose the parameters """
 gInitial = 0
-gFinal = 20      #factor of 2 from experiment due to s^xs^x -> s^+s^-
+gFinal = 10
 hInitial = 15
 hFinal = 0
-for pValue in np.linspace(0.1,1,10):
-    print('p_value = %.1f'%pValue)
-    g_p = (1-pValue)*gInitial + pValue*gFinal
-    h_p = (1-pValue)*hInitial + pValue*hFinal
-    parametersHamiltonian = (g_p,0,0,0,h_p)
-    system = openHamiltonian(parameters,parametersHamiltonian)
+stopRatio = 1
 
-    """ Compute Bogoliubov wavefunctions """
-    system.diagonalize(verbose=verbose)
+""" Actual computation """
+print('stop ratio = %.2f'%stopRatio)
+g_p = (1-stopRatio)*gInitial + stopRatio*gFinal
+h_p = (1-stopRatio)*hInitial + stopRatio*hFinal
+parameters.dia_Hamiltonian = (g_p,0,0,0,h_p,0)
+system = openHamiltonian(parameters)
 
-    if parameters.plotWf and pValue==1:
-        """ Plot wavefunctions """
-        rampPlots.plotWf(system,nModes=16)
-        """ Plot wavefunctions compared to cosines """
-        rampPlots.plotWfCos(system,nModes=6)
-        """ Plot extracted momentum points from Bogoliubov modes """
-        rampPlots.plotBogoliubovMomenta(system)
+""" Compute Bogoliubov wavefunctions """
+system.diagonalize(verbose=verbose)
 
 
 

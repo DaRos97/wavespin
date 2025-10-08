@@ -79,7 +79,7 @@ def plotRampKW(ramp, **kwargs):
             if np.any(mask):
                 P_k_omega_p[iP, i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
     # Figure
-    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4),nRows=1,nCols=nP)
+    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))#,nRows=1,nCols=nP)
     if hasattr(sys0,'magnonModes'):
         txtMagnon = ', magnons mode(s): '
         for i in sys0.magnonModes:
@@ -154,9 +154,9 @@ def plotWf(system,nModes=16):
         ix,iy = system.indexesMap[i]
         phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
     fig, axes, rows, cols = createFigure(nModes,plot3D=True)
-    for ik in range(50,55):#nModes):
+    for ik in range(nModes):
         kx, ky = system._xy(ik)
-        ax = axes[ik-50]
+        ax = axes[ik]
         ax.plot_surface(X,Y,
                         phi_ik[:,ik].reshape(Lx,Ly).T,
                         cmap='plasma'

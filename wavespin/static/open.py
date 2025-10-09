@@ -235,12 +235,6 @@ class openHamiltonian(latticeClass):
         V = np.real(self.V_)[:,1:]
         # Parameters
         p_xz = self.g_i[0] / np.sqrt(2*self.S)/4/self.S * (1-self.D_i[0]) * np.sin(2 * self.thetas)
-        #p_x = -self.g_i[0] * self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2)
-        #p_y = self.g_i[0] * self.S**2
-        #p_z = -self.g_i[0] * self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
-        #f1 = -(p_x+p_y)/(8*self.S**2)
-        #f2 = (p_y-p_x)/(8*self.S**2)
-        #f3 = p_z/self.S**2
         f1 = -self.g_i[0] / 16 / self.S**2 * np.sin(self.thetas)**2 * (1-self.D_i[0])
         f2 = self.g_i[0] / 16 / self.S**2 * (1 + np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2)
         f3 = -self.g_i[0] / 4 / self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
@@ -260,7 +254,7 @@ class openHamiltonian(latticeClass):
                 self.dataScattering[scatteringType] = np.load(vertexFn)
                 continue
             ti = time()
-            if scatteringType == '1to2':
+            if scatteringType in ['1to2_1','1to2_2']:
                 Omega = 1/2 * (U[:,None,:,None] * V[None,:,None,:] + U[:,None,None,:]*V[None,:,:,None])
                 Kappa = 1/2 * (U[:,None,:,None] * U[None,:,None,:] + V[:,None,:,None]*V[None,:,None,:])
                 Vn_lm =  np.einsum('ij,iilm,jn->nlm',p_xz,Omega,U+V,optimize=True)
@@ -268,36 +262,51 @@ class openHamiltonian(latticeClass):
                 Vn_lm += np.einsum('ij,iimn,jl->nlm',p_xz,Kappa,U+V,optimize=True)
                 # i <-> j
                 Vn_lm *= 2
-                en = evals[:,None,None]
-                el = evals[None,:,None]
-                em = evals[None,None,:]
-                ## 1 -> 2
-                # Delta
-                arg = en - el -  em
-                delta_vals = lorentz(arg, gamma)
-                # Bose Factor
-                if temperature != 0:
-                    beta = 1/temperature
-                    bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*(em+el)) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
-                else:
-                    bose_factor = 1
-                # Decay rate
-                Gamma_1to2 = 2 * np.pi * np.einsum('nlm,nlm,nlm->n',Vn_lm**2,delta_vals,bose_factor)
-                ## 1 <- 2
-                # Delta
-                arg = en + em - el
-                delta_vals = lorentz(arg, gamma)
-                # Bose Factor
-                if temperature != 0:
-                    beta = 1/temperature
-                    bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
-                else:
-                    bose_factor = 1
-                # Decay rate
-                Gamma_2to1 = 4 * np.pi * np.einsum('lnm,nlm,nlm->n',Vn_lm**2,delta_vals,bose_factor)
-                # Final
-                Gamma_n = Gamma_1to2 + Gamma_2to1
-            if scatteringType == '1to3':
+                if scatteringType == '1to2_1':
+                    en = evals[:,None,None]
+                    el = evals[None,:,None]
+                    em = evals[None,None,:]
+                    ## 1 -> 2
+                    # Delta
+                    arg = en - el -  em
+                    delta_vals = lorentz(arg, gamma)
+                    # Bose Factor
+                    if temperature != 0:
+                        beta = 1/temperature
+                        bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*(em+el)) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
+                    else:
+                        bose_factor = 1
+                    # Decay rate
+                    Gamma_1to2 = 2 * np.pi * np.einsum('nlm,nlm,nlm->n',Vn_lm**2,delta_vals,bose_factor)
+                    ## 1 <- 2
+                    # Delta
+                    arg = en + em - el
+                    delta_vals = lorentz(arg, gamma)
+                    # Bose Factor
+                    if temperature != 0:
+                        beta = 1/temperature
+                        bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
+                    else:
+                        bose_factor = 1
+                    # Decay rate
+                    Gamma_2to1 = 4 * np.pi * np.einsum('lnm,nlm,nlm->n',Vn_lm**2,delta_vals,bose_factor)
+                    # Final
+                    Gamma_n = Gamma_1to2 + Gamma_2to1
+                if scatteringType == '1to2_2':
+                    en = evals[:,None]
+                    el = evals[None,:]
+                    # Delta
+                    arg = 2*en - el
+                    delta_vals = lorentz(arg, gamma)
+                    # Bose Factor
+                    if temperature != 0:
+                        beta = 1/temperature
+                        bose_factor = (1-np.exp(-2*beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1)
+                    else:
+                        bose_factor = 1
+                    # Decay rate
+                    Gamma_n = np.pi * np.einsum('lnn,nl,nl->n',Vn_lm**2,delta_vals,bose_factor)
+            if scatteringType in ['1to3_1','1to3_2','1to3_3']:
                 # Terms I need
                 Omega = 1/2 * (U[:,None,:,None] * V[None,:,None,:] + U[:,None,None,:]*V[None,:,:,None])
                 Kappa = 1/2 * (U[:,None,:,None] * U[None,:,None,:] + V[:,None,:,None]*V[None,:,None,:])
@@ -327,37 +336,67 @@ class openHamiltonian(latticeClass):
                 # i <-> j and symmetrization
                 Vn_lmr /= 3
 
-                en = evals[:,None,None,None]
-                el = evals[None,:,None,None]
-                em = evals[None,None,:,None]
-                er = evals[None,None,None,:]
-                ## 1->3
-                # Delta
-                arg = en - el - em - er
-                delta_vals = lorentz(arg,gamma)
-                # Bose factor
-                if temperature != 0:
-                    beta = 1/temperature
-                    bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*(el+em+er)) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1) / (np.exp(beta*er)-1)
-                else:
-                    bose_factor = 1
-                # Decay rate
-                Gamma_1to3 = 6 * np.pi * np.einsum('nlmr,nlmr,nlmr->n',Vn_lmr**2,delta_vals,bose_factor)
-                ## 3->1
-                # Delta
-                arg = el - en - em - er
-                delta_vals = lorentz(arg,gamma)
-                # Bose factor
-                if temperature != 0:
-                    beta = 1/temperature
-                    bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1) / (np.exp(beta*er)-1)
-                else:
-                    bose_factor = 1
-                # Decay rate
-                Gamma_3to1 = 18 * np.pi * np.einsum('lnmr,nlmr,nlmr->n',Vn_lmr**2,delta_vals,bose_factor)
-                # Total
-                Gamma_n = Gamma_1to3 + Gamma_3to1
-            if scatteringType in ['2to2a','2to2b']:
+                if scatteringType == '1to3_1':
+                    en = evals[:,None,None,None]
+                    el = evals[None,:,None,None]
+                    em = evals[None,None,:,None]
+                    er = evals[None,None,None,:]
+                    ## 1->3
+                    # Delta
+                    arg = en - el - em - er
+                    delta_vals = lorentz(arg,gamma)
+                    # Bose factor
+                    if temperature != 0:
+                        beta = 1/temperature
+                        bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*(el+em+er)) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1) / (np.exp(beta*er)-1)
+                    else:
+                        bose_factor = 1
+                    # Decay rate
+                    Gamma_1to3 = 6 * np.pi * np.einsum('nlmr,nlmr,nlmr->n',Vn_lmr**2,delta_vals,bose_factor)
+                    ## 3->1
+                    # Delta
+                    arg = el - en - em - er
+                    delta_vals = lorentz(arg,gamma)
+                    # Bose factor
+                    if temperature != 0:
+                        beta = 1/temperature
+                        bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1) / (np.exp(beta*er)-1)
+                    else:
+                        bose_factor = 1
+                    # Decay rate
+                    Gamma_3to1 = 18 * np.pi * np.einsum('lnmr,nlmr,nlmr->n',Vn_lmr**2,delta_vals,bose_factor)
+                    # Total
+                    Gamma_n = Gamma_1to3 + Gamma_3to1
+                if scatteringType == '1to3_2':
+                    en = evals[:,None,None]
+                    el = evals[None,:,None]
+                    em = evals[None,None,:]
+                    # Delta
+                    arg = 2*en + el - em
+                    delta_vals = lorentz(arg,gamma)
+                    # Bose Factor
+                    if temperature != 0:
+                        beta = 1/temperature
+                        bose_factor = (1-np.exp(-2*beta*en)) * np.exp(beta*em) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
+                    else:
+                        bose_factor = 1
+                    # Decay rate
+                    Gamma_n = 6 * np.pi * np.einsum('mnnl,nlm,nlm->n',Vn_lmr**2,delta_vals,bose_factor)
+                if scatteringType == '1to3_3':
+                    en = evals[:,None]
+                    el = evals[None,:]
+                    # Delta
+                    arg = 3*en - el
+                    delta_vals = lorentz(arg,gamma)
+                    # Bose Factor
+                    if temperature != 0:
+                        beta = 1/temperature
+                        bose_factor = (1-np.exp(-3*beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1)
+                    else:
+                        bose_factor = 1
+                    # Decay rate
+                    Gamma_n = np.pi * np.einsum('lnnn,nl,nl->n',Vn_lmr**2,delta_vals,bose_factor)
+            if scatteringType in ['2to2_1','2to2_2']:
                 # Terms I need
                 Omega = 1/2 * (U[:,None,:,None] * V[None,:,None,:] + U[:,None,None,:]*V[None,:,:,None])
                 Kappa = 1/2 * (U[:,None,:,None] * U[None,:,None,:] + V[:,None,:,None]*V[None,:,None,:])
@@ -387,7 +426,7 @@ class openHamiltonian(latticeClass):
                 # i <-> j and symmetrization
                 Vnr_lm *= 2
 
-                if scatteringType == '2to2a':
+                if scatteringType == '2to2_1':
                     en = evals[:,None,None,None]
                     er = evals[None,:,None,None]
                     el = evals[None,None,:,None]
@@ -403,7 +442,7 @@ class openHamiltonian(latticeClass):
                         bose_factor = 1
                     # Decay rate
                     Gamma_n = 4 * np.pi * np.sum(Vnr_lm**2 * delta_vals * bose_factor,axis=(1,2,3))
-                if scatteringType == '2to2b':
+                if scatteringType == '2to2_2':
                     en = evals[:,None,None]
                     el = evals[None,:,None]
                     em = evals[None,None,:]
@@ -417,8 +456,7 @@ class openHamiltonian(latticeClass):
                     else:
                         bose_factor = 1
                     # Decay rate
-                    Gamma_n = np.einsum('nnlm,nlm,nlm->n',Vnr_lm**2,delta_vals,bose_factor)
-                    Gamma_n *= 2*np.pi
+                    Gamma_n = 2 * np.pi * np.einsum('nnlm,nlm,nlm->n',Vnr_lm**2,delta_vals,bose_factor)
             if verbose:
                 print("Computation took: %.3f seconds"%(time()-ti))
             self.dataScattering[scatteringType] = Gamma_n
@@ -433,7 +471,7 @@ class openHamiltonian(latticeClass):
 ##########################################################
 
 class openSystem(openHamiltonian):
-    def __init__(self, p: iu.openParameters):
+    def __init__(self, p: iu.myParameters):
         # Construct lattice and Hamiltonian
         super().__init__(p)
         #XT correlator parameters

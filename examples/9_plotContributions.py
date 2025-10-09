@@ -1,7 +1,6 @@
-""" Example script to compute and plot the zz correlator of a rectangular lattice.
+""" Script to compute and plot the zz correlator with different magnon contributions.
 Use with input_4.txt
 """
-
 
 import numpy as np
 import os, sys, argparse
@@ -20,13 +19,14 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 """ Define the parameters of the system at different 'times' """
-nP = 10     #number of parameters computed in the "ramp" -> analogue to stop ratio
+nP = 5     #number of parameters computed in the "ramp" -> analogue to stop ratio
 gInitial = 0
 gFinal = 10
 hInitial = 15
 hFinal = 0
-pValues = np.linspace(0.1,1,nP)
-#pValues = np.linspace(3/11-0.06,3/11+0.06,nP)
+#pValues = np.linspace(0.1,1,nP)
+pValues = np.linspace(3/11-0.06,3/11+0.06,nP)
+print(pValues)
 g_p = (1-pValues)*gInitial + pValues*gFinal
 h_p = (1-pValues)*hInitial + pValues*hFinal
 
@@ -39,7 +39,4 @@ for i in range(nP):
 """ Compute correlator XT and KW for all systems in the ramp """
 ramp.correlatorsXT(verbose=verbose)
 ramp.correlatorsKW(verbose=verbose)
-
-
-
 

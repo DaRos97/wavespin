@@ -4,7 +4,7 @@
 # Lattice options
 Lx: 7
 Ly: 9
-plotSites: False
+plotLattice: False
 
 # Diagonalization options
 excludeZeroMode: True

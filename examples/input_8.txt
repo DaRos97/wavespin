@@ -11,8 +11,8 @@ plotMomenta: False
 Hamiltonian: (10,0,0,0,0,0)
 
 # scattering options
-types: ['1to2','1to3','2to2a','2to2b']
-#types: ['2to2a','2to2b']
+#types: ['1to2','1to3']
+types: ['2to2a','2to2b']
 broadening: 0.5
 temperature: 8
 saveVertex: True

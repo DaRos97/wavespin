@@ -18,13 +18,13 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 """ Define the parameters of the system at different 'times' """
-nP = 6#101     #number of parameters computed in the "ramp" -> analogue to stop ratio
+nP = 101     #number of parameters computed in the "ramp" -> analogue to stop ratio
 gInitial = 0
-gFinal = 10      #factor of 2 from experiment due to s^xs^x -> s^+s^-
+gFinal = 10
 hInitial = 15
 hFinal = 0
-#pValues = np.linspace(0.1,1,nP)
-pValues = np.array([0.1,0.3,3/7,0.45,0.6,1])#np.linspace(3/7-0.06,3/7+0.06,nP)
+pValues = np.linspace(0.1,1,nP)
+#pValues = np.array([0.1,0.2,3/11,0.3,0.5,1])#np.linspace(3/7-0.06,3/7+0.06,nP)
 g_p = (1-pValues)*gInitial + pValues*gFinal
 h_p = (1-pValues)*hInitial + pValues*hFinal
 
@@ -36,11 +36,11 @@ for i in range(nP):
 #    print(ramp.rampElements[i].theta/np.pi*180)
 #    print(ramp.rampElements[i].gsEnergy /g_p[i]/2)
 
-if 0:
+if 1:
     """ Plot interesting values of the ramp """
     rampPlots.plotRampValues(ramp)
 
-if 1:
+if 0:
     """ Plot dispersions of the ramp """
     rampPlots.plotRampDispersions(ramp)
 

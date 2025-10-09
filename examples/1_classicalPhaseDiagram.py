@@ -6,21 +6,28 @@ import numpy as np
 import os,sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.classicSpins.RMO import *
+from wavespin.tools import pathFinder
 
 
-J1 = 1  # Positive
+saveData = True
 
-J2min = 0
-J2max = 1
-nJ2 = 21
+g1 = 1  # Positive
 
-Hmin = 0
-Hmax = 3
-nH = 21
+g2min = 0
+g2max = 1
+ng2 = 21
+
+hmin = 0
+hmax = 3
+nh = 21
+
+dataDn = '  '
+argsFn = ('classicalPhaseDiagram',g1,g2min,g2max,ng2,hmin,hmax,nh)
+transformationFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npz')
 
 phaseDiagramParameters = (J1,J2min,J2max,nJ2,Hmin,Hmax,nH)
 
-en = computeClassicalGroundState(phaseDiagramParameters,verbose=True,save=False)
+en = computeClassicalGroundState(phaseDiagramParameters,verbose=True,save=saveData)
 
 plotClassicalPhaseDiagram(en,phaseDiagramParameters,show=True)
 

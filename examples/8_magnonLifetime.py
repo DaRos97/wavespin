@@ -59,16 +59,17 @@ if 1:
         ax.plot(contA,amp(contA,*popt),color=color,ls='--',zorder=-1)
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.set_xlabel("Amplitude")
-    ax.set_ylabel("Decay rate (GHz)")
+    ax.set_xlabel("Amplitude",size=20)
+    ax.set_title(r"$\Gamma^{2\leftrightarrow2}$",size=20)
+    #ax.set_ylabel("Decay rate (GHz)",size=20)
     ax.set_xlim(As[0]-(As[1]-As[0])/3,As[-1]+(As[-1]-As[-2]))
     sm = cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])  # required for colorbar
     cbar = fig.colorbar(sm,ax=ax)
-    cbar.set_label("Mode freq. (GHz)")
+    cbar.set_label("Mode freq. (GHz)",size=20)
     plt.show()
 
-if 1:
+if 0:
     """ Compute multiple temperatures """
     Ts = np.linspace(2,20,10)
 #    Ts = [8,]

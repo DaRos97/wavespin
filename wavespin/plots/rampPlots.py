@@ -117,7 +117,7 @@ def plotRampKW(ramp, **kwargs):
         axes[i].axis('off')
     plt.tight_layout()
     #
-    if transformType=='dat':
+    if transformType=='dat' and 0:
         fig2, axes2, rows2, cols2 = createFigure(nP,subplotSize=(4,4))
         for iP in range(nP):
             kwargs = {'newFigure':False,'axis':axes2[iP],'showFigureMomentum':False,'printTitle':False,'printEnergies':False}

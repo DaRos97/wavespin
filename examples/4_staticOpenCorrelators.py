@@ -9,7 +9,6 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 from wavespin.static.open import openSystem, openRamp
-from wavespin.plots import rampPlots
 
 """ Parameters and options """
 parser = argparse.ArgumentParser(description="Static correlator calculation in OBC")

@@ -32,7 +32,7 @@ system.diagonalize(verbose=verbose,**kwargs)
 
 system.decayRates(temperature=parameters.sca_temperature,verbose=verbose)
 
-if 1:
+if 0:
     """ Decay vs amplitude """
     data = system.dataScattering
     evals = system.evals *2*np.pi / 1e3     #in GHz

@@ -20,5 +20,5 @@ perturbationSite: (3,4)
 magnonModes: (1,2,3,4)
 saveXT: False
 saveKW: False
-plotKW: True
+plotKW: False
 savePlotKW: False

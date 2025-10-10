@@ -8,12 +8,12 @@ excludeZeroMode: True
 plotWf: False
 plotMomenta: False
 # (g1, g2, d1, d2, h, disorder_h)
-Hamiltonian: (10,0,0,0,0,0)
+Hamiltonian: (10,0,0,0,1,0)
 
 # scattering options
 #types: ['1to2','1to3']
-types: ['2to2a','2to2b']
-broadening: 0.5
+types: ['1to2_1','1to2_2','1to3_1','1to3_2','1to3_3','2to2_1','2to2_2']
+broadening: 2
 temperature: 8
 saveVertex: True
 plotVertex: True

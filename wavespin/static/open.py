@@ -574,9 +574,6 @@ class openSystem(openHamiltonian):
     def momentumSpaceCorrelator(self,verbose=False):
         """ Here we simply Fourier transform the correlator.
         """
-        Lx = self.Lx
-        Ly = self.Ly
-        Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
         argsFn = ('correlatorKW_rs',self.p.cor_correlatorType,self.p.cor_transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')

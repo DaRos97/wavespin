@@ -7,6 +7,6 @@ plotLattice: False
 uniformQA: True
 excludeZeroMode: True
 
-saveWf: True
-plotWf: True
-plotMomenta: True
+saveWf: False
+plotWf: False
+plotMomenta: False

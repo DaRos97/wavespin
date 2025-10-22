@@ -189,6 +189,7 @@ class openHamiltonian(latticeClass):
             try:
                 K = scipy.linalg.cholesky(A-B)
             except:
+                #print(scipy.linalg.eigvalsh(A-B))
                 K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-4)
             lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
             if self.p.dia_excludeZeroMode:

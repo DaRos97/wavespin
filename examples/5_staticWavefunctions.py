@@ -21,18 +21,19 @@ gInitial = 0
 gFinal = 10
 hInitial = 15
 hFinal = 0
-stopRatio = 1
+stopRatios = np.linspace(0.1,1,10)
 
-""" Actual computation """
-print('stop ratio = %.2f'%stopRatio)
-g_p = (1-stopRatio)*gInitial + stopRatio*gFinal
-h_p = (1-stopRatio)*hInitial + stopRatio*hFinal
-parameters.dia_Hamiltonian = (g_p,0,0,0,h_p,0)
-system = openHamiltonian(parameters)
+Nr = len(stopRatios)
+from tqdm import tqdm
+for ir in tqdm(range(Nr)):
+    stopRatio = stopRatios[ir]
+    """ Actual computation """
+#    print('stop ratio = %.3f'%stopRatio)
+    g_p = (1-stopRatio)*gInitial + stopRatio*gFinal
+    h_p = (1-stopRatio)*hInitial + stopRatio*hFinal
+    parameters.dia_Hamiltonian = (g_p,0,0,0,h_p,0)
+    system = openHamiltonian(parameters)
 
-""" Compute Bogoliubov wavefunctions """
-system.diagonalize(verbose=verbose)
-
-
-
+    """ Compute Bogoliubov wavefunctions """
+    system.diagonalize(verbose=verbose)
 

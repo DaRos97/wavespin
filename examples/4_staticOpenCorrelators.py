@@ -19,12 +19,14 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 """ Define the parameters of the system at different 'times' """
-nP = 10     #number of parameters computed in the "ramp" -> analogue to stop ratio
+nP = 5     #number of parameters computed in the "ramp" -> analogue to stop ratio
 gInitial = 0
 gFinal = 10
 hInitial = 15
 hFinal = 0
-pValues = np.linspace(0.1,1,nP)
+#pValues = np.linspace(0.1,1,nP)
+#pValues = np.array([0.1,0.2,3/11,0.3,0.4,0.5,0.6,0.8,0.9,1])
+pValues = np.array([0.2,3/11,0.3,0.6,1])
 #pValues = np.linspace(3/11-0.06,3/11+0.06,nP)
 g_p = (1-pValues)*gInitial + pValues*gFinal
 h_p = (1-pValues)*hInitial + pValues*hFinal

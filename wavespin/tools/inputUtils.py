@@ -106,7 +106,7 @@ def checkParameters(parameters):
     # Correlator parameters
     if parameters.cor_correlatorType not in ['zz','ee','jj','ze','ez','xx']:
         raise ValueError(f"Invalid correlator type: {parameters.cor_type}")
-    if parameters.cor_transformType not in ['fft','dst','dct','dat']:
+    if parameters.cor_transformType not in ['fft','dst','dct','dat','dat2']:
         raise ValueError(f"Invalid momentum transform type: {parameters.cor_transformType}")
     coord = parameters.cor_perturbationSite
     if coord[0]>=parameters.lat_Lx or coord[0]<0:

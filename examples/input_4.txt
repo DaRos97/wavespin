@@ -18,7 +18,7 @@ correlatorType: zz
 transformType: dct
 perturbationSite: (3,4)
 magnonModes: (1,2,3,4)
-saveXT: False
-saveKW: False
+saveXT: True
+saveKW: True
 plotKW: False
 savePlotKW: False

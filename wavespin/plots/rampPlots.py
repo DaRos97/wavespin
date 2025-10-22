@@ -8,7 +8,7 @@ from scipy.fft import fftfreq, fftshift
 import math
 import os
 from pathlib import Path
-from wavespin.static.momentumTransformation import extractMomentum
+from wavespin.static.momentumTransformation import extractMomentum, extractMomentum2
 from wavespin.tools import pathFinder as pf
 
 def createFigure(n_subplots, subplotSize=(4, 4), plot3D=False, nRows=-1, nCols=-1):
@@ -46,6 +46,9 @@ def plotRampKW(ramp, **kwargs):
     """
     sys0 = ramp.rampElements[0]
     transformType = sys0.p.cor_transformType
+    if transformType == 'dat2':
+        plotRampDAT(ramp,**kwargs)
+        return
     nP = ramp.nP
     Lx = sys0.Lx
     Ly = sys0.Ly
@@ -79,7 +82,10 @@ def plotRampKW(ramp, **kwargs):
             if np.any(mask):
                 P_k_omega_p[iP, i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
     # Figure
-    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))#,nRows=1,nCols=nP)
+    #fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4),nRows=1,nCols=nP)
+    fig, axes = plt.subplots(1,5,figsize=(14,4))
+    rows = 1
+    cols = 5
     if hasattr(sys0,'magnonModes'):
         txtMagnon = ', magnons mode(s): '
         for i in sys0.magnonModes:
@@ -89,40 +95,56 @@ def plotRampKW(ramp, **kwargs):
     else:
         txtMagnon = ''
     title = 'Commutator: ' + sys0.p.cor_correlatorType + ', momentum transform: ' + transformType + txtMagnon
-    plt.suptitle(title,fontsize=20)
-    ylim = kwargs.get('ylim',70)
+    #plt.suptitle(title,fontsize=20)
+    ylim = kwargs.get('ylim',7)
+    P_k_omega_p /= 10
+    W_mesh /= 10
     vmax = np.max(P_k_omega_p)
     for iP in range(nP):
         P_k_omega = P_k_omega_p[iP]
-        vmax = np.max(P_k_omega)
+        #vmax = np.max(P_k_omega)
         ax = axes[iP]
         ax.set_facecolor('black')
         mesh = ax.pcolormesh(K_mesh, W_mesh, P_k_omega,
                              shading='auto',
-                             cmap='inferno',
+                             cmap='Blues',
                              norm=SqrtNorm(vmin=0,vmax=vmax)
                             )
+        if iP==0:
+            ax.set_ylabel(r"$\omega(g)$",size=20)
+        else:
+            ax.set_yticklabels([])
         ax.set_ylim(-ylim,ylim)
         ax.set_xlim(0,np.sqrt(2)*np.pi)
-        cbar = fig.colorbar(mesh, ax=ax)
-        if iP in [cols*i-1 for i in range(1,rows+1)]:
-            cbar.set_label(transformType,fontsize=15)
-        if iP in [cols*i for i in range(0,rows)]:
-            ax.set_ylabel(r'$\omega$',fontsize=15)
+        ax.yaxis.set_ticks_position('both')  # place ticks on both sides
+        ax.xaxis.set_ticks_position('both')  # place ticks on both sides
+        ax.tick_params(axis='both',direction='in',length=7,width=1,pad=2,labelsize=15)
+        if iP in np.arange((rows-1)*cols,rows*cols):
+            ax.set_xlabel(r'$|k|$',fontsize=15)
+        if 0:
+            if iP in [cols*i-1 for i in range(1,rows+1)]:
+                cbar.set_label(transformType,fontsize=15)
+            if iP in [cols*i for i in range(0,rows)]:
+                ax.set_ylabel(r'$\omega$',fontsize=15)
         if iP in np.arange((rows-1)*cols,rows*cols):
             ax.set_xlabel(r'$|k|$',fontsize=15)
         stopRatio = ramp.rampElements[iP].g1 / 10
         ax.set_title(r"$\alpha=$%.2f"%stopRatio,size=20)
     for i in range(nP,len(axes)):       #set to blank extra plots
         axes[i].axis('off')
-    plt.tight_layout()
+
+    if 1:   # Colorbar
+        cbar_ax = fig.add_axes([0.92, 0.15, 0.01, 0.75])  # [left, bottom, width, height]
+        cbar = fig.colorbar(mesh, cax=cbar_ax)
+        cbar.set_label(r"$\vert\chi_{ZZ}(\omega)\vert$",fontsize=20)
+    fig.subplots_adjust(left=0.052, right=0.9, top=0.9, bottom=0.14, wspace=0.15)
+    #plt.tight_layout()
     #
     if transformType=='dat' and 0:
         fig2, axes2, rows2, cols2 = createFigure(nP,subplotSize=(4,4))
         for iP in range(nP):
             kwargs = {'newFigure':False,'axis':axes2[iP],'showFigureMomentum':False,'printTitle':False,'printEnergies':False}
             plotBogoliubovMomenta(ramp.rampElements[iP],**kwargs)
-    plt.tight_layout()
     #
     saveFigure = kwargs.get('saveFigure',False)
     if saveFigure:
@@ -356,7 +378,87 @@ def plotVertex(system,**kwargs):
     fig.tight_layout()
     plt.show()
 
-
+def plotRampDAT(ramp, **kwargs):
+    """ Plot frequency over mod k for the different ramp parameters for the DAT transform.
+    """
+    sys0 = ramp.rampElements[0]
+    transformType = sys0.p.cor_transformType
+    nP = ramp.nP
+    Lx = sys0.Lx
+    Ly = sys0.Ly
+    nOmega = sys0.nOmega
+    fullTimeMeasure = sys0.fullTimeMeasure
+    nTimes = sys0.nTimes
+    #
+    freqs = fftshift(fftfreq(nOmega,fullTimeMeasure/nTimes))
+    # Define k bins
+    num_k_bins = kwargs.get('numKbins',50)
+    k_bins = np.linspace(0,np.sqrt(2)*np.pi, num_k_bins + 1)
+    k_centers = 0.5 * (k_bins[:-1] + k_bins[1:])
+    K_mesh, W_mesh = np.meshgrid(k_centers, freqs, indexing='ij')
+    P_k_omega_p = np.zeros((nP,num_k_bins,nOmega))
+    for iP in range(nP):
+        vecK = extractMomentum2(ramp.rampElements[iP])
+        K_flat = vecK[:,0] + vecK[:,1]
+        corr_flat = ramp.rampElements[iP].correlatorKW      #shape: Ns, nOmega
+        for i in range(num_k_bins):
+            mask = (K_flat >= k_bins[i]) & (K_flat < k_bins[i+1])
+            if np.any(mask):
+                P_k_omega_p[iP, i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
+    # Figure
+    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))#,nRows=1,nCols=nP)
+    if hasattr(sys0,'magnonModes'):
+        txtMagnon = ', magnons mode(s): '
+        for i in sys0.magnonModes:
+            txtMagnon += str(i)
+            if not i==sys0.magnonModes[-1]:
+                txtMagnon += '-'
+    else:
+        txtMagnon = ''
+    title = 'Commutator: ' + sys0.p.cor_correlatorType + ', momentum transform: ' + transformType + txtMagnon
+    plt.suptitle(title,fontsize=20)
+    ylim = kwargs.get('ylim',70)
+    vmax = np.max(P_k_omega_p)
+    for iP in range(nP):
+        P_k_omega = P_k_omega_p[iP]
+        vmax = np.max(P_k_omega)
+        ax = axes[iP]
+        ax.set_facecolor('black')
+        mesh = ax.pcolormesh(K_mesh, W_mesh, P_k_omega,
+                             shading='auto',
+                             cmap='inferno',
+                             norm=SqrtNorm(vmin=0,vmax=vmax)
+                            )
+        ax.set_ylim(-ylim,ylim)
+        ax.set_xlim(0,np.sqrt(2)*np.pi)
+        cbar = fig.colorbar(mesh, ax=ax)
+        if iP in [cols*i-1 for i in range(1,rows+1)]:
+            cbar.set_label(transformType,fontsize=15)
+        if iP in [cols*i for i in range(0,rows)]:
+            ax.set_ylabel(r'$\omega$',fontsize=15)
+        if iP in np.arange((rows-1)*cols,rows*cols):
+            ax.set_xlabel(r'$|k|$',fontsize=15)
+        stopRatio = ramp.rampElements[iP].g1 / 10
+        ax.set_title(r"$\alpha=$%.2f"%stopRatio,size=20)
+    for i in range(nP,len(axes)):       #set to blank extra plots
+        axes[i].axis('off')
+    plt.tight_layout()
+    #
+    saveFigure = kwargs.get('saveFigure',False)
+    if saveFigure:
+        argsFn = ('fig_correlatorKW_rs',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
+        figureFn = pf.getFilename(*argsFn,dirname=self.figureDn,extension='.png')
+        if not Path(self.figureDn).is_dir():
+            print("Creating 'Figures/' folder in home directory.")
+            os.system('mkdir '+self.figureDn)
+        fig.savefig(figureFn)
+        if transformType=='dat':
+            argsFn = ('fig_correlatorKW_rs_momenta',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
+            figureFn = pf.getFilename(*argsFn,dirname=self.figureDn,extension='.png')
+            fig.savefig(figureFn)
+    showFigure = kwargs.get('showFigure',True)
+    if showFigure:
+        plt.show()
 
 
 

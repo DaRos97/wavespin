@@ -107,8 +107,58 @@ def extractMomentum(f_in,ik=0,dctType=2):
     kx,ky = ind//Ly, ind%Ly
     return kx,ky
 
+def discreteAwsomeTransform2(system):
+    """ Compute the Discrete Awesome Transform with the Bogoliubov functions.
+    NON-RECTANGULAR GEOMETRIES NOT YET IMPLEMENTED.
+    In time we always use fft.
+    """
+    nOmega = system.nOmega
+    Lx = system.Lx
+    Ly = system.Ly
+    nTimes = system.nTimes
+    U_ = system.U_
+    V_ = system.V_
+    correlatorXT = system.correlatorXT.reshape(Lx*Ly,nTimes)
+    Ns = Lx*Ly
+    correlatorKW = np.zeros((Ns,nOmega),dtype=complex)
+    temp = np.zeros(Ns,dtype=complex)
+    phi_ik = np.real(U_ - V_)
+    for i in range(Ns):
+        ix,iy = system._xy(i)
+        phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    for n in range(1,Ns):
+        temp = np.sum(phi_ik[:,n,None]*correlatorXT[:,:],axis=0)
+        correlatorKW[n] = fftshift(fft(temp,n=nOmega))
+    return correlatorKW     #shape(Ns,Nomega)
+
+def extractMomentum2(system):
+    """ We get the momentum associated with a given Bogoliubov mode.
+    We get kx,ky for each mode n by summing the sqrt of the weight of the dctn of the mode.
+    """
+    Lx = system.Lx
+    Ly = system.Ly
+    Ns = system.Ns
+    U_,V_ = system.U_, system.V_
+    phi = np.real(U_ - V_)
+    for i in range(Ns):
+        ix,iy = system._xy(i)
+        phi[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    vecK = np.zeros((Ns,2))
+    X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
+    for n in range(1,Ns):
+        f_in = phi[:,n].reshape(Lx,Ly)
+        res = np.absolute(dctn(f_in))
+        res[0,0] = 0
+        res /= np.sum(res)
+        kx = np.sum(res * X)
+        ky = np.sum(res * Y)
+        vecK[n,0] = kx / Lx * np.pi
+        vecK[n,1] = ky / Ly * np.pi
+    return vecK
+
 dicTransformType = {'fft':fastFourierTransform,
                     'dct':discreteCosineTransform,
                     'dst':discreteCosineTransform,
-                    'dat':discreteAwsomeTransform
+                    'dat':discreteAwsomeTransform,
+                    'dat2':discreteAwsomeTransform2
                     }

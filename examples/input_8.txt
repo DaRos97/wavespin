@@ -12,8 +12,9 @@ Hamiltonian: (10,0,0,0,1,0)
 
 # scattering options
 #types: ['1to2','1to3']
-types: ['1to2_1','1to2_2','1to3_1','1to3_2','1to3_3','2to2_1','2to2_2']
-broadening: 2
+#types: ['1to2_1','1to2_2','1to3_1','1to3_2','1to3_3','2to2_1','2to2_2']
+types: ['2to2_1']
+broadening: 0.5
 temperature: 8
 saveVertex: True
-plotVertex: True
+plotVertex: False

@@ -5,9 +5,11 @@ import numpy as np
 from wavespin.tools import pathFinder as pf
 from pathlib import Path
 from wavespin.plots import fancyLattice
+import copy
 
 class latticeClass():
     def __init__(self,p):
+        self.p = copy.deepcopy(p)
         self.Lx = p.lat_Lx
         self.Ly = p.lat_Ly
         self.offSiteList = p.lat_offSiteList

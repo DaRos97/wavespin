@@ -9,7 +9,7 @@ plotLattice: False
 # Diagonalization options
 excludeZeroMode: True
 uniformQA: True
-saveWf: True
+saveWf: False
 plotWf: False
 plotMomenta: False
 
@@ -18,7 +18,7 @@ correlatorType: zz
 transformType: dct
 perturbationSite: (3,4)
 magnonModes: (1,2,3,4)
-saveXT: True
-saveKW: True
-plotKW: False
+saveXT: False
+saveKW: False
+plotKW: True
 savePlotKW: False

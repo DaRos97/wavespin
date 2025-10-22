@@ -12,7 +12,7 @@ from wavespin.lattice.lattice import latticeClass
 from wavespin.tools import pathFinder as pf
 from wavespin.tools import inputUtils as iu
 from wavespin.tools.functions import lorentz
-from wavespin.static import openCorrelators
+from wavespin.static import correlators
 from wavespin.static import momentumTransformation
 from wavespin.static.periodic import quantizationAxis
 from wavespin.plots.rampPlots import *
@@ -20,7 +20,6 @@ from wavespin.plots.rampPlots import *
 class openHamiltonian(latticeClass):
     def __init__(self, p: iu.myParameters):
         super().__init__(p)
-        self.p = p
         #Hamiltonian parameters
         self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = p.dia_Hamiltonian
         self.S = 0.5     #spin value
@@ -53,6 +52,34 @@ class openHamiltonian(latticeClass):
                 ind = self._idx(ix,iy)
                 vals[ind,ind] = -(-1)**(ix+iy) * val + disorder[ind]
         return vals
+
+    def _temperature(self,Eref):
+        """ Compute temperature given the energy.
+        Since the E(T) function is not invertible we have to compute E for a bunch of Ts and extract graphically the T.
+        """
+        if Eref == -100:
+            return 0
+        self.diagonalize()
+        Nbonds = np.sum(self._NNterms(1)) // 2
+        GS_energy = -3/2 + np.sum(self.evals) / Nbonds / self.g1 / 2
+        if Eref < GS_energy:
+            raise ValueError("Input state energy smaller than GS energy: %.3f"%GS_energy)
+        tempE = np.zeros(self.Ns)
+        tempE[0] = GS_energy
+        for i in range(1,self.Ns):
+            B = 1/(np.exp(self.evals[1:]/self.evals[i]))
+            tempE[i] = GS_energy + np.sum(self.evals[1:]*B) / Nbonds / self.g1
+        if Eref > tempE[-1]:
+            raise ValueError("Input state energy larger then max magnon one %.3f"%tempE[-1])
+        Tmin = self.evals[ np.argmin( (Eref-tempE)[Eref>tempE] ) ]
+        Tmax = self.evals[ np.argmin( (Eref-tempE)[Eref>tempE] ) +1 ]
+        Tlist = np.linspace(Tmin,Tmax,100)
+        e_list = np.zeros(len(Tlist))
+        for i in range(len(Tlist)):
+            B = 1/(np.exp(self.evals[1:]/Tlist[i]))
+            e_list[i] = GS_energy + np.sum(self.evals[1:]*B) / Nbonds / self.g1
+        indT = np.argmin(abs(e_list-Eref))
+        return Tlist[indT]
 
     def quantizationAxisAngles(self,verbose=False):
         """ Here we get the quantization axis angles to use for the diagonalization.
@@ -489,11 +516,13 @@ class openSystem(openHamiltonian):
     def realSpaceCorrelator(self,verbose=False):
         """ Here we compute the correlator in real space.
         """
+        #print(self.evals)
+        temperature = self._temperature(self.p.cor_energy)
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn = ('correlatorXT_rs',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes)
+        argsFn = ('correlatorXT_rs',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorXT = np.zeros((Lx,Ly,self.nTimes),dtype=complex)
@@ -509,12 +538,30 @@ class openSystem(openHamiltonian):
             B = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
             G = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
             H = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[Ns:,Ns:],optimize=True)
+            if temperature != 0:
+                exp_e_c = np.exp(1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
+                BF = 1/(np.exp(self.evals/temperature)-1)
+                A += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.U_,self.V_,exp_e_c,optimize=True)
+                A += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.V_,self.U_,exp_e,  optimize=True)
+                A += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.V_,self.U_,exp_e, optimize=True)
+                #
+                B += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.V_,self.U_,exp_e_c,optimize=True)
+                B += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.U_,self.V_,exp_e,  optimize=True)
+                B += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.U_,self.V_,exp_e, optimize=True)
+                #
+                G += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.U_,self.U_,exp_e_c,optimize=True)
+                G += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.V_,self.V_,exp_e,  optimize=True)
+                G += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.V_,self.V_,exp_e, optimize=True)
+                #
+                H += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.V_,self.V_,exp_e_c,optimize=True)
+                H += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.U_,self.U_,exp_e,  optimize=True)
+                H += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.U_,self.U_,exp_e, optimize=True)
             #
             for ind_i in range(Ns):
                 ix, iy = self._xy(ind_i)
                 if (ix,iy) in self.offSiteList:
                     continue
-                self.correlatorXT[ix,iy] = openCorrelators.dicCorrelators[self.p.cor_correlatorType](self,ind_i,A,B,G,H)
+                self.correlatorXT[ix,iy] = correlators.dicCorrelators[self.p.cor_correlatorType](self,ind_i,A,B,G,H)
             if self.p.cor_saveXT:
                 if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in directory: "+self.dataDn)
@@ -528,12 +575,13 @@ class openSystem(openHamiltonian):
     def realSpaceCorrelatorBond(self,verbose=False):
         """ Here we compute the correlator in real space for each bond, like for the jj.
         """
+        temperature = self._temperature()
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn_h = ('correlator_horizontal_bonds',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite)
-        argsFn_v = ('correlator_vertical_bonds',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite)
+        argsFn_h = ('correlator_horizontal_bonds',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite,self.p.cor_energy)
+        argsFn_v = ('correlator_vertical_bonds',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite,self.p.cor_energy)
         correlatorFn_h = pf.getFilename(*argsFn_h,dirname=self.dataDn,extension='.npy')
         correlatorFn_v = pf.getFilename(*argsFn_v,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn_h).is_file() or Path(correlatorFn_v).is_file():
@@ -555,11 +603,11 @@ class openSystem(openHamiltonian):
             for ihx in range(Lx-1):
                 for ihy in range(Ly):
                     ind_i = self._idx(ihx,ihy)
-                    self.correlatorXT_h[ihx,ihy] = openCorrelators.jjCorrelatorBond(self,ind_i,A,B,G,H,'h')
+                    self.correlatorXT_h[ihx,ihy] = correlators.jjCorrelatorBond(self,ind_i,A,B,G,H,'h')
             for ivx in range(Lx):
                 for ivy in range(Ly-1):
                     ind_i = self._idx(ivx,ivy)
-                    self.correlatorXT_v[ivx,ivy] = openCorrelators.jjCorrelatorBond(self,ind_i,A,B,G,H,'v')
+                    self.correlatorXT_v[ivx,ivy] = correlators.jjCorrelatorBond(self,ind_i,A,B,G,H,'v')
             if self.p.cor_saveXTbonds:
                 if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in directory: "+self.dataDn)
@@ -575,8 +623,9 @@ class openSystem(openHamiltonian):
     def momentumSpaceCorrelator(self,verbose=False):
         """ Here we simply Fourier transform the correlator.
         """
+        temperature = self._temperature(self.p.cor_energy)
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn = ('correlatorKW_rs',self.p.cor_correlatorType,self.p.cor_transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes)
+        argsFn = ('correlatorKW_rs',self.p.cor_correlatorType,self.p.cor_transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorKW = momentumTransformation.dicTransformType[self.p.cor_transformType](self)
@@ -594,7 +643,7 @@ class openSystem(openHamiltonian):
 ##########################################################
 
 class openRamp():
-    def __init__(self, systems : list[openSystem] = None):
+    def __init__(self, systems = None):
         """ systems should be a list of openSystem objects. """
         self.rampElements = systems or []
         self.nP = len(self.rampElements)

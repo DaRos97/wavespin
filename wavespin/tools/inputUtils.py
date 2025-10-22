@@ -20,8 +20,8 @@ def parseValue(value_str):
 @dataclass
 class myParameters:
     # Lattice
-    lat_Lx: int = 6                             # 
-    lat_Ly: int = 7                             #
+    lat_Lx: int = 7                             # 
+    lat_Ly: int = 9                             #
     lat_offSiteList: tuple = ()                 #
     lat_boundary: str = 'open'                  #
     lat_plotLattice: bool = False               #
@@ -37,6 +37,7 @@ class myParameters:
     cor_transformType: str = 'dct'              #
     cor_perturbationSite: tuple = (0,0)         #
     cor_magnonModes: tuple = (1,2,3,4)          #
+    cor_energy: float = -100                    #
     cor_saveXT: bool = False                    #
     cor_saveXTbonds: bool = False               #
     cor_saveKW: bool = False                    #

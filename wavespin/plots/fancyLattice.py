@@ -18,7 +18,7 @@ def plotSitesGrid(lattice,**kwargs):
     Lx = lattice.Lx
     Ly = lattice.Ly
     offSiteList = lattice.offSiteList
-    indexesMap = lattice.indexesMap
+    indexesMap = lattice.indexToSite
     printIndices = kwargs.get('indices',True)
     #
     fig = plt.figure(figsize=(12,12))

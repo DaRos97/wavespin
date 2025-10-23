@@ -27,13 +27,12 @@ class latticeClass():
         # Plotting
         if p.lat_plotLattice:
             fancyLattice.plotSitesGrid(self)
-            exit()
 
     def _xy(self, i):
         return self.indexToSite[i]
 
     def _idx(self, x, y):
-        return self.Ly * (x % self.Lx) + (y % self.Ly) if self.boundary=='periodic' else self.Ly * x + y
+        return self.indexToSite.index( (x,y) )
 
     def _build_nn(self):
         """ Construct a list of nn indexes for each site index.
@@ -43,10 +42,10 @@ class latticeClass():
             if self.boundary=='periodic':
                 x,y = self._xy(ind)
                 NN[ind] = [
-                    self._idx(x+1, y),
-                    self._idx(x-1, y),
-                    self._idx(x, y+1),
-                    self._idx(x, y-1),
+                    self._idx((x+1)%self.Lx, y),
+                    self._idx((x-1)%self.Ly, y),
+                    self._idx(x, (y+1)%self.Ly),
+                    self._idx(x, (y-1)%self.Ly),
                 ]
             else:
                 NN[ind] = self._open_nn(ind)
@@ -77,10 +76,10 @@ class latticeClass():
             if self.boundary=='periodic':
                 x,y = self._xy(ind)
                 NNN[ind] = [
-                    self._idx(x+1, y+1),
-                    self._idx(x-1, y+1),
-                    self._idx(x+1, y-1),
-                    self._idx(x-1, y-1),
+                    self._idx((x+1)%self.Lx, (y+1)%self.Ly),
+                    self._idx((x-1)%self.Ly, (y+1)%self.Ly),
+                    self._idx((x+1)%self.Lx, (y-1)%self.Ly),
+                    self._idx((x-1)%self.Ly, (y-1)%self.Ly),
                 ]
             else:
                 NNN[ind] = self._open_nnn(ind)

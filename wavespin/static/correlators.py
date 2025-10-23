@@ -8,7 +8,7 @@ def zzCorrelator(system,ind_i,A,B,G,H):
     """
     ts = system.ts
     site0 = system.site0
-    indexesMap = system.indexesMap
+    indexesMap = system.indexToSite
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
@@ -34,7 +34,7 @@ def zeCorrelator(system,ind_i,A,B,G,H):
     Ly = system.Ly
     ts = system.ts
     site0 = system.site0
-    indexesMap = system.indexesMap
+    indexesMap = system.indexToSite
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
@@ -69,7 +69,7 @@ def ezCorrelator(system,ind_i,A,B,G,H):
     Ly = system.Ly
     ts = system.ts
     site0 = system.site0
-    indexesMap = system.indexesMap
+    indexesMap = system.indexToSite
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
@@ -107,7 +107,7 @@ def eeCorrelator(system,ind_i,A,B,G,H):
     Ly = system.Ly
     ts = system.ts
     site0 = system.site0
-    indexesMap = system.indexesMap
+    indexesMap = system.indexToSite
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
@@ -152,7 +152,7 @@ def xxCorrelator(system,ind_i,A,B,G,H):
     """
     ts = system.ts
     site0 = system.site0
-    indexesMap = system.indexesMap
+    indexesMap = system.indexToSite
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
@@ -181,7 +181,7 @@ def jjCorrelator(system,ind_i,A,B,G,H):
     Ly = system.Ly
     ts = system.ts
     site0 = system.site0
-    indexesMap = system.indexesMap
+    indexesMap = system.indexToSite
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
@@ -228,7 +228,7 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
     Jbond = system.g_i[0][ind_i,(ind_i+1)%system.Ns] if orientation=='v' else system.g_i[0][ind_i,(ind_i+Ly)%system.Ns]
     ts = system.ts
     site0 = system.site0
-    indexesMap = system.indexesMap
+    indexesMap = system.indexToSite
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S

@@ -32,8 +32,7 @@ def getFilename(*args,dirname='',extension='',floatPrecision=4):
         elif t in [float, np.float32, np.float64]:
             filename += f"{a:.{floatPrecision}f}"
         elif t==tuple:
-            for it in a:
-                filename += str(it)
+            filename += getFilename(*a)
         else:
             raise TypeError("Parameter %s has unsupported type: %s"%(a,t))
         if not i==len(args)-1:

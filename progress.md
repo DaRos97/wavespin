@@ -18,8 +18,8 @@
 - Same for input parameters
 
 ## Static
-
 - Pass to hdf5 for saving data compactly
+- Put together periodic and open for real space computation -> that's what we care about anyway
 
 ### Periodic boundary
 - Analysis on spin size S
@@ -29,10 +29,11 @@
 - computePs and computeTs need to be extended for canted-Stripe order
 
 ### Open boundary
-- Input of experimental parameters 
+- Input of experimental parameters
 - Implement the non-rectangular geometry
 - Pipeline momentum space correlator computation so one does not need to firts explicitly compute the real space one.
 - Switch correlators from x,y to ind=x*Ly+y
 - Handle the save correlator bonds -> I'm not plotting so its used just for saving data
+- In diagonalization -> since we exclude the zero mode, reduce dimensionaliti of U and V a-priori
 
 ## Dynamic

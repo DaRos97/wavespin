@@ -24,8 +24,7 @@ hFinal = 0
 stopRatios = np.linspace(0.1,1,10)
 Nr = len(stopRatios)
 
-from tqdm import tqdm
-for ir in tqdm(range(Nr)):
+for ir in range(Nr):
     stopRatio = stopRatios[ir]
     g_p = (1-stopRatio)*gInitial + stopRatio*gFinal
     h_p = (1-stopRatio)*hInitial + stopRatio*hFinal

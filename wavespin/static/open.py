@@ -20,13 +20,13 @@ from wavespin.plots.rampPlots import *
 class openHamiltonian(latticeClass):
     def __init__(self, p: iu.myParameters):
         super().__init__(p)
-        #Hamiltonian parameters
-        self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = p.dia_Hamiltonian
+        # Hamiltonian parameters
+        self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = self.p.dia_Hamiltonian
         self.S = 0.5     #spin value
         self.g_i = (self._NNterms(self.g1), self._NNNterms(self.g2))
         self.D_i = (self._NNterms(self.d1), self._NNNterms(self.d2))
         self.h_i = self._Hterms(self.h,self.h_disorder)
-#        self.realSpaceHamiltonian = self._realSpaceHamiltonian()
+        # self.realSpaceHamiltonian = self._realSpaceHamiltonian()
 
     def _NNterms(self,val):
         """ Construct Ns,Ns matrix for real space Hamiltonian using the lattice nn.
@@ -39,18 +39,17 @@ class openHamiltonian(latticeClass):
     def _NNNterms(self,val):
         """ Construct Ns,Ns matrix for real space Hamiltonian using the lattice nnn.
         """
-        vals = np.zeros((self.Lx*self.Ly,self.Lx*self.Ly))
+        vals = np.zeros((self.Ns,self.Ns))
         for i in range(self.Ns):
             vals[i,self.NNN[i]] = val
         return vals
 
     def _Hterms(self,val,disorder_val):
-        vals = np.zeros((self.Lx*self.Ly,self.Lx*self.Ly))
+        vals = np.zeros((self.Ns,self.Ns))
         disorder = (np.random.rand(self.Ns)-0.5)*2 * disorder_val
-        for ix in range(self.Lx):
-            for iy in range(self.Ly):
-                ind = self._idx(ix,iy)
-                vals[ind,ind] = -(-1)**(ix+iy) * val + disorder[ind]
+        for i in range(self.Ns):
+            ix,iy = self._xy(i)
+            vals[i,i] = -(-1)**(ix+iy) * val + disorder[i]
         return vals
 
     def _temperature(self,Eref):
@@ -89,7 +88,8 @@ class openHamiltonian(latticeClass):
             self.thetas = np.ones(self.Ns)*self.theta
             self.phis = np.ones(self.Ns)*self.phi
         else:
-            argsFn = ('minimization_solution',self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder,self.Lx,self.Ly,self.Ns,'open')
+            argsFn = ('quantAngle',self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian)
+#                      self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder,self.Lx,self.Ly,self.Ns,'open')
             anglesFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
             if not Path(anglesFn).is_file():
                 print("File of quantization axis angles not found: "+anglesFn)
@@ -111,19 +111,20 @@ class openHamiltonian(latticeClass):
                     self.thetas[i] += np.pi
             self.phis = np.zeros(self.Ns)
 
-    def computeTs(self):
-        """ Compute the parameters t_z, t_x and t_y as in notes for sublattice A and B.
+    def computeTs(self,order='c-Neel'):
+        """ Compute the vector parameters t_z, t_x and t_y as in notes for sublattice A and B.
         Sublattice A has negative magnetic feld.
         """
         self.ts = np.zeros((self.Ns,3,3))
-        for i in range(self.Ns):
-            ix,iy = self._xy(i)
-            sign = (-1)**(ix+iy)
-            th = self.thetas[i]
-            ph = self.phis[i]
-            self.ts[i,0] = sign*np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th) ]) #t_zx,t_zy,t_zz
-            self.ts[i,1] = sign*np.array([np.cos(th)*np.cos(ph),np.cos(th)*np.sin(ph),-np.sin(th)]) #t_xx,t_xy,t_xz
-            self.ts[i,2] =      np.array([-np.sin(ph)          ,np.cos(ph)           ,0             ]) #t_yx,t_yy,t_yz
+        if order=='c-Neel': #nn: A<->B, nnn: A<->A
+            for i in range(self.Ns):
+                ix,iy = self._xy(i)
+                sign = (-1)**(ix+iy)
+                th = self.thetas[i]
+                ph = self.phis[i]
+                self.ts[i,0] = sign*np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th) ]) #t_zx,t_zy,t_zz
+                self.ts[i,1] = sign*np.array([np.cos(th)*np.cos(ph),np.cos(th)*np.sin(ph),-np.sin(th)]) #t_xx,t_xy,t_xz
+                self.ts[i,2] =      np.array([-np.sin(ph)          ,np.cos(ph)           ,0          ]) #t_yx,t_yy,t_yz
 
     def computePs(self,order='c-Neel'):
         """ Compute coefficient p_gamma^{alpha,beta}_ij for a given classical order.
@@ -146,29 +147,22 @@ class openHamiltonian(latticeClass):
                 #nnn
                 for j in self.NNN[i]:
                     self.Ps[1,i,j] = np.einsum('d,ad,bd->ab',vecGnnn[:,i,j],self.ts[i],self.ts[j],optimize=True)
-        for offTerm in self.offSiteList:
-            ind = offTerm[0]*Ly + offTerm[1]
-            nn[:,ind] *= 0
-            nn[ind,:] *= 0
 
     def _realSpaceHamiltonian(self,verbose=False):
         """
         Compute the real space Hamiltonian -> (2Ns x 2Ns).
         Conventions for the real space wavefunction and parameters are in the notes.
-        SECOND NEAREST-NEIGHBOR NOT IMPLEMENTED.
-        Built for the rectangular shape and AFTER removed the rows/columns corresponding to off sites.
+        SECOND NEAREST-NEIGHBOR: implemented Ps but not in the Hamiltonian.
 
         Returns
         -------
         ham : 2Ns,2Ns matrix of real space Hamiltonian.
         """
         S = self.S
-        Lx = self.Lx
-        Ly = self.Ly
+        Ns = self.Ns
         g_i = self.g_i
         D_i = self.D_i
         h_i = self.h_i
-        offSiteList = self.offSiteList
         self.quantizationAxisAngles(verbose)
         self.computeTs()
         self.computePs()
@@ -176,47 +170,37 @@ class openHamiltonian(latticeClass):
         p_xx = self.Ps[0,:,:,1,1]
         p_yy = self.Ps[0,:,:,2,2]
         #
-        ham = np.zeros((2*Lx*Ly,2*Lx*Ly),dtype=complex)
+        ham = np.zeros((2*Ns,2*Ns),dtype=complex)
         #p_zz sums over nn but is on-site -> problem when geometry is not rectangular
-        ham[:Lx*Ly,:Lx*Ly] = abs(h_i)*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
-        ham[Lx*Ly:,Lx*Ly:] = abs(h_i)*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
+        ham[:Ns,:Ns] = abs(h_i)*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
+        ham[Ns:,Ns:] = abs(h_i)*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
         #off_diag 1 - nn
         off_diag_1_nn = (p_xx+p_yy) / 4 / S
-        ham[:Lx*Ly,:Lx*Ly] += off_diag_1_nn
-        ham[Lx*Ly:,Lx*Ly:] += off_diag_1_nn
+        ham[:Ns,:Ns] += off_diag_1_nn
+        ham[Ns:,Ns:] += off_diag_1_nn
         #off_diag 2 - nn
         off_diag_2_nn = (p_xx-p_yy) / 4 / S
-        ham[:Lx*Ly,Lx*Ly:] += off_diag_2_nn
-        ham[Lx*Ly:,:Lx*Ly] += off_diag_2_nn.T.conj()
-        #Remove offSiteList
-        indexesToRemove = []
-        for offTerm in offSiteList:
-            ind = _idx(offTerm[0],offTerm[1])
-            indexesToRemove.append(ind)
-            indexesToRemove.append(ind + Lx*Ly)
-        ham = np.delete(ham,indexesToRemove,axis=0)
-        ham = np.delete(ham,indexesToRemove,axis=1)
+        ham[:Ns,Ns:] += off_diag_2_nn
+        ham[Ns:,:Ns] += off_diag_2_nn.T.conj()
         return ham
 
     def diagonalize(self,verbose=False,**kwargs):
         """ Compute the Bogoliubov transformation for the real-space Hamiltonian.
         Initialize U_, V_ and evals : bogoliubov transformation matrices U and V and eigenvalues.
         """
-        Ns = self.Ns
-        #
-        argsFn = ('bogoliubov_rs',self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder,self.Lx,self.Ly,self.Ns)
+        argsFn = ('bogWf',self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian)
         transformationFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
         hamiltonian = self._realSpaceHamiltonian(verbose)
         if not Path(transformationFn).is_file():
             if np.max(np.absolute(hamiltonian-hamiltonian.conj()))>1e-5:
                 raise ValueError("Hamiltonian is not real! Procedure might be wrong")
-            # Para-diagonalization, see notes (appendix) for details
+            # Para-diagonalization
+            Ns = self.Ns
             A = hamiltonian[:Ns,:Ns]
             B = hamiltonian[:Ns,Ns:]
             try:
                 K = scipy.linalg.cholesky(A-B)
             except:
-                #print(scipy.linalg.eigvalsh(A-B))
                 K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-4)
             lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
             if self.p.dia_excludeZeroMode:
@@ -504,7 +488,7 @@ class openSystem(openHamiltonian):
         super().__init__(p)
         #XT correlator parameters
         self.perturbationSite = p.cor_perturbationSite
-        self.perturbationIndex = self.indexesMap.index(self.perturbationSite)
+        self.perturbationIndex = self.indexToSite.index(self.perturbationSite)
         #
         self.site0 = 0 #if h_t_i[0,0,0]<0 else 1     #decide sublattice A and B of reference lattice site
         self.fullTimeMeasure = 0.8     #measure time in ms
@@ -516,7 +500,6 @@ class openSystem(openHamiltonian):
     def realSpaceCorrelator(self,verbose=False):
         """ Here we compute the correlator in real space.
         """
-        #print(self.evals)
         temperature = self._temperature(self.p.cor_energy)
         Lx = self.Lx
         Ly = self.Ly
@@ -575,7 +558,7 @@ class openSystem(openHamiltonian):
     def realSpaceCorrelatorBond(self,verbose=False):
         """ Here we compute the correlator in real space for each bond, like for the jj.
         """
-        temperature = self._temperature()
+        temperature = self._temperature(self.p.cor_energy)
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns

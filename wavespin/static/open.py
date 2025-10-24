@@ -49,7 +49,7 @@ class openHamiltonian(latticeClass):
         disorder = (np.random.rand(self.Ns)-0.5)*2 * disorder_val
         for i in range(self.Ns):
             ix,iy = self._xy(i)
-            vals[i,i] = -(-1)**(ix+iy) * val + disorder[i]
+            vals[i,i] = (-1)**(ix+iy+1) * val + disorder[i]
         return vals
 
     def _temperature(self,Eref):
@@ -237,8 +237,9 @@ class openHamiltonian(latticeClass):
             self.U_[:,0] *= 0
             self.V_[:,0] *= 0
         if self.p.dia_plotWf:
-            plotWf(self)
-            plotWfCos(self)
+            #plotWf3D(self)
+            plotWf2D(self)
+            #plotWfCos(self)
         if self.p.dia_plotMomenta:
             plotBogoliubovMomenta(self,**kwargs)
 

@@ -162,7 +162,7 @@ def plotRampKW(ramp, **kwargs):
     if showFigure:
         plt.show()
 
-def plotWf(system,nModes=16):
+def plotWf3D(system,nModes=16):
     """ Here we plot just the wavefunctions (first n modes)
     """
     Lx = system.Lx
@@ -170,23 +170,70 @@ def plotWf(system,nModes=16):
     Ns = system.Ns
     U_ = system.U_
     V_ = system.V_
-    X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly))
-    phi_ik = np.real(U_ - V_)
+    X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
+    phi = np.real(U_ - V_)
     for i in range(Ns):
-        ix,iy = system.indexesMap[i]
-        phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+        ix,iy = system._xy(i)
+        phi[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
     fig, axes, rows, cols = createFigure(nModes,plot3D=True)
-    for ik in range(nModes):
-        kx, ky = system._xy(ik)
-        ax = axes[ik]
+    for n in range(nModes):
+        ax = axes[n]
+        if len(system.p.lat_offSiteList)==0:
+            formattedPhi = phi[:,n].reshape(Lx,Ly)
+        else:
+            formattedPhi = np.zeros((Lx,Ly))
+            for ix in range(Lx):
+                for iy in range(Ly):
+                    if (ix,iy) in system.offSiteList:
+                        formattedPhi[ix,iy] = np.nan
+                    else:
+                        formattedPhi[ix,iy] = phi[system._idx(ix,iy),n]
         ax.plot_surface(X,Y,
-                        phi_ik[:,ik].reshape(Lx,Ly).T,
+                        formattedPhi,
                         cmap='plasma'
                         )
-        ax.set_title("Mode: "+str(ik))
+        ax.set_title("Mode: "+str(n))
     for ik in range(nModes,len(axes)):
         axes[ik].axis('off')
     plt.suptitle("Modes from bogoliubov transformation",size=20)
+    plt.show()
+
+def plotWf2D(system,nModes=25):
+    """ Here we plot just the wavefunctions (first n modes)
+    """
+    Lx = system.Lx
+    Ly = system.Ly
+    Ns = system.Ns
+    U_ = system.U_
+    V_ = system.V_
+    X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
+    phi = np.real(U_ - V_)
+    for i in range(Ns):
+        ix,iy = system._xy(i)
+        phi[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    fig, axes, rows, cols = createFigure(nModes)
+    for n in range(nModes):
+        ax = axes[n]
+        if len(system.p.lat_offSiteList)==0:
+            formattedPhi = phi[:,n].reshape(Lx,Ly)
+        else:
+            formattedPhi = np.zeros((Lx,Ly))
+            for ix in range(Lx):
+                for iy in range(Ly):
+                    if (ix,iy) in system.offSiteList:
+                        formattedPhi[ix,iy] = np.nan
+                    else:
+                        formattedPhi[ix,iy] = phi[system._idx(ix,iy),n]
+        ax.pcolormesh(X,Y,
+                      formattedPhi,
+                      cmap='bwr'
+                      )
+        ax.set_title("Mode: "+str(n))
+        ax.set_aspect('equal')
+    for ik in range(nModes,len(axes)):
+        axes[ik].axis('off')
+    plt.suptitle("Modes from bogoliubov transformation",size=20)
+    fig.tight_layout()
     plt.show()
 
 def plotWfCos(system,nModes=6):

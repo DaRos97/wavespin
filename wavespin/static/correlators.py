@@ -226,16 +226,17 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
     Lx = system.Lx
     Ly = system.Ly
     Jbond = system.g_i[0][ind_i,(ind_i+1)%system.Ns] if orientation=='v' else system.g_i[0][ind_i,(ind_i+Ly)%system.Ns]
+    Jbond = system.g1
     ts = system.ts
     site0 = system.site0
-    indexesMap = system.indexToSite
-    measurementIndex = indexesMap.index(system._xy(ind_i))
+    ix, iy = system._xy(ind_i)
     perturbationIndex = system.perturbationIndex
+    jx, jy = system.p.cor_perturbationSite
     S = system.S
     magnonModes = system.p.cor_magnonModes
     #
-    ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
-    ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
+    ts_i = ts[(site0+ix+iy)%2]
+    ts_j = ts[(site0+jx+jy)%2]
     ind_r = ind_i+1 if orientation=='v' else ind_i+Ly   #-> from i
     ind_s = perturbationIndex+Ly #if system.perturbationDirection=='h' else perturbationIndex-Ly#always horizontal      -> from j
     term_list = ['XYXY','ZYZY','XYYX','ZYYZ','YXXY','YZZY','YXYX','YZYZ']
@@ -254,7 +255,7 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
         for t in list_terms:
             contraction = computeContraction(t[1],t[2],t[3],A,B,G,H,magnonModes)
             JJ += coeff_t * t[0] * contraction
-    return 2*1j*np.imag(JJ)*Jbond**2
+    return 2*1j*np.imag(JJ)#*Jbond**2
 
 def generatePairings(elements):
     """

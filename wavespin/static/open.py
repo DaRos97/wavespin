@@ -66,7 +66,7 @@ class openHamiltonian(latticeClass):
         tempE = np.zeros(self.Ns)
         tempE[0] = GS_energy
         for i in range(1,self.Ns):
-            B = 1/(np.exp(self.evals[1:]/self.evals[i]))
+            B = 1/(np.exp(self.evals[1:]/self.evals[i])-1)
             tempE[i] = GS_energy + np.sum(self.evals[1:]*B) / Nbonds / self.g1
         if Eref > tempE[-1]:
             raise ValueError("Input state energy larger then max magnon one %.3f"%tempE[-1])
@@ -75,9 +75,18 @@ class openHamiltonian(latticeClass):
         Tlist = np.linspace(Tmin,Tmax,100)
         e_list = np.zeros(len(Tlist))
         for i in range(len(Tlist)):
-            B = 1/(np.exp(self.evals[1:]/Tlist[i]))
+            B = 1/(np.exp(self.evals[1:]/Tlist[i])-1)
             e_list[i] = GS_energy + np.sum(self.evals[1:]*B) / Nbonds / self.g1
         indT = np.argmin(abs(e_list-Eref))
+        if 0:   # Plot temperature
+            fig = plt.figure(figsize=(10,10))
+            ax = fig.add_subplot()
+            #ax.plot(self.evals,tempE)
+            ax.plot(Tlist,e_list)
+            ax.axhline(Eref)
+            ax.axvline(Tlist[indT])
+            plt.show()
+            exit()
         return Tlist[indT]
 
     def quantizationAxisAngles(self,verbose=False):
@@ -488,7 +497,7 @@ class openSystem(openHamiltonian):
         super().__init__(p)
         #XT correlator parameters
         self.perturbationSite = p.cor_perturbationSite
-        self.perturbationIndex = self.indexToSite.index(self.perturbationSite)
+        self.perturbationIndex = self._idx(*self.perturbationSite)
         #
         self.site0 = 0 #if h_t_i[0,0,0]<0 else 1     #decide sublattice A and B of reference lattice site
         self.fullTimeMeasure = 0.8     #measure time in ms
@@ -496,11 +505,13 @@ class openSystem(openHamiltonian):
         self.measureTimeList = np.linspace(0,self.fullTimeMeasure,self.nTimes)
         #KW correlator parameters
         self.nOmega = 2000
+        # Diagonalize
+        self.diagonalize()
 
     def realSpaceCorrelator(self,verbose=False):
         """ Here we compute the correlator in real space.
         """
-        temperature = self._temperature(self.p.cor_energy)
+        temperature = 0#self._temperature(self.p.cor_energy)
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
@@ -558,7 +569,8 @@ class openSystem(openHamiltonian):
     def realSpaceCorrelatorBond(self,verbose=False):
         """ Here we compute the correlator in real space for each bond, like for the jj.
         """
-        temperature = self._temperature(self.p.cor_energy)
+        #temperature = self._temperature(self.p.cor_energy)
+        temperature = 0
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
@@ -567,7 +579,7 @@ class openSystem(openHamiltonian):
         argsFn_v = ('correlator_vertical_bonds',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite,self.p.cor_energy)
         correlatorFn_h = pf.getFilename(*argsFn_h,dirname=self.dataDn,extension='.npy')
         correlatorFn_v = pf.getFilename(*argsFn_v,dirname=self.dataDn,extension='.npy')
-        if not Path(correlatorFn_h).is_file() or Path(correlatorFn_v).is_file():
+        if not Path(correlatorFn_h).is_file() or not Path(correlatorFn_v).is_file():
             self.correlatorXT_h = np.zeros((Lx-1,Ly,self.nTimes),dtype=complex)
             self.correlatorXT_v = np.zeros((Lx,Ly-1,self.nTimes),dtype=complex)
             #
@@ -582,6 +594,24 @@ class openSystem(openHamiltonian):
             B = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
             G = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
             H = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[Ns:,Ns:],optimize=True)
+            if temperature != 0:
+                exp_e_c = np.exp(1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
+                BF = 1/(np.exp(self.evals/temperature)-1)
+                A += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.U_,self.V_,exp_e_c,optimize=True)
+                A += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.V_,self.U_,exp_e,  optimize=True)
+                A += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.V_,self.U_,exp_e, optimize=True)
+                #
+                B += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.V_,self.U_,exp_e_c,optimize=True)
+                B += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.U_,self.V_,exp_e,  optimize=True)
+                B += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.U_,self.V_,exp_e, optimize=True)
+                #
+                G += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.U_,self.U_,exp_e_c,optimize=True)
+                G += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.V_,self.V_,exp_e,  optimize=True)
+                G += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.V_,self.V_,exp_e, optimize=True)
+                #
+                H += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.V_,self.V_,exp_e_c,optimize=True)
+                H += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.U_,self.U_,exp_e,  optimize=True)
+                H += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.U_,self.U_,exp_e, optimize=True)
             #
             for ihx in range(Lx-1):
                 for ihy in range(Ly):

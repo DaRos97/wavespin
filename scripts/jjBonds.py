@@ -4,10 +4,8 @@
 import numpy as np
 import os, sys, argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from wavespin.tools.inputUtils import importOpenParameters as importParameters
+from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openSystem, openRamp
-from wavespin.plots import fancyLattice
-from wavespin.plots import rampPlots
 
 """ Parameters and options """
 parser = argparse.ArgumentParser(description="Static correlator calculation in OBC")
@@ -17,42 +15,63 @@ inputArguments = parser.parse_args()
 verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
-if parameters.plotSites:
-    simulation = openSystem(parameters,(0,0,0,0,0))
-    fancyLattice.plotSitesGrid(simulation,**{'indices':False})
-
 """ Define the parameters of the system at different 'times' """
-nP = 1     #number of parameters computed in the "ramp" -> analogue to stop ratio
-gInitial = 0
-gFinal = 20      #factor of 2 from experiment due to s^xs^x -> s^+s^-
-hInitial = 15
-hFinal = 0
-pValues = np.array([1,])#np.linspace(1,1,nP)
-g_p = (1-pValues)*gInitial + pValues*gFinal
-h_p = (1-pValues)*hInitial + pValues*hFinal
+parameters.dia_Hamiltonian = (10,0,0,0,0,0)
+magModes = [(1,2,3),(1,),(2,),(3,)]
+ens = [-0.52,]
+data = [[] for i in range(len(magModes))]
+for im in range(len(magModes)):
+    parameters.cor_magnonModes = magModes[im]
+    parameters.cor_energy = ens[0]
+    sys0 = openSystem(parameters)
+    sys0.realSpaceCorrelatorBond(verbose=verbose)
+    # Extract bonds: specific for fig.3 -> perturbation 2,2 in 6x6 chip
+    # In order: hor bond A, ver bond up, hor bond, ver bond down
+    data[im] = [-sys0.correlatorXT_h[2,2], -sys0.correlatorXT_v[3,2], sys0.correlatorXT_h[2,3], sys0.correlatorXT_v[2,2] ]
 
-data = []
-Lx = parameters.Lx
-Ly = parameters.Ly
-for ip,pS in enumerate([(0,0),(Lx-2,0)]):
-    parameters.perturbationSite=pS
-    """ Initialize all the systems and store them in a ramp object """
-    ramp = openRamp()
-    for i in range(nP):
-        termsHamiltonian = (g_p[i],0,0,0,h_p[i])
-        ramp.addSystem(openSystem(parameters,termsHamiltonian))
-#    ramp.rampElements[0].perturbationDirection = 'h' if ip==0 else 'v'
+nTimes = np.arange(sys0.nTimes) / 10
 
-    """ Compute correlator XT and KW for all systems in the ramp """
-    ramp.correlatorsXT(verbose=verbose)
-
-    data.append(ramp.rampElements[0].correlatorXT_h)
-
-time = np.arange(ramp.rampElements[0].nTimes)
-
+# Plot
 import matplotlib.pyplot as plt
-fig = plt.figure(figsize=(15,10))
-ax = fig.add_subplot()
-ax.plot(time,np.imag(data[0][1,0,:]),color='r')
-ax.plot(time,np.imag(data[1][Lx-3,0,:]),color='b')
+colors = ['purple','k','grey','silver']
+fig,axs = plt.subplots(1,4,sharey=True,figsize=(15,7))
+title = ["all","1","2","3"]
+for im in range(len(magModes)):
+    ax = axs[im]
+    ax.set_title("Magnons: "+title[im])
+    bonds = data[im]
+    tot = np.zeros_like(bonds[0])
+    for i in range(4):
+        ax.plot(nTimes,
+                np.imag(bonds[i]),
+                color=colors[i],
+                ls='dashed' if i != 0 else '-',
+                lw=1 if i != 0 else 3,
+                zorder = 8-2*i,
+                )
+        tot += bonds[i]
+    ax.plot(nTimes,
+            np.imag(tot),
+            color='teal',
+            ls='-',
+            lw=3,
+            zorder=7,
+            )
+
+    ax.set_xlim(0,3)
 plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -34,3 +34,13 @@ for ir in range(Nr):
     """ Compute Bogoliubov wavefunctions """
     system.diagonalize(verbose=verbose)
 
+
+if 0:   # Save just the amazing functions to share
+    U_ = system.U_
+    V_ = system.V_
+    phi = np.real(U_ - V_)
+    for i in range(system.Ns):
+        ix,iy = system._xy(i)
+        phi[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    np.save("Data/amazing.npy",phi)
+    np.save("Data/evals.npy",system.evals)

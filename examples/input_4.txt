@@ -16,9 +16,9 @@ plotMomenta: False
 # Correlator options
 correlatorType: zz
 transformType: dct
-perturbationSite: (3,4)
+perturbationSite: (5,5)
 magnonModes: (1,2,3,4)
 saveXT: False
 saveKW: False
-plotKW: False
+plotKW: True
 savePlotKW: False

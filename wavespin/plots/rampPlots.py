@@ -396,13 +396,14 @@ def plotVertex(system,**kwargs):
     types = system.p.sca_types
     data = system.dataScattering
     nS = len(types)
-    fig, axes, nRows, nCols = createFigure(nS,nRows=2,nCols=4)            #plt.figure(figsize=(6*nCols,6*nRows))
+    fig, axes, nRows, nCols = createFigure(nS,subplotSize=(8,8),nRows=1,nCols=1)            #plt.figure(figsize=(6*nCols,6*nRows))
     col_1 = ['navy','orange']
     col_2 = ['blue','red']
     for st, scatteringType in enumerate(types):
         Gamma_n = data[scatteringType]        #in MHz
         ax = axes[st]
-        ax.scatter(np.arange(1,system.Ns),Gamma_n/1e3,marker='o',color=col_1[0],s=70)
+        finN = system.Ns
+        ax.scatter(np.arange(1,finN),Gamma_n[:finN]/1e3,marker='o',color=col_1[0],s=70)
         ax.set_xlabel("Mode number",size=s_)
         ax.set_title(title[scatteringType],size=s_+5)
         # best modes
@@ -418,11 +419,13 @@ def plotVertex(system,**kwargs):
             ax.set_ylabel("Decay rate (GHz)",size=s_)
         # Print mode number
         fac = (np.max(Gamma_n) - np.min(Gamma_n)) / 40 / 1e3
-        for i in range(1,system.Ns):
+        for i in range(1,finN):
             ax.text(i-0.6,Gamma_n[i-1]/1e3+fac,str(i))
 
     #plt.suptitle("Grid: %d x %d"%(system.Lx,system.Ly),size=s_)
-    fig.tight_layout()
+#    ax.set_ylim(0,0.05)
+#    ax.set_xlim(0,50)
+#    fig.tight_layout()
     plt.show()
 
 def plotRampDAT(ramp, **kwargs):

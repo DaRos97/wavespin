@@ -22,10 +22,12 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 """ Initialize and diagonalize system """
+parameters.dia_Hamiltonian = (10,0,0,0,0,0)
 system = openHamiltonian(parameters)
 best_modes = np.array([17,18,19,20,24,25,26,27,30,31,32,34])
 kwargs = {'best_modes':best_modes}
 system.diagonalize(verbose=verbose,**kwargs)
+print(system.evals)
 
 #rampPlots.plotWf(system)
 #rampPlots.plotBogoliubovMomenta(system)
@@ -70,7 +72,7 @@ if 0:
     plt.show()
 
 
-if 1:
+if 0:
     def computeEs(system,Tlist):
         """ Initialize and diagonalize system """
         g_p = system.g1

@@ -16,6 +16,7 @@ from wavespin.static import correlators
 from wavespin.static import momentumTransformation
 from wavespin.static.periodic import quantizationAxis
 from wavespin.plots.rampPlots import *
+from wavespin.plots import fancyLattice
 
 class openHamiltonian(latticeClass):
     def __init__(self, p: iu.myParameters):
@@ -91,34 +92,35 @@ class openHamiltonian(latticeClass):
 
     def quantizationAxisAngles(self,verbose=False):
         """ Here we get the quantization axis angles to use for the diagonalization.
+        Phi is 0, we would need it just when the dynamics is implemented.
         """
         self.theta, self.phi = quantizationAxis(self.S,self.g_i,self.D_i,self.h_i)
+        self.phis = np.zeros(self.Ns)
         if self.p.dia_uniformQA:
             self.thetas = np.ones(self.Ns)*self.theta
-            self.phis = np.ones(self.Ns)*self.phi
+            if 0:   # Plot solution
+                kwargs = {'indices':False, 'angles':True}
+                fancyLattice.plotSitesGrid(self,**kwargs)
+                #exit()
         else:
             argsFn = ('quantAngle',self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian)
-#                      self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder,self.Lx,self.Ly,self.Ns,'open')
             anglesFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
             if not Path(anglesFn).is_file():
                 print("File of quantization axis angles not found: "+anglesFn)
                 print("computing it now..")
-                from wavespin.classicSpins.minimization import minHam
-                from wavespin.tools.inputUtils import classicParameters
-                parameters = classicParameters()
-                setattr(parameters,'saveSolution',True)
-                setattr(parameters,'Lx',self.Lx)
-                setattr(parameters,'Ly',self.Ly)
-                setattr(parameters,'offSiteList',self.offSiteList)
-                simulation = minHam(parameters,(self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder))
-                simulation.minimization(verbose=verbose)
-
-            self.thetas = np.load(anglesFn)
-            for i in range(self.Ns):
-                ix,iy = self._xy(i)
-                if (ix+iy)%2==1:
-                    self.thetas[i] += np.pi
-            self.phis = np.zeros(self.Ns)
+                from wavespin.classicSpins.anglesOBC import classicMagnetization
+                result = classicMagnetization(self,verbose)
+                self.thetas = result.bestAngles
+                if 1:   # Plot solution
+                    kwargs = {'indices':False, 'angles':True}
+                    fancyLattice.plotSitesGrid(self,**kwargs)
+                    exit()
+                if input("Save result?[y/N]")=='y':
+                    argsFn = ('anglesOBC',self.Lx,self.Ly,self.Ns,self.dia_Hamiltonian)
+                    solutionFn = pf.getFilename(*argsFn,dirname=obj.dataDn,extension='.npy')
+                    np.save(solutionFn,self.thetas)
+            else:
+                self.thetas = np.load(anglesFn)
 
     def computeTs(self,order='c-Neel'):
         """ Compute the vector parameters t_z, t_x and t_y as in notes for sublattice A and B.
@@ -238,7 +240,7 @@ class openHamiltonian(latticeClass):
             self.V_[:,0] *= 0
         if self.p.dia_plotWf:
             #plotWf3D(self)
-            plotWf2D(self)
+            plotWf2D(self,nModes=9)
             #plotWfCos(self)
         if self.p.dia_plotMomenta:
             plotBogoliubovMomenta(self,**kwargs)
@@ -425,6 +427,7 @@ class openHamiltonian(latticeClass):
                 OmS = Omega + np.transpose(Omega,(1,0,2,3))
                 KaS = Kappa + np.transpose(Kappa,(0,1,3,2))
                 # f1
+                print("f1")
                 Vnr_lm =  np.einsum('ij,jjlm,ijrn->nrlm',f1,Omega,OmS,optimize=True)
                 Vnr_lm += np.einsum('ij,jjnr,ijlm->nrlm',f1,Omega,OmS,optimize=True)
                 Vnr_lm += np.einsum('ij,jjlr,ijmn->nrlm',f1,Kappa,KaS,optimize=True)
@@ -432,6 +435,7 @@ class openHamiltonian(latticeClass):
                 Vnr_lm += np.einsum('ij,jjln,ijmr->nrlm',f1,Kappa,KaS,optimize=True)
                 Vnr_lm += np.einsum('ij,jjmn,ijlr->nrlm',f1,Kappa,KaS,optimize=True)
                 # f2
+                print("f2")
                 Vnr_lm += np.einsum('ij,jjlm,ijrn->nrlm',f2,Omega,KaS,optimize=True)
                 Vnr_lm += np.einsum('ij,jjnr,ijlm->nrlm',f2,Omega,KaS,optimize=True)
                 Vnr_lm += np.einsum('ij,jjlr,ijnm->nrlm',f2,Kappa,OmS,optimize=True)
@@ -439,6 +443,7 @@ class openHamiltonian(latticeClass):
                 Vnr_lm += np.einsum('ij,jjln,ijrm->nrlm',f2,Kappa,OmS,optimize=True)
                 Vnr_lm += np.einsum('ij,jjmn,ijrl->nrlm',f2,Kappa,OmS,optimize=True)
                 # f3
+                print("f3")
                 Vnr_lm += np.einsum('ij,jjlm,iinr->nrlm',f3,Omega,Omega,optimize=True)
                 Vnr_lm += np.einsum('ij,jjnr,iilm->nrlm',f3,Omega,Omega,optimize=True)
                 Vnr_lm += np.einsum('ij,jjlr,iimn->nrlm',f3,Kappa,Kappa,optimize=True)
@@ -449,6 +454,7 @@ class openHamiltonian(latticeClass):
                 Vnr_lm *= 2
 
                 if scatteringType == '2to2_1':
+                    print("bose")
                     en = evals[:,None,None,None]
                     er = evals[None,:,None,None]
                     el = evals[None,None,:,None]
@@ -512,12 +518,14 @@ class openSystem(openHamiltonian):
     def realSpaceCorrelator(self,verbose=False):
         """ Here we compute the correlator in real space.
         """
-        temperature = 0#self._temperature(self.p.cor_energy)
+        temperature = self._temperature(self.p.cor_energy)
+        print(temperature)
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn = ('correlatorXT_rs',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
+        argsFn = ('correlatorXT',self.p.cor_correlatorType,self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian,
+                  txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorXT = np.zeros((Lx,Ly,self.nTimes),dtype=complex)
@@ -529,38 +537,61 @@ class openSystem(openHamiltonian):
             U[Ns:,Ns:] = self.U_
             #Correlator -> can make this faster, we actually only need U_ and V_
             exp_e = np.exp(-1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
-            A = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[Ns:,Ns:],optimize=True)
-            B = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
-            G = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
-            H = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[Ns:,Ns:],optimize=True)
+            A_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[Ns:,Ns:],optimize=True)
+            B_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
+            G_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
+            H_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[Ns:,Ns:],optimize=True)
             if temperature != 0:
                 exp_e_c = np.exp(1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
                 BF = 1/(np.exp(self.evals/temperature)-1)
-                A += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.U_,self.V_,exp_e_c,optimize=True)
-                A += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.V_,self.U_,exp_e,  optimize=True)
-                A += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.V_,self.U_,exp_e, optimize=True)
+                A2  = np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e, optimize=True)
+                A2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e_c,optimize=True)
+                #A2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.U_,exp_e, optimize=True)
+                #A2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.V_,exp_e_c,optimize=True)
                 #
-                B += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.V_,self.U_,exp_e_c,optimize=True)
-                B += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.U_,self.V_,exp_e,  optimize=True)
-                B += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.U_,self.V_,exp_e, optimize=True)
+                B2  = np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e, optimize=True)
+                B2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e_c,optimize=True)
+                #B2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.V_,exp_e, optimize=True)
+                #B2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.U_,exp_e_c,optimize=True)
                 #
-                G += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.U_,self.U_,exp_e_c,optimize=True)
-                G += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.V_,self.V_,exp_e,  optimize=True)
-                G += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.V_,self.V_,exp_e, optimize=True)
+                G2  = np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e, optimize=True)
+                G2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e_c,optimize=True)
+                #G2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.V_,exp_e, optimize=True)
+                #G2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.U_,exp_e_c,optimize=True)
                 #
-                H += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.V_,self.V_,exp_e_c,optimize=True)
-                H += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.U_,self.U_,exp_e,  optimize=True)
-                H += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.U_,self.U_,exp_e, optimize=True)
+                H2  = np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e, optimize=True)
+                H2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e_c,optimize=True)
+                #H2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.U_,exp_e, optimize=True)
+                #H2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.V_,exp_e_c,optimize=True)
+            else:
+                A2 = B2 = G2 = H2 = 0
+            Af = A_GS + A2
+            Bf = B_GS + B2
+            Gf = G_GS + G2
+            Hf = H_GS + H2
+            if temperature != 0 and 0:
+                fig = plt.figure(figsize=(12,12))
+                funcs = [A_GS,B_GS,G_GS,H_GS]
+                funcs2 = [A2,B2,G2,H2]
+                ss = [-1,+1,-self.Ly,self.Ly]
+                for iA in range(4):
+                    f = np.real(funcs[iA][:,self.perturbationIndex,:])
+                    fi = np.imag(funcs[iA][:,self.perturbationIndex,:])
+                    f2 = np.real(funcs2[iA][:,self.perturbationIndex,:])
+                    f2i = np.imag(funcs2[iA][:,self.perturbationIndex,:])
+                    for ix in range(4):
+                        ax = fig.add_subplot(4,4,iA*4+ix+1)
+                        ax.plot(self.measureTimeList,f[self.perturbationIndex+ss[ix],:],color='r')
+                        ax.plot(self.measureTimeList,fi[self.perturbationIndex+ss[ix],:],color='orange')
+                        ax.plot(self.measureTimeList,f2[self.perturbationIndex+ss[ix],:],color='b')
+                        ax.plot(self.measureTimeList,f2i[self.perturbationIndex+ss[ix],:],color='aqua')
+                        ax.set_xlim(0,0.1)
+                plt.show()
             #
             for ind_i in range(Ns):
                 ix, iy = self._xy(ind_i)
-                if (ix,iy) in self.offSiteList:
-                    continue
-                self.correlatorXT[ix,iy] = correlators.dicCorrelators[self.p.cor_correlatorType](self,ind_i,A,B,G,H)
+                self.correlatorXT[ix,iy] = correlators.dicCorrelators[self.p.cor_correlatorType](self,ind_i,Af,Bf,Gf,Hf)
             if self.p.cor_saveXT:
-                if not Path(self.dataDn).is_dir():
-                    print("Creating 'Data/' folder in directory: "+self.dataDn)
-                    os.system('mkdir '+self.dataDn)
                 np.save(correlatorFn,self.correlatorXT)
         else:
             if verbose:
@@ -644,13 +675,10 @@ class openSystem(openHamiltonian):
         if not Path(correlatorFn).is_file():
             self.correlatorKW = momentumTransformation.dicTransformType[self.p.cor_transformType](self)
             if self.p.cor_saveKW:
-                if not Path(self.dataDn).is_dir():
-                    print("Creating 'Data/' folder in directory: "+self.dataDn)
-                    os.system('mkdir '+self.dataDn)
                 np.save(correlatorFn,self.correlatorKW)
         else:
             if verbose:
-                print("Loading moemntum-space correlator from file: "+correlatorFn)
+                print("Loading momentum-space correlator from file: "+correlatorFn)
             self.correlatorKW = np.load(correlatorFn)
 
 ##########################################################

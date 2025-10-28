@@ -23,7 +23,13 @@ class latticeClass():
         self.NNN = self._build_nnn()
         # Directory names
         self.dataDn = pf.getHomeDirname(str(Path.cwd()),'/Data/')
+        if not Path(self.dataDn).is_dir():
+            print("Creating 'Data/' folder in home directory.")
+            os.system('mkdir '+self.dataDn)
         self.figureDn = pf.getHomeDirname(str(Path.cwd()),'/Figures/')
+        if not Path(self.figureDn).is_dir():
+            print("Creating 'Figures/' folder in home directory.")
+            os.system('mkdir '+self.figureDn)
         # Plotting
         if p.lat_plotLattice:
             fancyLattice.plotSitesGrid(self)

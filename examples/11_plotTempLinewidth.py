@@ -21,7 +21,7 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 """ Initialize all the systems and store them in a ramp object """
-energies = np.linspace(-0.55,-0.5,10)
+energies = np.linspace(-0.55,-0.5,3)
 ramp = openRamp()
 for en in energies:
     parameters.cor_energy = en if en != energies[0] else -100
@@ -32,7 +32,6 @@ for en in energies:
 ramp.correlatorsXT(verbose=verbose)
 ramp.correlatorsKW(verbose=verbose)
 
-
 sys0 = ramp.rampElements[0]
 Ns = sys0.Ns
 nOmega = sys0.nOmega
@@ -41,25 +40,27 @@ indMax = nOmega//2 + int(nOmega/500*70)
 freqs = fftshift(fftfreq(nOmega,sys0.fullTimeMeasure/sys0.nTimes)) [indMin:indMax] / 10
 xline = np.linspace(freqs[0],freqs[-1],1000)
 def lorentzian(x, x0, gamma, A, y0):
-    return y0 + (A / np.pi) * (0.5 * gamma) / ((x - x0)**2 + (0.5 * gamma)**2)
+    return y0 + (abs(A) / np.pi) * (0.5 * abs(gamma)) / ((x - x0)**2 + (0.5 * gamma)**2)
 
-if 0: # Plot single k to check fitting
-    fig = plt.figure(figsize=(12,5))
-    ax = fig.add_subplot()
-    indK = 54       # Representative k
-    ikx, iky = sys0._xy(indK)
-    for ie,en in enumerate(energies):
-        zz = np.abs(ramp.rampElements[ie].correlatorKW[ikx,iky][indMin:indMax])
-        popt, pcov = curve_fit(lorentzian, freqs, zz)
-        if 0:
-            print(popt)
-            sc = ax.scatter(freqs,zz,
-                            label="Energy: %.2f"%en if en != -100 else "Energy: GS")
-            ax.plot(xline, lorentzian(xline,*popt), color=sc.get_facecolors(),label="Width: %.5f"%popt[1])
-    #
-    ax.set_xlim(popt[0]-1,popt[0]+1)
-    ax.legend()
+if 1: # Plot single k to check fitting
+    fig = plt.figure(figsize=(25,20))
+    for ii,indK in enumerate(range(0,63,1)):
+        ax = fig.add_subplot(7,9,ii+1)
+        ikx, iky = sys0._xy(indK)
+        for ie,en in enumerate(energies):
+            zz = np.abs(ramp.rampElements[ie].correlatorKW[ikx,iky][indMin:indMax])
+            popt, pcov = curve_fit(lorentzian, freqs, zz, p0=[freqs[np.argmax(zz)],2,10,np.max(zz)])
+            if 1:
+                print(abs(popt[1]))
+                sc = ax.scatter(freqs,zz,
+                                label="Energy: %.2f"%en if en != energies[0] else "Energy: GS")
+                ax.plot(xline, lorentzian(xline,*popt), color=sc.get_facecolors(),label="Width: %.5f"%popt[1])
+        #
+        ax.set_xlim(popt[0]-1,popt[0]+1)
+        #ax.legend()
+    fig.tight_layout()
     plt.show()
+    exit()
 
 def weighted_stdev(x, amplitude, w_mean = None, threshold = None):
     """ To compute the weighted standard deviation.

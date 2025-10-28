@@ -26,7 +26,7 @@ def plotSitesGrid(lattice,**kwargs):
     for ix in range(Lx):
         for iy in range(Ly):
             if (ix,iy) in offSiteList:
-                ax.scatter(ix,iy,c='r',marker='x',s=80,zorder=2)
+                ax.scatter(ix,iy,c='orange',marker='x',s=30,zorder=2)
             else:
                 ax.scatter(ix,iy,c='b',marker='o',s=80,zorder=2)
                 if printIndices:
@@ -44,6 +44,17 @@ def plotSitesGrid(lattice,**kwargs):
     if hasattr(lattice,'perturbationSite'):
         perturbationSite = lattice.perturbationSite
         ax.scatter(perturbationSite[0],perturbationSite[1],c='w',edgecolor='m',lw=2,marker='o',s=200,zorder=1)
+    if hasattr(lattice,'thetas') and kwargs.get('angles',False):    # Plot Q-angles -> only when called from an Hamiltonian object
+        a = 0.8     # Arrow length
+        for i in range(lattice.Ns):
+            x,y = lattice._xy(i)
+            dx = a * np.sin(lattice.thetas[i])   # total x displacement
+            dy = a * np.cos(lattice.thetas[i])
+            x_start = x - dx / 2
+            y_start = y - dy / 2
+            ax.arrow(x_start, y_start, dx, dy,
+                     head_width=0.15, head_length=0.2, length_includes_head=True,
+                     color='red')
     ax.set_aspect('equal')
     ax.set_xlabel('x',size=30)
     ax.set_ylabel('y',size=30)

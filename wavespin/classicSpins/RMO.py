@@ -14,13 +14,14 @@ from wavespin.tools.pathFinder import getFilename, getHomeDirname
 
 def classicalEnergyRMO(angles,*args):
     r""" Computes the classical energy of the considered RMO construction.
+    Anisotropy not implemented yet.
 
     Parameters
     ----------
     angles : 3-float tuple.
         Three angles of the RMO: $\theta$ sublattice A, $\phi$ sublattice B, $\phi$ of translation along $a_2$.
     *args: Hamiltonian parameters.
-        j1,j2,h -> 1st nn, 2nd nn, magnetic field.
+        j1,j2,h,D1,D2 -> 1st nn, 2nd nn, magnetic field, anisotroy 1 and 2.
 
     Returns
     -------
@@ -28,7 +29,7 @@ def classicalEnergyRMO(angles,*args):
     """
     thA,phB,ph2 = angles
     thB = np.pi-thA
-    j1,j2,h = args
+    j1,j2,h,D1,D2 = args
     ph1 = 0
     energy = (j1/2*np.sin(thA)*np.sin(thB)*(np.cos(phB)+np.cos(phB+ph2)+np.cos(phB-ph1)+np.cos(phB-ph1-ph2))
              + j2/2*(np.cos(ph1+ph2)+np.cos(ph2))*(np.sin(thA)**2+np.sin(thB)**2)
@@ -50,7 +51,7 @@ def computeClassicalGroundState(phaseDiagramParameters,**kwargs):
     -------
     en : (nJ2,nH,4)-array -> energy + 3 angles for each point of the phase diagram.
     """
-    J1,J2min,J2max,nJ2,Hmin,Hmax,nH = phaseDiagramParameters
+    J1,J2min,J2max,nJ2,Hmin,Hmax,nH,D1,D2 = phaseDiagramParameters
     listJ2 = np.linspace(J2min,J2max,nJ2)
     listH = np.linspace(Hmin,Hmax,nH)
 
@@ -58,14 +59,14 @@ def computeClassicalGroundState(phaseDiagramParameters,**kwargs):
     save = kwargs.get('save',False)
 
     filenameArgs = ('energies_',) + phaseDiagramParameters
-    dataFn = getFilename(*filenameArgs,dirname=getHomeDirname(str(Path.cwd()),'Data/classicalEnergies/'),extension='.npy')
+    dataFn = getFilename(*filenameArgs,dirname=getHomeDirname(str(Path.cwd()),'Data/'),extension='.npy')
 
     if not Path(dataFn).is_file():
         en = np.zeros((nJ2,nH,4))   #energy and 3 angles
         iterJ2 = tqdm(range(nJ2)) if verbose else range(nJ2)
         for ij2 in iterJ2:
             for ih in range(nH):
-                args = (J1,listJ2[ij2],listH[ih])
+                args = (J1,listJ2[ij2],listH[ih],D1,D2)
                 res = D_E(     classicalEnergyRMO,
                                bounds = [(0,np.pi),(-np.pi,np.pi),(-np.pi,np.pi)],
                                args=args,
@@ -86,14 +87,6 @@ def computeClassicalGroundState(phaseDiagramParameters,**kwargs):
                 if abs(abs(en[ij2,ih,3])-np.pi)<1e-4:
                     en[ij2,ih,3] = abs(en[ij2,ih,3])
         if save:
-            dataDn = Path(getHomeDirname(str(Path.cwd())),'Data/')
-            if not dataDn.is_dir():
-                print("Creating 'Data/' folder in home directory.")
-                os.system('mkdir '+dataDn)
-            dataDn = Path(getHomeDirname(str(Path.cwd())),'Data/classicalEnergies/')
-            if not dataDn.is_dir():
-                print("Creating 'classicalEnergies/' folder in 'Data/' directory.")
-                os.system('mkdir '+dataDn)
             np.save(dataFn,en)
     else:
         en = np.load(dataFn)

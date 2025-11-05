@@ -124,5 +124,20 @@ class latticeClass():
                     indexesMap.append((ix,iy))
         return indexesMap
 
+    def patchFunction(self,func):
+        """ Tool for masking a function defined over a non-rectangular geometry.
+        func has to have size Ns
+        """
+        if len(self.offSiteList)==0:
+            formattedFunc = func.reshape(self.Lx,self.Ly)
+        else:
+            formattedFunc = np.zeros((self.Lx,self.Ly))
+            for ix in range(self.Lx):
+                for iy in range(self.Ly):
+                    if (ix,iy) in self.offSiteList:
+                        formattedFunc[ix,iy] = np.nan
+                    else:
+                        formattedFunc[ix,iy] = func[self._idx(ix,iy)]
+        return formattedFunc
 
 

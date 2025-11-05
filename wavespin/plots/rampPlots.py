@@ -56,18 +56,22 @@ def plotRampKW(ramp, **kwargs):
     fullTimeMeasure = sys0.fullTimeMeasure
     nTimes = sys0.nTimes
     #Axis
-    if transformType=='fft':
-        kx = fftshift(fftfreq(Lx,d=1)*2*np.pi)
-        ky = fftshift(fftfreq(Ly,d=1)*2*np.pi)
-    elif transformType=='dst':
-        kx = np.pi * np.arange(1, Lx + 1) / (Lx + 1)
-        ky = np.pi * np.arange(1, Ly + 1) / (Ly + 1)
-    elif transformType in ['dct','dat']:
-        kx = np.pi * np.arange(0, Lx ) / (Lx )
-        ky = np.pi * np.arange(0, Ly ) / (Ly )
-    KX, KY = np.meshgrid(kx, ky, indexing='ij')
-    K_mag = np.sqrt(KX**2 + KY**2)
-    K_flat = K_mag.ravel()
+    if 0:   #Old momentum definition
+        if transformType=='fft':
+            kx = fftshift(fftfreq(Lx,d=1)*2*np.pi)
+            ky = fftshift(fftfreq(Ly,d=1)*2*np.pi)
+        elif transformType=='dst':
+            kx = np.pi * np.arange(1, Lx + 1) / (Lx + 1)
+            ky = np.pi * np.arange(1, Ly + 1) / (Ly + 1)
+        elif transformType in ['dct','dat']:
+            kx = np.pi * np.arange(0, Lx ) / (Lx )
+            ky = np.pi * np.arange(0, Ly ) / (Ly )
+        KX, KY = np.meshgrid(kx, ky, indexing='ij')
+        K_mag = np.sqrt(KX**2 + KY**2)
+        K_flat = K_mag.ravel()
+    else:
+        K_flat = np.sqrt(sys0.momentum[:,0]**2 + sys0.momentum[:,1]**2)
+        #K_flat = K_flat.ravel()
     freqs = fftshift(fftfreq(nOmega,fullTimeMeasure/nTimes))
     # Define k bins
     num_k_bins = kwargs.get('numKbins',50)
@@ -76,14 +80,14 @@ def plotRampKW(ramp, **kwargs):
     K_mesh, W_mesh = np.meshgrid(k_centers, freqs, indexing='ij')
     P_k_omega_p = np.zeros((nP,num_k_bins,nOmega))
     for iP in range(nP):
-        corr_flat = ramp.rampElements[iP].correlatorKW.reshape(Lx*Ly, nOmega)
+        corr_flat = ramp.rampElements[iP].correlatorKW#.reshape(Lx*Ly, nOmega)
         for i in range(num_k_bins):
             mask = (K_flat >= k_bins[i]) & (K_flat < k_bins[i+1])
             if np.any(mask):
                 P_k_omega_p[iP, i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
     # Figure
-    #fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4),nRows=1,nCols=nP)
-    fig, axes = plt.subplots(1,5,figsize=(14,4))
+    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4),nRows=1,nCols=nP)
+    #fig, axes = plt.subplots(1,5,figsize=(14,4))
     rows = 1
     cols = 5
     if hasattr(sys0,'magnonModes'):
@@ -115,7 +119,7 @@ def plotRampKW(ramp, **kwargs):
         else:
             ax.set_yticklabels([])
         ax.set_ylim(-ylim,ylim)
-        ax.set_xlim(0,np.sqrt(2)*np.pi)
+#        ax.set_xlim(0,np.sqrt(2)*np.pi)
         ax.yaxis.set_ticks_position('both')  # place ticks on both sides
         ax.xaxis.set_ticks_position('both')  # place ticks on both sides
         ax.tick_params(axis='both',direction='in',length=7,width=1,pad=2,labelsize=15)
@@ -178,16 +182,7 @@ def plotWf3D(system,nModes=16):
     fig, axes, rows, cols = createFigure(nModes,plot3D=True)
     for n in range(nModes):
         ax = axes[n]
-        if len(system.p.lat_offSiteList)==0:
-            formattedPhi = phi[:,n].reshape(Lx,Ly)
-        else:
-            formattedPhi = np.zeros((Lx,Ly))
-            for ix in range(Lx):
-                for iy in range(Ly):
-                    if (ix,iy) in system.offSiteList:
-                        formattedPhi[ix,iy] = np.nan
-                    else:
-                        formattedPhi[ix,iy] = phi[system._idx(ix,iy),n]
+        formattedPhi = system.patchFunction(phi[:,n])
         ax.plot_surface(X,Y,
                         formattedPhi,
                         cmap='plasma'
@@ -211,19 +206,10 @@ def plotWf2D(system,nModes=25):
     for i in range(Ns):
         ix,iy = system._xy(i)
         phi[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
-    fig, axes, rows, cols = createFigure(nModes)
+    fig, axes, rows, cols = createFigure(nModes)#,nRows=Lx,nCols=Ly)#nCols=nModes//2 if nModes!=system.Ns else Lx,nRows=nModes//2 if nModes!=system.Ns else Lx)
     for n in range(nModes):
         ax = axes[n]
-        if len(system.p.lat_offSiteList)==0:
-            formattedPhi = phi[:,n].reshape(Lx,Ly)
-        else:
-            formattedPhi = np.zeros((Lx,Ly))
-            for ix in range(Lx):
-                for iy in range(Ly):
-                    if (ix,iy) in system.offSiteList:
-                        formattedPhi[ix,iy] = np.nan
-                    else:
-                        formattedPhi[ix,iy] = phi[system._idx(ix,iy),n]
+        formattedPhi = system.patchFunction(phi[:,n])
         ax.pcolormesh(X,Y,
                       formattedPhi,
                       cmap='bwr'

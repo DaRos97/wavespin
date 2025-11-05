@@ -2,25 +2,242 @@
 """
 
 import numpy as np
-from scipy.fft import fftshift, fft, fft2, dstn, dctn
+from scipy.fft import fftshift, fft, fft2, dstn, dctn, fftfreq
+
+def DCTgeom(system):
+    """ DCT of tilted geometry.
+    We separate the lattice in the two sublattices which must have tilted-rectangular shapes.
+    We DCT them separately but combining them through the displacement vector.
+    Explicitly for 97 qubit geom
+    """
+    func = system.correlatorXT
+    Nr,Mr,Nb,Mb = (8,6,7,7)        #97-geometry
+    xr0, xb0 = (5,6)
+    yr0, yb0 = (0,0)
+    #Nr,Mr,Nb,Mb = (7,6,7,6)         #84 geometry
+    #xr0, xb0 = (5,5)
+    #yr0, yb0 = (0,1)
+    #Separate
+    fr = np.zeros((Nr,Mr,system.nTimes),dtype=complex)
+    fb = np.zeros((Nb,Mb,system.nTimes),dtype=complex)
+    R = np.array([[1,1],[-1,1]]) / 2
+    for ind in range(system.Ns):
+        x,y = system._xy(ind)
+        if (x+y)%2==1:  #sublattice-0
+            x -= xr0
+            y -= yr0
+            x_new, y_new = R@np.array([x,y])
+            fr[int(x_new),int(y_new)] = func[ind]
+        else:  #sublattice-1
+            x -= xb0
+            y -= yb0
+            x_new, y_new = R@np.array([x,y])
+            fb[int(x_new),int(y_new)] = func[ind]
+    #Transform dct
+    frk = np.zeros_like(fr)
+    fbk = np.zeros_like(fb)
+    #
+    Kxr = np.pi/Nr*(np.arange(Nr) + 0)
+    Kyr = np.pi/Mb*(np.arange(Mr) + 1)
+    Kxb = np.pi/Nr*(np.arange(Nb) + 1)
+    Kyb = np.pi/Mb*(np.arange(Mb) + 0)
+    #
+    Xr = np.arange(Nr)
+    Yr = np.arange(Mr) + 1/2
+    Xb = np.arange(Nb) + 1/2
+    Yb = np.arange(Mb)
+    for it in range(system.nTimes):
+        for ikxr in range(Nr):
+            for ikyr in range(Mr):
+                frk[ikxr,ikyr,it] = np.sum(
+                    fr[:,:,it] * np.cos(Kxr[ikxr]*(Xr[:,None]+1/2)) * np.cos(Kyr[ikyr]*(Yr[None,:]+1/2)) )
+                frk[ikxr,ikyr,it] += np.sum(
+                    fb[:,:,it] * np.cos(Kxr[ikxr]*(Xb[:,None]+1/2)) * np.cos(Kyr[ikyr]*(Yb[None,:]+1/2)) )
+        for ikxb in range(Nb):
+            for ikyb in range(Mb):
+                fbk[ikxb,ikyb,it] = np.sum(
+                    fr[:,:,it] * np.cos(Kxb[ikxb]*(Xr[:,None]+1/2)) * np.cos(Kyb[ikyb]*(Yr[None,:]+1/2)) )
+                fbk[ikxb,ikyb,it] += np.sum(
+                    fb[:,:,it] * np.cos(Kxb[ikxb]*(Xb[:,None]+1/2)) * np.cos(Kyb[ikyb]*(Yb[None,:]+1/2)) )
+    #Time transform
+    frkw = np.zeros((Nr,Mr,system.nOmega),dtype=complex)
+    for ikxr in range(Nr):
+        for ikyr in range(Mr):
+            frkw[ikxr,ikyr] = fftshift(fft( frk[ikxr,ikyr], n=system.nOmega ))
+    fbkw = np.zeros((Nb,Mb,system.nOmega),dtype=complex)
+    for ikxb in range(Nb):
+        for ikyb in range(Mb):
+            fbkw[ikxb,ikyb] = fftshift(fft( fbk[ikxb,ikyb], n=system.nOmega ))
+    #Patch together
+    fFinal = np.zeros((system.Ns,system.nOmega),dtype=complex)
+    fFinal[:Nr*Mr] = frkw.reshape(Nr*Mr,system.nOmega)
+    fFinal[Nr*Mr:] = fbkw.reshape(Nb*Mb,system.nOmega)
+    #Momenta
+    mom_r = np.zeros((Nr,Mr,2))
+    mom_b = np.zeros((Nb,Mb,2))
+    for ikxr in range(Nr):
+        for ikyr in range(Mr):
+            mom_r[ikxr,ikyr] = np.array([
+                Kxr[ikxr],
+                Kyr[ikyr]
+            ])
+    for ikxb in range(Nb):
+        for ikyb in range(Mb):
+            mom_b[ikxb,ikyb] = np.array([
+                Kxb[ikxb],
+                Kyb[ikyb]
+            ])
+    momentum = np.zeros((system.Ns,2))
+    momentum[:Nr*Mr] = mom_r.reshape(Nr*Mr,2)
+    momentum[Nr*Mr:] = mom_b.reshape(Nb*Mb,2)
+    #
+    if 1:
+        import matplotlib.pyplot as plt
+        X_r,Y_r = np.meshgrid(Xr,Yr,indexing='ij')
+        X_b,Y_b = np.meshgrid(Xb,Yb,indexing='ij')
+        X,Y = np.meshgrid(np.arange(system.Lx),np.arange(system.Ly),indexing='ij')
+        fig = plt.figure(figsize=(20,15))
+        for i in range(Nr*Mr):
+            ax = fig.add_subplot(Mr,Nr,i+1)
+            kx = Kxr[i%Nr]
+            ky = Kyr[i//Nr]
+            fun_r = np.cos(kx*(X_r+1/2)) * np.cos(ky*(Y_r+1/2))
+            fun_b = np.cos(kx*(X_b+1/2)) * np.cos(ky*(Y_b+1/2))
+            # Back to Ns function
+            fun = np.zeros(system.Ns)
+            R = np.array([[1,-1],[1,1]])
+            for ixr in range(Nr):
+                for iyr in range(Mr):
+                    v = R @ np.array([ixr,iyr])
+                    ind = system._idx(int(v[0])+xr0,int(v[1])+yr0)
+                    fun[ind] = fun_r[ixr,iyr]
+            for ixb in range(Nb):
+                for iyb in range(Mb):
+                    v = R @ np.array([ixb,iyb])
+                    ind = system._idx(int(v[0])+xb0,int(v[1])+yb0)
+                    fun[ind] = fun_b[ixb,iyb]
+            # Patch and plot
+            fun_patched = system.patchFunction(fun)
+            ax.pcolormesh(X,Y,fun_patched,cmap='bwr')
+            ax.set_title("kx,ky: %d,%d"%(i//Nr,i%Nr))
+            ax.set_aspect('equal')
+        plt.suptitle("Red sublattice")
+        fig.tight_layout()
+        #plt.show()
+        fig = plt.figure(figsize=(20,25))
+        for i in range(Nb*Mb):
+            ax = fig.add_subplot(Nb,Mb,i+1)
+            kx = Kxb[i%Nb]
+            ky = Kyb[i//Nb]
+            fun_r = np.cos(kx*(X_r+1/2)) * np.cos(ky*(Y_r+1/2))
+            fun_b = np.cos(kx*(X_b+1/2)) * np.cos(ky*(Y_b+1/2))
+            # Back to Ns function
+            fun = np.zeros(system.Ns)
+            R = np.array([[1,-1],[1,1]])
+            for ixr in range(Nr):
+                for iyr in range(Mr):
+                    v = R @ np.array([ixr,iyr])
+                    ind = system._idx(int(v[0])+xr0,int(v[1])+yr0)
+                    fun[ind] = fun_r[ixr,iyr]
+            for ixb in range(Nb):
+                for iyb in range(Mb):
+                    v = R @ np.array([ixb,iyb])
+                    ind = system._idx(int(v[0])+xb0,int(v[1])+yb0)
+                    fun[ind] = fun_b[ixb,iyb]
+            # Patch and plot
+            fun_patched = system.patchFunction(fun)
+            ax.pcolormesh(X,Y,fun_patched,cmap='bwr')
+            ax.set_title("kx,ky: %d,%d"%(i//Nb,i%Nb))
+            ax.set_aspect('equal')
+        plt.suptitle("Blue sublattice")
+        fig.tight_layout()
+        #plt.show()
+        #exit()
+    #
+    if 0:
+        import matplotlib.pyplot as plt
+        freqs = fftshift(fftfreq(system.nOmega,system.fullTimeMeasure/system.nTimes))
+        for i in range(Nr*Mr):
+            fig = plt.figure(figsize=(10,10))
+            ax = fig.add_subplot()
+            ax.plot(freqs,np.imag(fFinal[i,:]),label=str(i))
+            #ax.plot(freqs,np.imag(fFinal[-1,:]),label=str(i)+'t')
+            #ax.plot(np.arange(system.nTimes),np.imag(f0k.reshape(N0*M0,system.nTimes)[i,:]),label=str(i))
+            #ax.plot(np.arange(system.nTimes),np.imag(f0.reshape(N0*M0,system.nTimes)[i,:]),label=str(i))
+            ax.set_xlim(-70,70)
+            ax.legend()
+            plt.show()
+        exit()
+
+    return fFinal, momentum
+
+def DCTgeom2(system):
+    nOmega = system.nOmega
+    Lx = system.Lx
+    Ly = system.Ly
+    kx = np.pi * np.arange(0, Lx ) / (Lx )
+    ky = np.pi * np.arange(0, Ly ) / (Ly )
+    nTimes = system.nTimes
+    correlatorKW = np.zeros((Lx*Ly,nOmega),dtype=complex)
+    momentum = np.zeros((Lx*Ly,2))
+    fKT = np.zeros((Lx,Ly,nTimes),dtype=complex)
+    for it in range(nTimes):
+        fun = correlatorKW[:,it]
+        for ikx in range(Lx):
+            for iky in range(Ly):
+                for ind in range(system.Ns):
+                    indx,indy = system._xy(ind)
+                    fKT[ikx,iky,it] += fun[ind] * np.cos(kx[ikx]*(indx+1/2)) * np.cos(ky[iky]*(indy+1/2))
+    for ikx in range(Lx):
+        for iky in range(Ly):
+            correlatorKW[ikx*Ly+iky] = fftshift(fft(fKT[ikx,iky],n=nOmega))
+            momentum[ikx*Ly+iky] = np.array([kx[ikx],ky[iky]])
+    return correlatorKW, momentum
 
 def discreteCosineTransform(system,dctType=2):
     """
     Compute the Discrete Cos Transform since we have open BC.
     In time we always use fft.
     """
+    if len(system.offSiteList)>0:
+        return DCTgeom(system)
     nOmega = system.nOmega
     Lx = system.Lx
     Ly = system.Ly
+    kx = np.pi * np.arange(0, Lx ) / (Lx )
+    ky = np.pi * np.arange(0, Ly ) / (Ly )
     nTimes = system.nTimes
-    correlatorKW = np.zeros((Lx,Ly,nOmega),dtype=complex)
+    correlatorKW = np.zeros((system.Ns,nOmega),dtype=complex)
+    momentum = np.zeros((system.Ns,2))
     temp = np.zeros((Lx,Ly,nTimes),dtype=complex)
     for it in range(nTimes):
-        temp[:,:,it] = dctn(system.correlatorXT[:,:,it], type=dctType, norm='ortho')
-    for ix in range(Lx):
-        for iy in range(Ly):
-            correlatorKW[ix,iy] = fftshift(fft(temp[ix,iy],n=nOmega))
-    return correlatorKW
+        temp[:,:,it] = dctn(system.correlatorXT[:,it].reshape(Lx,Ly),
+                            type=dctType,
+                            norm='ortho' )
+        continue
+        # Explicit calculation
+        fun = system.correlatorXT[:,it].reshape(Lx,Ly)
+        for ix in range(Lx):
+            for iy in range(Ly):
+                temp[ix,iy,it] = np.sum(
+                    fun*np.cos(kx[ix]*(np.arange(Lx)[:,None]+1/2))*np.cos(ky[iy]*(np.arange(Ly)[None,:]+1/2)))
+    for ind in range(system.Ns):
+        x,y = system._xy(ind)
+        correlatorKW[ind] = fftshift(fft(temp[x,y],n=nOmega))
+        momentum[ind] = np.array([kx[x],ky[y]])
+    if 0:
+        import matplotlib.pyplot as plt
+        freqs = fftshift(fftfreq(system.nOmega,system.fullTimeMeasure/system.nTimes))
+        for i in range(1):
+            i = system.Ns-1
+            fig = plt.figure(figsize=(10,10))
+            ax = fig.add_subplot()
+            ax.plot(freqs,np.imag(correlatorKW[i,:]),label=str(i))
+            ax.set_xlim(-70,70)
+            ax.legend()
+            plt.show()
+        exit()
+    return correlatorKW, momentum
 
 def fastFourierTransform(system):
     """

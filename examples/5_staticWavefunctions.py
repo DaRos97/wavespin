@@ -21,7 +21,7 @@ gInitial = 0
 gFinal = 10
 hInitial = 15
 hFinal = 0
-stopRatios = [1,]#np.linspace(0.1,1,10)
+stopRatios = [0,]#np.linspace(0.1,1,10)
 Nr = len(stopRatios)
 
 for ir in range(Nr):
@@ -35,12 +35,3 @@ for ir in range(Nr):
     system.diagonalize(verbose=verbose)
 
 
-if 0:   # Save just the amazing functions to share
-    U_ = system.U_
-    V_ = system.V_
-    phi = np.real(U_ - V_)
-    for i in range(system.Ns):
-        ix,iy = system._xy(i)
-        phi[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
-    np.save("Data/amazing.npy",phi)
-    np.save("Data/evals.npy",system.evals)

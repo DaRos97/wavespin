@@ -27,7 +27,7 @@ class myParameters:
     lat_plotLattice: bool = False               #
     # Diagonalization
     dia_Hamiltonian: tuple = (0,0,0,0,0,0)      #
-    dia_excludeZeroMode: bool = False           #
+    dia_excludeZeroMode: bool = True            #
     dia_uniformQA: bool = True                  #
     dia_saveWf: bool = False                    #
     dia_plotWf: bool = False                    #
@@ -80,10 +80,10 @@ def importParameters(inputFn,**kwargs):
                 setattr(parameters,attr,parseValue(value))
             else:
                 print(f"Warning: Unknown parameter '{key}' ignored.")
-    checkParameters(parameters)
     if verbose:
         print("------------------ Chosen input parameters -----------------")
         print(parameters)
+    checkParameters(parameters)
     return parameters
 
 def checkParameters(parameters):

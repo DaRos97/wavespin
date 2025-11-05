@@ -18,7 +18,7 @@ def quantizationAxis(S,g_i,D_i,h_i):
     Parameters
     ----------
     S : float, spin size.
-    J,D,h : (Lx,Ly)-arrays of Hamiltonian parameters.
+    g,D,h : (Lx,Ly)-arrays of Hamiltonian parameters.
 
     Returns
     -------
@@ -51,9 +51,12 @@ def quantizationAxis(S,g_i,D_i,h_i):
             h = float(np.sum(h_stag)/(h_stag[np.nonzero(h_stag)]).shape)
         else:
             h = 0
-#    h_critical = 2*(g[0]*(1-D[0])-g[1]*(1-D[1]))
-    h_critical = 4*g[0]*(1-D[0])
-    if g[1]<g[0]/2 and h<h_critical:
+    if g[1]<=g[0]/2:
+        h_critical = 2/S*(g[0]*(1-D[0])-g[1]*(1-D[1]))
+    if g[1]>g[0]/2:
+        h_critical = 2/S*g[1]*(1-D[1])
+    #
+    if h<h_critical:
         theta = np.arccos(h/h_critical)
     else:
         theta = 0

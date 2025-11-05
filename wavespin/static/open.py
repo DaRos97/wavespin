@@ -23,6 +23,7 @@ class openHamiltonian(latticeClass):
         super().__init__(p)
         # Hamiltonian parameters
         self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = self.p.dia_Hamiltonian
+        self.order = 'canted-Néel' if self.g2<self.g1/2 else 'canted-stripe'
         self.S = 0.5     #spin value
         self.g_i = (self._NNterms(self.g1), self._NNNterms(self.g2))
         self.D_i = (self._NNterms(self.d1), self._NNNterms(self.d2))
@@ -98,10 +99,17 @@ class openHamiltonian(latticeClass):
         self.phis = np.zeros(self.Ns)
         if self.p.dia_uniformQA:
             self.thetas = np.ones(self.Ns)*self.theta
-            if 0:   # Plot solution
+            if self.order == 'canted-Néel':
+                for i in range(self.Ns):
+                    x,y = self._xy(i)
+                    self.thetas[i] += np.pi*((x+y)%2)
+            else:       # canted-stripe
+                for i in range(self.Ns):
+                    x,y = self._xy(i)
+                    self.thetas[i] += np.pi*(x%2)   # columnar
+            if 1:   # Plot solution
                 kwargs = {'indices':False, 'angles':True}
                 fancyLattice.plotSitesGrid(self,**kwargs)
-                #exit()
         else:
             argsFn = ('quantAngle',self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian)
             anglesFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
@@ -122,22 +130,21 @@ class openHamiltonian(latticeClass):
             else:
                 self.thetas = np.load(anglesFn)
 
-    def computeTs(self,order='c-Neel'):
+    def computeTs(self):
         """ Compute the vector parameters t_z, t_x and t_y as in notes for sublattice A and B.
         Sublattice A has negative magnetic feld.
         """
         self.ts = np.zeros((self.Ns,3,3))
-        if order=='c-Neel': #nn: A<->B, nnn: A<->A
-            for i in range(self.Ns):
-                ix,iy = self._xy(i)
-                sign = (-1)**(ix+iy)
-                th = self.thetas[i]
-                ph = self.phis[i]
-                self.ts[i,0] = sign*np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th) ]) #t_zx,t_zy,t_zz
-                self.ts[i,1] = sign*np.array([np.cos(th)*np.cos(ph),np.cos(th)*np.sin(ph),-np.sin(th)]) #t_xx,t_xy,t_xz
-                self.ts[i,2] =      np.array([-np.sin(ph)          ,np.cos(ph)           ,0          ]) #t_yx,t_yy,t_yz
+        for i in range(self.Ns):
+            #ix,iy = self._xy(i)
+            sign = 1#(-1)**(ix+iy)
+            th = self.thetas[i]
+            ph = self.phis[i]
+            self.ts[i,0] = sign*np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th) ]) #t_zx,t_zy,t_zz
+            self.ts[i,1] = sign*np.array([np.cos(th)*np.cos(ph),np.cos(th)*np.sin(ph),-np.sin(th)]) #t_xx,t_xy,t_xz
+            self.ts[i,2] =      np.array([-np.sin(ph)          ,np.cos(ph)           ,0          ]) #t_yx,t_yy,t_yz
 
-    def computePs(self,order='c-Neel'):
+    def computePs(self):
         """ Compute coefficient p_gamma^{alpha,beta}_ij for a given classical order.
         alpha,beta=0,1,2 -> z,x,y like for ts.
 
@@ -150,14 +157,13 @@ class openHamiltonian(latticeClass):
         self.Ps = np.zeros((2,self.Ns,self.Ns,3,3))     # number of nearest-neighbor(2), Ns, Ns, zxy, xyz 
         vecGnn = np.array([self.g_i[0],self.g_i[0],self.g_i[0]*self.D_i[0]])        #3,Ns,Ns
         vecGnnn = np.array([self.g_i[1],self.g_i[1],self.g_i[1]*self.D_i[1]])
-        if order=='c-Neel': #nn: A<->B, nnn: A<->A
-            for i in range(self.Ns):
-                #nn
-                for j in self.NN[i]:
-                    self.Ps[0,i,j] = np.einsum('d,ad,bd->ab',vecGnn[:,i,j],self.ts[i],self.ts[j],optimize=True)
-                #nnn
-                for j in self.NNN[i]:
-                    self.Ps[1,i,j] = np.einsum('d,ad,bd->ab',vecGnnn[:,i,j],self.ts[i],self.ts[j],optimize=True)
+        for i in range(self.Ns):
+            #nn
+            for j in self.NN[i]:
+                self.Ps[0,i,j] = np.einsum('d,ad,bd->ab',vecGnn[:,i,j],self.ts[i],self.ts[j],optimize=True)
+            #nnn
+            for j in self.NNN[i]:
+                self.Ps[1,i,j] = np.einsum('d,ad,bd->ab',vecGnnn[:,i,j],self.ts[i],self.ts[j],optimize=True)
 
     def _realSpaceHamiltonian(self,verbose=False):
         """
@@ -183,8 +189,8 @@ class openHamiltonian(latticeClass):
         #
         ham = np.zeros((2*Ns,2*Ns),dtype=complex)
         #p_zz sums over nn but is on-site -> problem when geometry is not rectangular
-        ham[:Ns,:Ns] = abs(h_i)*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
-        ham[Ns:,Ns:] = abs(h_i)*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
+        ham[:Ns,:Ns] = -h_i*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
+        ham[Ns:,Ns:] = -h_i*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
         #off_diag 1 - nn
         off_diag_1_nn = (p_xx+p_yy) / 4 / S
         ham[:Ns,:Ns] += off_diag_1_nn
@@ -240,7 +246,7 @@ class openHamiltonian(latticeClass):
             self.V_[:,0] *= 0
         if self.p.dia_plotWf:
             #plotWf3D(self)
-            plotWf2D(self,nModes=9)
+            plotWf2D(self,nModes=self.Ns)
             #plotWfCos(self)
         if self.p.dia_plotMomenta:
             plotBogoliubovMomenta(self,**kwargs)
@@ -513,34 +519,34 @@ class openSystem(openHamiltonian):
         #KW correlator parameters
         self.nOmega = 2000
         # Diagonalize
-        self.diagonalize()
+        #self.diagonalize()
 
     def realSpaceCorrelator(self,verbose=False):
         """ Here we compute the correlator in real space.
         """
         temperature = self._temperature(self.p.cor_energy)
-        print(temperature)
-        Lx = self.Lx
-        Ly = self.Ly
-        Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
         argsFn = ('correlatorXT',self.p.cor_correlatorType,self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian,
                   txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
-            self.correlatorXT = np.zeros((Lx,Ly,self.nTimes),dtype=complex)
+            self.correlatorXT = np.zeros((self.Ns,self.nTimes),dtype=complex)
             #
-            U = np.zeros((2*Ns,2*Ns),dtype=complex)
-            U[:Ns,:Ns] = self.U_
-            U[:Ns,Ns:] = self.V_
-            U[Ns:,:Ns] = self.V_
-            U[Ns:,Ns:] = self.U_
+            #U = np.zeros((2*Ns,2*Ns),dtype=complex)
+            #U[:Ns,:Ns] = self.U_
+            #U[:Ns,Ns:] = self.V_
+            #U[Ns:,:Ns] = self.V_
+            #U[Ns:,Ns:] = self.U_
             #Correlator -> can make this faster, we actually only need U_ and V_
             exp_e = np.exp(-1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
-            A_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[Ns:,Ns:],optimize=True)
-            B_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
-            G_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
-            H_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[Ns:,Ns:],optimize=True)
+            #A_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[Ns:,Ns:],optimize=True)
+            #B_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
+            #G_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
+            #H_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[Ns:,Ns:],optimize=True)
+            A_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.V_,self.U_,optimize=True)
+            B_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.U_,self.V_,optimize=True)
+            G_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.V_,self.V_,optimize=True)
+            H_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.U_,self.U_,optimize=True)
             if temperature != 0:
                 exp_e_c = np.exp(1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
                 BF = 1/(np.exp(self.evals/temperature)-1)
@@ -588,9 +594,8 @@ class openSystem(openHamiltonian):
                         ax.set_xlim(0,0.1)
                 plt.show()
             #
-            for ind_i in range(Ns):
-                ix, iy = self._xy(ind_i)
-                self.correlatorXT[ix,iy] = correlators.dicCorrelators[self.p.cor_correlatorType](self,ind_i,Af,Bf,Gf,Hf)
+            for ind_i in range(self.Ns):
+                self.correlatorXT[ind_i] = correlators.dicCorrelators[self.p.cor_correlatorType](self,ind_i,Af,Bf,Gf,Hf)
             if self.p.cor_saveXT:
                 np.save(correlatorFn,self.correlatorXT)
         else:
@@ -670,10 +675,11 @@ class openSystem(openHamiltonian):
         """
         temperature = self._temperature(self.p.cor_energy)
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn = ('correlatorKW_rs',self.p.cor_correlatorType,self.p.cor_transformType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,self.Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
+        argsFn = ('correlatorKW',self.p.cor_correlatorType,self.p.cor_transformType,self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian,
+                  txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
-            self.correlatorKW = momentumTransformation.dicTransformType[self.p.cor_transformType](self)
+            self.correlatorKW, self.momentum = momentumTransformation.dicTransformType[self.p.cor_transformType](self)
             if self.p.cor_saveKW:
                 np.save(correlatorFn,self.correlatorKW)
         else:

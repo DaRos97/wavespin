@@ -18,12 +18,15 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 """ Define the parameters of the system at different 'times' """
-nP = 1     #number of parameters computed in the "ramp" -> analogue to stop ratio
+nP = 10     #number of parameters computed in the "ramp" -> analogue to stop ratio
 gInitial = 0
 gFinal = 10
 hInitial = 15
 hFinal = 0
-pValues = np.array([1])
+if nP==1:
+    pValues = np.array([0.9,])
+else:
+    pValues = np.linspace(0.1,1,nP)
 
 g_p = (1-pValues)*gInitial + pValues*gFinal
 h_p = (1-pValues)*hInitial + pValues*hFinal
@@ -31,7 +34,7 @@ h_p = (1-pValues)*hInitial + pValues*hFinal
 """ Initialize all the systems and store them in a ramp object """
 ramp = openRamp()
 for i in range(nP):
-    for en in [-100,-0.52,-0.48,-0.44]:
+    for en in [-100,]:#-0.52,-0.48,-0.44]:
         parameters.cor_energy = en
         parameters.dia_Hamiltonian = (g_p[i],0,0,0,h_p[i],0)
         mySystem = openSystem(parameters)

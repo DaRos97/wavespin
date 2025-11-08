@@ -2,8 +2,8 @@
 # Use '#' to comment a line and ':' to assign a value
 
 # Lattice options
-Lx: 7
-Ly: 9
+Lx: 4
+Ly: 4
 # Tilted-rectangular proper: 84 
 #Lx: 12
 #Ly: 13
@@ -17,7 +17,7 @@ plotLattice: False
 # Diagonalization options
 uniformQA: True
 excludeZeroMode: True
-saveWf: False
+saveWf: True
 plotWf: False
 plotMomenta: False
 
@@ -25,8 +25,9 @@ plotMomenta: False
 correlatorType: zz
 transformType: dct
 perturbationSite: (3,4)
+#perturbationSite: (0,0)
 magnonModes: (1,2,3,4)
-saveXT: False
-saveKW: False
+saveXT: True
+saveKW: True
 plotKW: True
 savePlotKW: False

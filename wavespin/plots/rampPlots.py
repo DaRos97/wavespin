@@ -11,6 +11,13 @@ from pathlib import Path
 from wavespin.static.momentumTransformation import extractMomentum, extractMomentum2
 from wavespin.tools import pathFinder as pf
 
+if 1:
+    plt.rcParams.update({
+        "text.usetex": True,              # Use LaTeX for all text
+        "font.family": "serif",           # Set font family
+        "font.serif": ["Computer Modern"], # Default LaTeX font
+    })
+
 def createFigure(n_subplots, subplotSize=(4, 4), plot3D=False, nRows=-1, nCols=-1):
     """Create a figure with n_subplots, keeping each subplot the same size.
 
@@ -44,49 +51,55 @@ class SqrtNorm(mcolors.Normalize):
 def plotRampKW(ramp, **kwargs):
     """ Plot frequency over mod k for the different ramp parameters.
     """
-    sys0 = ramp.rampElements[0]
-    transformType = sys0.p.cor_transformType
-    if transformType == 'dat2':
-        plotRampDAT(ramp,**kwargs)
-        return
     nP = ramp.nP
-    Lx = sys0.Lx
-    Ly = sys0.Ly
-    nOmega = sys0.nOmega
-    fullTimeMeasure = sys0.fullTimeMeasure
-    nTimes = sys0.nTimes
-    #Axis
-    if 0:   #Old momentum definition
-        if transformType=='fft':
-            kx = fftshift(fftfreq(Lx,d=1)*2*np.pi)
-            ky = fftshift(fftfreq(Ly,d=1)*2*np.pi)
-        elif transformType=='dst':
-            kx = np.pi * np.arange(1, Lx + 1) / (Lx + 1)
-            ky = np.pi * np.arange(1, Ly + 1) / (Ly + 1)
-        elif transformType in ['dct','dat']:
-            kx = np.pi * np.arange(0, Lx ) / (Lx )
-            ky = np.pi * np.arange(0, Ly ) / (Ly )
-        KX, KY = np.meshgrid(kx, ky, indexing='ij')
-        K_mag = np.sqrt(KX**2 + KY**2)
-        K_flat = K_mag.ravel()
-    else:
-        K_flat = np.sqrt(sys0.momentum[:,0]**2 + sys0.momentum[:,1]**2)
-        #K_flat = K_flat.ravel()
-    freqs = fftshift(fftfreq(nOmega,fullTimeMeasure/nTimes))
-    # Define k bins
-    num_k_bins = kwargs.get('numKbins',50)
-    k_bins = np.linspace(0,np.sqrt(2)*np.pi, num_k_bins + 1)
-    k_centers = 0.5 * (k_bins[:-1] + k_bins[1:])
-    K_mesh, W_mesh = np.meshgrid(k_centers, freqs, indexing='ij')
-    P_k_omega_p = np.zeros((nP,num_k_bins,nOmega))
+    P_k_omega_p = []
+    K_mesh_p = []
+    W_mesh_p = []
     for iP in range(nP):
+        sys0 = ramp.rampElements[iP]
+        transformType = sys0.p.cor_transformType
+        if transformType == 'dat2':
+            plotRampDAT(ramp,**kwargs)
+            return
+        Lx = sys0.Lx
+        Ly = sys0.Ly
+        nOmega = sys0.nOmega
+        fullTimeMeasure = sys0.fullTimeMeasure
+        nTimes = sys0.nTimes
+        #Axis
+        if 0:   #Old momentum definition
+            if transformType=='fft':
+                kx = fftshift(fftfreq(Lx,d=1)*2*np.pi)
+                ky = fftshift(fftfreq(Ly,d=1)*2*np.pi)
+            elif transformType=='dst':
+                kx = np.pi * np.arange(1, Lx + 1) / (Lx + 1)
+                ky = np.pi * np.arange(1, Ly + 1) / (Ly + 1)
+            elif transformType in ['dct','dat']:
+                kx = np.pi * np.arange(0, Lx ) / (Lx )
+                ky = np.pi * np.arange(0, Ly ) / (Ly )
+            KX, KY = np.meshgrid(kx, ky, indexing='ij')
+            K_mag = np.sqrt(KX**2 + KY**2)
+            K_flat = K_mag.ravel()
+        else:
+            K_flat = np.sqrt(sys0.momentum[:,0]**2 + sys0.momentum[:,1]**2)
+            #K_flat = K_flat.ravel()
+        freqs = fftshift(fftfreq(nOmega,fullTimeMeasure/nTimes))
+        # Define k bins
+        num_k_bins = kwargs.get('numKbins',50)
+        k_bins = np.linspace(0,np.sqrt(2)*np.pi, num_k_bins + 1)
+        k_centers = 0.5 * (k_bins[:-1] + k_bins[1:])
+        K_mesh, W_mesh = np.meshgrid(k_centers, freqs, indexing='ij')
+        K_mesh_p.append(K_mesh)
+        W_mesh_p.append(W_mesh)
         corr_flat = ramp.rampElements[iP].correlatorKW#.reshape(Lx*Ly, nOmega)
+        P_k_omega = np.zeros((num_k_bins,nOmega))
         for i in range(num_k_bins):
             mask = (K_flat >= k_bins[i]) & (K_flat < k_bins[i+1])
             if np.any(mask):
-                P_k_omega_p[iP, i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
+                P_k_omega[i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
+        P_k_omega_p.append(P_k_omega)
     # Figure
-    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4),nRows=1,nCols=nP)
+    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4),nRows=2,nCols=nP//2)
     #fig, axes = plt.subplots(1,5,figsize=(14,4))
     rows = 1
     cols = 5
@@ -101,12 +114,16 @@ def plotRampKW(ramp, **kwargs):
     title = 'Commutator: ' + sys0.p.cor_correlatorType + ', momentum transform: ' + transformType + txtMagnon
     #plt.suptitle(title,fontsize=20)
     ylim = kwargs.get('ylim',7)
-    P_k_omega_p /= 10
-    W_mesh /= 10
-    vmax = np.max(P_k_omega_p)
+    vmax1 = np.max(P_k_omega_p[:5])
+    vmax2 = np.max(P_k_omega_p[5:])
     for iP in range(nP):
+        W_mesh = W_mesh_p[iP]
+        K_mesh = K_mesh_p[iP]
+        W_mesh /= 10
         P_k_omega = P_k_omega_p[iP]
-        #vmax = np.max(P_k_omega)
+        P_k_omega /= 10
+        vmax = vmax1 if iP<5 else vmax2
+        vmax /= 10
         ax = axes[iP]
         ax.set_facecolor('black')
         mesh = ax.pcolormesh(K_mesh, W_mesh, P_k_omega,
@@ -114,34 +131,42 @@ def plotRampKW(ramp, **kwargs):
                              cmap='Blues',
                              norm=SqrtNorm(vmin=0,vmax=vmax)
                             )
-        if iP==0:
-            ax.set_ylabel(r"$\omega(g)$",size=20)
+        ax.set_yticks(np.arange(-6,7,3),[str(i) for i in np.arange(-6,7,3)])
+        ax.set_xticks(np.arange(0,5,1),[str(i) for i in np.arange(0,5,1)])
+        if iP in [0,5]:
+            ax.set_ylabel(r"$\omega(g)$",size=25)
         else:
             ax.set_yticklabels([])
         ax.set_ylim(-ylim,ylim)
 #        ax.set_xlim(0,np.sqrt(2)*np.pi)
         ax.yaxis.set_ticks_position('both')  # place ticks on both sides
         ax.xaxis.set_ticks_position('both')  # place ticks on both sides
-        ax.tick_params(axis='both',direction='in',length=7,width=1,pad=2,labelsize=15)
-        if iP in np.arange((rows-1)*cols,rows*cols):
-            ax.set_xlabel(r'$|k|$',fontsize=15)
-        if 0:
-            if iP in [cols*i-1 for i in range(1,rows+1)]:
-                cbar.set_label(transformType,fontsize=15)
-            if iP in [cols*i for i in range(0,rows)]:
-                ax.set_ylabel(r'$\omega$',fontsize=15)
-        if iP in np.arange((rows-1)*cols,rows*cols):
-            ax.set_xlabel(r'$|k|$',fontsize=15)
-        stopRatio = ramp.rampElements[iP].g1 / 10
-        ax.set_title(r"$\alpha=$%.2f"%stopRatio,size=20)
+        ax.tick_params(axis='both',direction='in',length=7,width=1,pad=3,labelsize=20)
+        if iP >=5 :
+            ax.set_xlabel(r'$|k|$',fontsize=20)
+        if iP < 5:
+            ax.set_xticklabels([])
+            stopRatio = ramp.rampElements[iP].g1 / 10
+            ax.set_title(r"$\alpha=$%.3f"%stopRatio,size=25)
+
+        x_cb = 0.94
+        y_cb2 = 0.081
+        h_cb = 0.41
+        w_cb = 0.015
+        y_cb1 = y_cb2 + h_cb + 0.042
+        if iP==4:   # Colorbar
+            cbar_ax = fig.add_axes([x_cb, y_cb1, w_cb, h_cb])  # [left, bottom, width, height]
+            cbar = fig.colorbar(mesh, cax=cbar_ax)
+            cbar.set_label(r"$\vert\chi_{ZZ}(\omega)\vert$",fontsize=25)
+            cbar.ax.tick_params(labelsize=16)
+        if iP==9:   # Colorbar
+            cbar_ax = fig.add_axes([x_cb, y_cb2, w_cb, h_cb])  # [left, bottom, width, height]
+            cbar = fig.colorbar(mesh, cax=cbar_ax)
+            cbar.set_label(r"$\vert\chi_{ZZ}(\omega)\vert$",fontsize=25)
+            cbar.ax.tick_params(labelsize=16)
     for i in range(nP,len(axes)):       #set to blank extra plots
         axes[i].axis('off')
-
-    if 1:   # Colorbar
-        cbar_ax = fig.add_axes([0.92, 0.15, 0.01, 0.75])  # [left, bottom, width, height]
-        cbar = fig.colorbar(mesh, cax=cbar_ax)
-        cbar.set_label(r"$\vert\chi_{ZZ}(\omega)\vert$",fontsize=20)
-    fig.subplots_adjust(left=0.052, right=0.9, top=0.9, bottom=0.14, wspace=0.15)
+    fig.subplots_adjust(left=0.052, right=0.925, top=0.942, bottom=0.08, wspace=0.095, hspace=0.095)
     #plt.tight_layout()
     #
     if transformType=='dat' and 0:
@@ -202,10 +227,7 @@ def plotWf2D(system,nModes=25):
     U_ = system.U_
     V_ = system.V_
     X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
-    phi = np.real(U_ - V_)
-    for i in range(Ns):
-        ix,iy = system._xy(i)
-        phi[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    phi = system.Phi
     fig, axes, rows, cols = createFigure(nModes)#,nRows=Lx,nCols=Ly)#nCols=nModes//2 if nModes!=system.Ns else Lx,nRows=nModes//2 if nModes!=system.Ns else Lx)
     for n in range(nModes):
         ax = axes[n]
@@ -324,7 +346,7 @@ def plotRampDispersions(ramp, **kwargs):
         stopRatio = ramp.rampElements[iP].g1 / 10
         ax.set_title(r"$\alpha=$%.2f"%stopRatio,size=20)
     plt.suptitle("Dispersion relation of periodic system",size=20)
-    plt.tight_layout()
+    #plt.tight_layout()
     plt.show()
 
 def plotRampValues(ramp, **kwargs):

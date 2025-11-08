@@ -25,3 +25,13 @@ def lorentz(arg,gamma):
     """ Lorentz distribution used for scattering and decay rates.
     """
     return (1.0/np.pi) * (gamma / (arg**2 + gamma**2))
+
+def Ry(theta):
+    """ Compute 3D rotation matrix around y-axis of angle theta """
+    R = np.zeros((3,3))
+    R[0,0] = np.cos(theta)
+    R[0,2] = np.sin(theta)
+    R[1,1] = 1
+    R[2,0] = -np.sin(theta)
+    R[2,2] = np.cos(theta)
+    return R

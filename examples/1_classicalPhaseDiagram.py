@@ -53,8 +53,15 @@ if 1:
 #
 cNf = zN
 cSf = zN
-if 1:
+if 0:
     """ Plot with uniform colors the Delta=0 phase diagram """
+    if 1:
+        plt.rcParams.update({
+            "text.usetex": True,              # Use LaTeX for all text
+            "font.family": "serif",           # Set font family
+            "font.serif": ["Computer Modern"], # Default LaTeX font
+            "text.latex.preamble": r"\usepackage{amsmath}",
+        })
     # --- Grid ---
     x = np.linspace(J2min, J2max, 500)
     y = np.linspace(hmin, hmax, 500)
@@ -89,12 +96,12 @@ if 1:
     ax.plot(x[x>J1/2], 2*x[x>J1/2], 'k', lw=1)
     ax.plot([J1/2,J1/2],[0,1],'k--')
 
-    s_ = 22
+    s_ = 30
     ax.set_xlabel(r"$J_2$",size=s_)
     ax.set_ylabel("h",size=s_,rotation=0,labelpad=15)
     ax.set_xlim(J2min,J2max)
     ax.set_ylim(hmin,hmax)
-    s_ = 18
+    s_ = 25
     ax.tick_params(axis='both',direction='in',length=10,width=1,pad=7,labelsize=s_)
     # Colorbars
     s_ = 14
@@ -109,9 +116,9 @@ if 1:
                         cax=cax,
                         orientation='vertical')
     cbar.set_ticks([0,0.5,1])
-    cbar.set_ticklabels([r"$\pi/2$",r"$\pi/4$",r"$0$"],size=s_)
+    cbar.set_ticklabels([r"$\pi/2$",r"$\pi/4$",r"$0$"],size=s_+5)
     cbar.ax.yaxis.set_ticks_position('left')
-    cbar.ax.set_title(r"$\theta^\text{canted-Néel}$", fontsize=20, pad=10)
+    cbar.ax.set_title(r"$\theta^\text{canted-Néel}$", fontsize=30, pad=10)
 
     cax = fig.add_axes([0.91,y_,w_,h_])
     cmap = mcolors.ListedColormap(colors[y<2*(x[-1]*(1-D1)),-1])
@@ -120,9 +127,9 @@ if 1:
                         cax=cax,
                         orientation='vertical')
     cbar.set_ticks([0,0.5,1])
-    cbar.set_ticklabels([r"$\pi/2$",r"$\pi/4$",r"$0$"],size=s_)
+    cbar.set_ticklabels([r"$\pi/2$",r"$\pi/4$",r"$0$"],size=s_+5)
     cbar.ax.yaxis.set_ticks_position('right')
-    cbar.ax.set_title(r"$\theta^\text{canted-stripe}$", fontsize=20, pad=10)
+    cbar.ax.set_title(r"$\theta^\text{canted-stripe}$", fontsize=30, pad=10)
     #fig.tight_layout()
     plt.subplots_adjust(
         left=0.16,
@@ -132,12 +139,12 @@ if 1:
     )
     plt.show()
 if 1:
-    """ Plot some of te spin configurations """
+    """ Plot some of the spin configurations """
     import sys, os, argparse
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
     from wavespin.tools.inputUtils import importParameters
     from wavespin.static.periodic import quantizationAxis
-    from wavespin.lattice.lattice import latticeClass
+    from wavespin.static.open import openHamiltonian
     from wavespin.plots import fancyLattice
     """ Parameters and options """
     parser = argparse.ArgumentParser(description="Static correlator calculation using Holstein-Primakoff formalism")
@@ -156,14 +163,15 @@ if 1:
         cf = cNf if J2<J1/2 else cSf
         color = ci * th/np.pi*2 + cf * (1-th/np.pi*2)
         color[-1] = 1
-        system = latticeClass(parameters)
-        system.thetas = np.ones(system.Ns) * th
+        system = openHamiltonian(parameters)
+        system.quantizationAxisAngles()
         fn = "Figures/lattice_"+str(J2)+"_"+str(h)+".png"
         kwargs = {'indices':False,
                   'angles':True,
                   'arrowColor':color,
                   'order':'c-Neel' if J2<J1/2 else 'c-stripe',
                   "savePlot":1,
+                  "sublatticeColors":J2>J1/2,
                   "filename":fn}
         fancyLattice.plotSitesGrid(system,**kwargs)
 

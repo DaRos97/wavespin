@@ -1,11 +1,14 @@
 """ Here we compute the dispersion of a periodic system, together with quantization axis canting, GS energy and gap.
+Use with input_3.txt
 """
 
 import numpy as np
 import os, sys, argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.tools.inputUtils import importParameters
-from wavespin.static.periodic import periodicHamiltonian, periodicRamp
+#from wavespin.static.periodic import periodicHamiltonian, periodicRamp
+from wavespin.static.open import openHamiltonian
+from wavespin.static.open import openSystem, openRamp
 from wavespin.plots import fancyLattice
 from wavespin.plots import rampPlots
 
@@ -18,7 +21,7 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 """ Define the parameters of the system at different 'times' """
-nP = 101     #number of parameters computed in the "ramp" -> analogue to stop ratio
+nP = 6     #number of parameters computed in the "ramp" -> analogue to stop ratio
 gInitial = 0
 gFinal = 10
 hInitial = 15
@@ -29,18 +32,22 @@ g_p = (1-pValues)*gInitial + pValues*gFinal
 h_p = (1-pValues)*hInitial + pValues*hFinal
 
 """ Initialize all the systems and store them in a ramp object """
-ramp = periodicRamp()
-for i in range(nP):
-    parameters.dia_Hamiltonian = (g_p[i],0,0,0,h_p[i],0)
-    ramp.addSystem(periodicHamiltonian(parameters))
+#ramp = periodicRamp()
+ramp = openRamp()
+g1 = 1/2
+g2 = 0
+for i in range(4):
+    parameters.dia_Hamiltonian = (g1,g2,0,0,i,0)
+    #ramp.addSystem(periodicHamiltonian(parameters))
+    ramp.addSystem(openHamiltonian(parameters))
 #    print(ramp.rampElements[i].theta/np.pi*180)
 #    print(ramp.rampElements[i].gsEnergy /g_p[i]/2)
 
-if 1:
+if 0:
     """ Plot interesting values of the ramp """
     rampPlots.plotRampValues(ramp)
 
-if 0:
-    """ Plot dispersions of the ramp """
+if 1:
+    """ Plot dispersions of the ramp in fancy way"""
     rampPlots.plotRampDispersions(ramp)
 

@@ -50,7 +50,7 @@ class myParameters:
     sca_saveVertex: bool = True                 #
     sca_plotVertex: bool = False                #
 
-def importParameters(inputFn,**kwargs):
+def importParameters(inputFn='',**kwargs):
     """ Function to import all the parameters for the calculation from the input file and store the in the class myParameters.
     Lines starting with '#' are skipped.
 
@@ -65,6 +65,8 @@ def importParameters(inputFn,**kwargs):
     """
     verbose = kwargs.get('verbose',False)
     parameters = myParameters()
+    if inputFn=='':
+        return parameters
     with open(inputFn, 'r') as file:
         for line in file:
             line = line.strip()

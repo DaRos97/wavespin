@@ -9,6 +9,7 @@ from wavespin.lattice.lattice import latticeClass
 from wavespin.tools import pathFinder as pf
 from wavespin.tools import inputUtils as iu
 from wavespin.static import momentumTransformation
+import copy
 
 def quantizationAxis(S,g_i,D_i,h_i):
     r""" Compute angles theta and phi of quantization axis depending on Hamiltonian parameters.
@@ -65,7 +66,7 @@ def quantizationAxis(S,g_i,D_i,h_i):
     angles = (theta, phi)
     return angles
 
-def computePs(alpha,beta,ts,g,D,offSiteList=[],Lx=0,Ly=0,order='c-Neel'):
+def computePs(alpha,beta,ts,g,D,offSiteList=[],Lx=0,Ly=0):
     """ Compute coefficient p_gamma^{alpha,beta} for a given classical order.
     alpha,beta=0,1,2 -> z,x,y like for ts.
     J and D are tuple with 1st and 2nd nn.
@@ -77,14 +78,8 @@ def computePs(alpha,beta,ts,g,D,offSiteList=[],Lx=0,Ly=0,order='c-Neel'):
     Returns
     -------
     """
-    if order=='c-Neel': #nn: A<->B, nnn: A<->A
-        #Nearest neighor
-        nn =  g[0]*ts[0][alpha][0]*ts[1][beta][0] + g[0]*ts[0][alpha][1]*ts[1][beta][1] + g[0]*D[0]*ts[0][alpha][2]*ts[1][beta][2]
-        nnn = g[1]*ts[0][alpha][0]*ts[0][beta][0] + g[1]*ts[0][alpha][1]*ts[0][beta][1] + g[1]*D[1]*ts[0][alpha][2]*ts[0][beta][2]
-    for offTerm in offSiteList:
-        ind = offTerm[0]*Ly + offTerm[1]
-        nn[:,ind] *= 0
-        nn[ind,:] *= 0
+    nn =  g[0]*ts[0][alpha][0]*ts[1][beta][0] + g[0]*ts[0][alpha][1]*ts[1][beta][1] + g[0]*D[0]*ts[0][alpha][2]*ts[1][beta][2]
+    nnn = g[1]*ts[0][alpha][0]*ts[0][beta][0] + g[1]*ts[0][alpha][1]*ts[0][beta][1] + g[1]*D[1]*ts[0][alpha][2]*ts[0][beta][2]
     return (nn,nnn)
 
 def computeTs(theta,phi):
@@ -106,7 +101,6 @@ def computeTs(theta,phi):
 class periodicHamiltonian(latticeClass):
     def __init__(self, p: iu.myParameters):
         super().__init__(p)
-        self.p = p
         #Lattice parameters
         self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
         self._momentumGrid()

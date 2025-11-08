@@ -8,6 +8,13 @@ from wavespin.tools import pathFinder as pf
 from wavespin.tools import functions as fs
 from pathlib import Path
 
+if 1:
+    plt.rcParams.update({
+        "text.usetex": True,              # Use LaTeX for all text
+        "font.family": "serif",           # Set font family
+        "font.serif": ["Computer Modern"], # Default LaTeX font
+    })
+
 def plotSitesGrid(lattice,**kwargs):
     """ Here we plot the grid structure to see which sites are considered in the calculation.
 
@@ -23,7 +30,8 @@ def plotSitesGrid(lattice,**kwargs):
     #
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot()
-    cols = ['k','k']
+    sublatticeColors = kwargs.get("sublatticeColors",False)
+    cols = ['b','c'] if sublatticeColors else ['k','k']
     for ix in range(Lx):
         for iy in range(Ly):
             if (ix,iy) in offSiteList:
@@ -82,7 +90,7 @@ def plotSitesGrid(lattice,**kwargs):
         plotFn = kwargs.get("filename",'')
         if plotFn=='':
             raise ValueError("Give a name to save the file in the **kwargs: \"filename\"")
-        print("Saving t file: "+plotFn)
+        print("Saving t0 file: "+plotFn)
         fig.savefig(plotFn)
     plt.show()
 

@@ -27,7 +27,6 @@ system = openHamiltonian(parameters)
 best_modes = np.array([17,18,19,20,24,25,26,27,30,31,32,34])
 kwargs = {'best_modes':best_modes}
 system.diagonalize(verbose=verbose,**kwargs)
-print(system.evals)
 
 #rampPlots.plotWf(system)
 #rampPlots.plotBogoliubovMomenta(system)

@@ -11,7 +11,7 @@ from time import time
 from wavespin.lattice.lattice import latticeClass
 from wavespin.tools import pathFinder as pf
 from wavespin.tools import inputUtils as iu
-from wavespin.tools.functions import lorentz
+from wavespin.tools.functions import lorentz, Ry
 from wavespin.static import correlators
 from wavespin.static import momentumTransformation
 from wavespin.static.periodic import quantizationAxis
@@ -23,12 +23,110 @@ class openHamiltonian(latticeClass):
         super().__init__(p)
         # Hamiltonian parameters
         self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = self.p.dia_Hamiltonian
-        self.order = 'canted-Néel' if self.g2<self.g1/2 else 'canted-stripe'
+        self.order = 'canted-Néel' if self.g2<=self.g1/2 else 'canted-stripe'
         self.S = 0.5     #spin value
         self.g_i = (self._NNterms(self.g1), self._NNNterms(self.g2))
         self.D_i = (self._NNterms(self.d1), self._NNNterms(self.d2))
         self.h_i = self._Hterms(self.h,self.h_disorder)
         # self.realSpaceHamiltonian = self._realSpaceHamiltonian()
+        if self.boundary == 'periodic':
+            self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
+            self._momentumGrid()
+            self.gamma = self._gamma()
+            self.dispersion = self._dispersion()
+            self.gap = np.min(self.dispersion)
+            self.GSenergy = np.sum(self.dispersion)/self.Ns/2 + self._E0()
+
+# Periodic functions
+    def _momentumGrid(self):
+        """ Compute momenta in the Brillouin zone for a (periodic) rectangular shape.
+
+        Parameters
+        ----------
+        Lx,Ly : int, linear size.
+
+        """
+        dx = 2*np.pi/self.Lx
+        dy = 2*np.pi/self.Ly
+        self.gridk = np.zeros((self.Lx,self.Ly,2))
+        for i1 in range(self.Lx):
+            for i2 in range(self.Ly):
+                self.gridk[i1,i2,0] = dx*(1+i1) #- np.pi
+                self.gridk[i1,i2,1] = dy*(1+i2) #- np.pi
+
+    def _gamma(self):
+        r""" Compute the '$\Gamma$' dispersion at first and second nearest neighbor.
+
+        Returns
+        -------
+        Gamma : 2-tuple
+            Dispersions at 1st and 2nd nearest neighbor.
+        """
+        gridk = self.gridk
+        Gamma1 = 1/2*( np.cos(gridk[:,:,0])+np.cos(gridk[:,:,1]) ) #cos(kx) + cos(ky)
+        Gamma2 = 1/2*( np.cos(gridk[:,:,0]+gridk[:,:,1])+np.cos(gridk[:,:,0]-gridk[:,:,1]))  #cos(kx+ky) + cos(kx-ky)
+        return (Gamma1,Gamma2)
+
+    def _dispersion(self):
+        """
+        Compute dispersion epsilon as in notes.
+        Controls are neded for ZZ in k.
+        """
+        self.quantizationAxisAngles()
+        self.computeTs()
+        self.computePs()
+        N_11 = self._N11()
+        N_12 = self._N12()
+        result = np.zeros(N_11.shape)
+        mask = (N_11**2>=np.absolute(N_12)**2)
+        result[mask] = np.sqrt(N_11[mask]**2-np.absolute(N_12[mask])**2)
+        return result
+
+    def _E0(self):
+        r""" Compute $E_0$ as in notes.
+        """
+        pzz_nn = np.sum(self.Ps[0,0,:,0,0]) / 4
+        pzz_nnn = np.sum(self.Ps[1,0,:,0,0]) / 4
+        result = 2*self.S*(self.S+1) * (pzz_nn + pzz_nnn)
+        result += - self.h * np.cos(self.theta) * (self.S + 1/2)
+        return result
+
+    def _N11(self):
+        """ Compute N_11 as in notes. """
+        #nn
+        pxx_nn = np.sum(self.Ps[0,0,:,1,1]) / 4
+        pyy_nn = np.sum(self.Ps[0,0,:,2,2]) / 4
+        pzz_nn = np.sum(self.Ps[0,0,:,0,0]) / 4
+        #pyy_nn = self.Ps[0,0,1,2,2]
+        #pzz_nn = self.Ps[0,0,1,0,0]
+        result = 1/2/self.S * ( (pxx_nn+pyy_nn)*self.gamma[0] - 2*pzz_nn)
+        #nnn
+        if 0:
+            for i in range(100,150):
+                x,y = self._xy(i)
+                if x+1!=self.Lx and y!=0:
+                    innn = self._idx(x+1,y-1)
+                    print(self.Ps[1,i,innn,1,1],self.Ps[1,i,innn,2,2],self.Ps[1,i,innn,0,0])
+            input()
+        pxx_nnn = np.sum(self.Ps[1,0,:,1,1]) / 4
+        pyy_nnn = np.sum(self.Ps[1,0,:,2,2]) / 4
+        pzz_nnn = np.sum(self.Ps[1,0,:,0,0]) / 4
+        result += 1/2/self.S * ( (pxx_nnn+pyy_nnn)*self.gamma[1] - 2*pzz_nnn)
+        #z
+        result += self.h/2*np.cos(self.theta)
+        return result
+
+    def _N12(self):
+        """ Compute N_12 as in notes. """
+        #nn
+        pxx_nn = np.sum(self.Ps[0,0,:,1,1]) / 4
+        pyy_nn = np.sum(self.Ps[0,0,:,2,2]) / 4
+        result = 1/2/self.S * self.gamma[0] * (pxx_nn - pyy_nn)
+        #nnn
+        pxx_nnn = np.sum(self.Ps[1,0,:,1,1]) / 4
+        pyy_nnn = np.sum(self.Ps[1,0,:,2,2]) / 4
+        result += 1/2/self.S * self.gamma[1] * (pxx_nnn - pyy_nnn)
+        return result
 
     def _NNterms(self,val):
         """ Construct Ns,Ns matrix for real space Hamiltonian using the lattice nn.
@@ -106,8 +204,14 @@ class openHamiltonian(latticeClass):
             else:       # canted-stripe
                 for i in range(self.Ns):
                     x,y = self._xy(i)
-                    self.thetas[i] += np.pi*(x%2)   # columnar
-            if 1:   # Plot solution
+                    if x%2==1 and y%2==0:
+                        self.thetas[i] += np.pi
+                    if x%2==0 and y%2==1:
+                        self.thetas[i] *= -1
+                        self.thetas[i] += np.pi
+                    if x%2==1 and y%2==1:
+                        self.thetas[i] *= -1
+            if 0:   # Plot solution
                 kwargs = {'indices':False, 'angles':True}
                 fancyLattice.plotSitesGrid(self,**kwargs)
         else:
@@ -136,13 +240,12 @@ class openHamiltonian(latticeClass):
         """
         self.ts = np.zeros((self.Ns,3,3))
         for i in range(self.Ns):
-            #ix,iy = self._xy(i)
-            sign = 1#(-1)**(ix+iy)
-            th = self.thetas[i]
-            ph = self.phis[i]
-            self.ts[i,0] = sign*np.array([np.sin(th)*np.cos(ph),np.sin(th)*np.sin(ph),np.cos(th) ]) #t_zx,t_zy,t_zz
-            self.ts[i,1] = sign*np.array([np.cos(th)*np.cos(ph),np.cos(th)*np.sin(ph),-np.sin(th)]) #t_xx,t_xy,t_xz
-            self.ts[i,2] =      np.array([-np.sin(ph)          ,np.cos(ph)           ,0          ]) #t_yx,t_yy,t_yz
+            #print(i,self._xy(i),self.thetas[i]/np.pi*180)
+            #input()
+            rot= Ry(self.thetas[i])
+            self.ts[i,0] = rot @ np.array([0,0,1])#t_zx,t_zy,t_zz
+            self.ts[i,1] = rot @ np.array([1,0,0])#t_xx,t_xy,t_xz
+            self.ts[i,2] = rot @ np.array([0,1,0])#t_yx,t_yy,t_yz
 
     def computePs(self):
         """ Compute coefficient p_gamma^{alpha,beta}_ij for a given classical order.
@@ -229,16 +332,21 @@ class openHamiltonian(latticeClass):
             psi_ = (A+B)@phi_/self.evals       # Problem also here
             self.U_ = 1/2*(phi_+psi_)
             self.V_ = 1/2*(phi_-psi_)
+            self.Phi = np.real(self.U_-self.V_)
+            for n in range(self.Ns):
+                x,y = self._xy(n)
+                self.Phi[n,:] *= 2/np.pi*(-1)**(x+y+1)
             if self.p.dia_saveWf:
                 if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in directory: "+self.dataDn)
                     os.system('mkdir '+self.dataDn)
-                np.savez(transformationFn,awesomeU=self.U_,awesomeV=self.V_,evals=self.evals)
+                np.savez(transformationFn,awesomeU=self.U_,awesomeV=self.V_,evals=self.evals,Phi=self.Phi)
         else:
             if verbose:
                 print("Loading Bogoliubov transformation from file: "+transformationFn)
             self.U_ = np.load(transformationFn)['awesomeU']
             self.V_ = np.load(transformationFn)['awesomeV']
+            self.Phi = np.load(transformationFn)['Phi']
             self.evals = np.load(transformationFn)['evals']
 
         if self.p.dia_excludeZeroMode:       #Put to 0 the eigenstate corresponding to the zero energy mode -> a bit far fetched
@@ -246,7 +354,7 @@ class openHamiltonian(latticeClass):
             self.V_[:,0] *= 0
         if self.p.dia_plotWf:
             #plotWf3D(self)
-            plotWf2D(self,nModes=self.Ns)
+            plotWf2D(self,nModes=30)#self.Ns)
             #plotWfCos(self)
         if self.p.dia_plotMomenta:
             plotBogoliubovMomenta(self,**kwargs)
@@ -677,15 +785,16 @@ class openSystem(openHamiltonian):
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
         argsFn = ('correlatorKW',self.p.cor_correlatorType,self.p.cor_transformType,self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian,
                   txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
-        correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
+        correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
         if not Path(correlatorFn).is_file():
             self.correlatorKW, self.momentum = momentumTransformation.dicTransformType[self.p.cor_transformType](self)
             if self.p.cor_saveKW:
-                np.save(correlatorFn,self.correlatorKW)
+                np.savez(correlatorFn,correlator=self.correlatorKW,momentum=self.momentum)
         else:
             if verbose:
                 print("Loading momentum-space correlator from file: "+correlatorFn)
-            self.correlatorKW = np.load(correlatorFn)
+            self.correlatorKW = np.load(correlatorFn)['correlator']
+            self.momentum = np.load(correlatorFn)['momentum']
 
 ##########################################################
 ##########################################################

@@ -7,9 +7,7 @@ import os, sys, argparse
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
-from wavespin.plots import rampPlots
 
-from time import time
 import matplotlib.pyplot as plt
 from pathlib import Path
 
@@ -23,15 +21,31 @@ parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 """ Initialize and diagonalize system """
 parameters.dia_Hamiltonian = (10,0,0,0,0,0)
+sca_types = (
+    #'1to2_1','1to2_2',
+    '2to2_1','2to2_2',
+    #'1to3_1','1to3_2','1to3_3',
+)
+
+parameters.sca_types = sca_types
 system = openHamiltonian(parameters)
-best_modes = np.array([17,18,19,20,24,25,26,27,30,31,32,34])
-kwargs = {'best_modes':best_modes}
-system.diagonalize(verbose=verbose,**kwargs)
 
-#rampPlots.plotWf(system)
-#rampPlots.plotBogoliubovMomenta(system)
+#best_modes = np.array([17,18,19,20,24,25,26,27,30,31,32,34])
+#kwargs = {'best_modes':best_modes}
+#system.diagonalize(verbose=verbose,**kwargs)
 
-system.decayRates(temperature=parameters.sca_temperature,verbose=verbose)
+#system.decayRates(temperature=parameters.sca_temperature,verbose=verbose)
+
+if 1:
+    system.computeRate(verbose=verbose)
+    fig = plt.figure(figsize=(18,10))
+    lr = len(sca_types)
+    for i in range(lr):
+        ax = fig.add_subplot(2,4,1+i%4+4*(i//4))
+        ax.scatter(np.arange(1,system.Ns),system.rates[sca_types[i]][1:])
+        ax.set_title(sca_types[i],size=20)
+    fig.tight_layout()
+    plt.show()
 
 if 0:
     """ Decay vs amplitude """

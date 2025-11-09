@@ -17,6 +17,8 @@ from wavespin.static import momentumTransformation
 from wavespin.static.periodic import quantizationAxis
 from wavespin.plots.rampPlots import *
 from wavespin.plots import fancyLattice
+from wavespin.static.decayProcesses import dic_processes
+import itertools
 
 class openHamiltonian(latticeClass):
     def __init__(self, p: iu.myParameters):
@@ -28,6 +30,8 @@ class openHamiltonian(latticeClass):
         self.g_i = (self._NNterms(self.g1), self._NNNterms(self.g2))
         self.D_i = (self._NNterms(self.d1), self._NNNterms(self.d2))
         self.h_i = self._Hterms(self.h,self.h_disorder)
+        # Diagonalize Hamiltonian to get eigenvalues and Bogoliubov fuunctions
+        self.diagonalize()
         # self.realSpaceHamiltonian = self._realSpaceHamiltonian()
         if self.boundary == 'periodic':
             self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
@@ -359,255 +363,137 @@ class openHamiltonian(latticeClass):
         if self.p.dia_plotMomenta:
             plotBogoliubovMomenta(self,**kwargs)
 
-    def decayRates(self,temperature,verbose=False):
-        """ Compute decay rates.
-        Use sca_broadening * mean energy difference for the broadening of the energy delta function.
+    def computeRate(self,verbose=False):
+        """ Compute the required decay/scattering rate for each mode.
         """
-        if (self.g_i[1] != 0).any() or (self.D_i[1] != 0).any():
-            raise ValueError("Decay rates are so far only implemented for first nearest neighbor couplings.")
-        edif = self.evals[2:] - self.evals[1:-1]
-        gamma = self.p.sca_broadening * np.mean(edif)
-        #
-        evals = self.evals[1:]
-        U = np.real(self.U_)[:,1:]
-        V = np.real(self.V_)[:,1:]
-        # Parameters
-        p_xz = self.g_i[0] / np.sqrt(2*self.S)/4/self.S * (1-self.D_i[0]) * np.sin(2 * self.thetas)
-        f1 = -self.g_i[0] / 16 / self.S**2 * np.sin(self.thetas)**2 * (1-self.D_i[0])
-        f2 = self.g_i[0] / 16 / self.S**2 * (1 + np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2)
-        f3 = -self.g_i[0] / 4 / self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
-        # Filename and looping types
-        self.dataScattering = {}
-        argsFn = ['scatteringVertex',temperature,self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder,self.Lx,self.Ly,self.Ns,self.p.sca_broadening]
-        for scatteringType in self.p.sca_types:
-            if scatteringType=='2to2all':
+        self.rates = {}
+        for process in self.p.sca_types:
+            argsDecayFn = ['decay',process,self.p.sca_temperature,self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.p.sca_broadening]
+            decayFn = pf.getFilename(*tuple(argsDecayFn),dirname=self.dataDn,extension='.npy')
+            if Path(decayFn).is_file():
+                self.rates[process] = np.load(decayFn)
                 continue
-            argsFnS = argsFn.insert(1,scatteringType)
-            if verbose:
-                print("\nScattering %s"%scatteringType)
-            vertexFn = pf.getFilename(*tuple(argsFn),dirname=self.dataDn,extension='.npy')
-            if Path(vertexFn).is_file():
-                if verbose:
-                    print("Loading from file")
-                self.dataScattering[scatteringType] = np.load(vertexFn)
-                continue
-            ti = time()
-            if scatteringType in ['1to2_1','1to2_2']:
-                Omega = 1/2 * (U[:,None,:,None] * V[None,:,None,:] + U[:,None,None,:]*V[None,:,:,None])
-                Kappa = 1/2 * (U[:,None,:,None] * U[None,:,None,:] + V[:,None,:,None]*V[None,:,None,:])
-                Vn_lm =  np.einsum('ij,iilm,jn->nlm',p_xz,Omega,U+V,optimize=True)
-                Vn_lm += np.einsum('ij,iiln,jm->nlm',p_xz,Kappa,U+V,optimize=True)
-                Vn_lm += np.einsum('ij,iimn,jl->nlm',p_xz,Kappa,U+V,optimize=True)
-                # i <-> j
-                Vn_lm *= 2
-                if scatteringType == '1to2_1':
-                    en = evals[:,None,None]
-                    el = evals[None,:,None]
-                    em = evals[None,None,:]
-                    ## 1 -> 2
-                    # Delta
-                    arg = en - el -  em
-                    delta_vals = lorentz(arg, gamma)
-                    # Bose Factor
-                    if temperature != 0:
-                        beta = 1/temperature
-                        bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*(em+el)) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
-                    else:
-                        bose_factor = 1
-                    # Decay rate
-                    Gamma_1to2 = 2 * np.pi * np.einsum('nlm,nlm,nlm->n',Vn_lm**2,delta_vals,bose_factor)
-                    ## 1 <- 2
-                    # Delta
-                    arg = en + em - el
-                    delta_vals = lorentz(arg, gamma)
-                    # Bose Factor
-                    if temperature != 0:
-                        beta = 1/temperature
-                        bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
-                    else:
-                        bose_factor = 1
-                    # Decay rate
-                    Gamma_2to1 = 4 * np.pi * np.einsum('lnm,nlm,nlm->n',Vn_lm**2,delta_vals,bose_factor)
-                    # Final
-                    Gamma_n = Gamma_1to2 + Gamma_2to1
-                if scatteringType == '1to2_2':
-                    en = evals[:,None]
-                    el = evals[None,:]
-                    # Delta
-                    arg = 2*en - el
-                    delta_vals = lorentz(arg, gamma)
-                    # Bose Factor
-                    if temperature != 0:
-                        beta = 1/temperature
-                        bose_factor = (1-np.exp(-2*beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1)
-                    else:
-                        bose_factor = 1
-                    # Decay rate
-                    Gamma_n = np.pi * np.einsum('lnn,nl,nl->n',Vn_lm**2,delta_vals,bose_factor)
-            if scatteringType in ['1to3_1','1to3_2','1to3_3']:
-                # Terms I need
-                Omega = 1/2 * (U[:,None,:,None] * V[None,:,None,:] + U[:,None,None,:]*V[None,:,:,None])
-                Kappa = 1/2 * (U[:,None,:,None] * U[None,:,None,:] + V[:,None,:,None]*V[None,:,None,:])
-                OmS = Omega + np.transpose(Omega,(1,0,2,3))
-                KaS = Kappa + np.transpose(Kappa,(0,1,3,2))
-                # f1
-                Vn_lmr =  np.einsum('ij,jjlm,ijrn->nlmr',f1,Omega,KaS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjlr,ijmn->nlmr',f1,Omega,KaS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjmr,ijln->nlmr',f1,Omega,KaS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjln,ijmr->nlmr',f1,Kappa,OmS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjmn,ijlr->nlmr',f1,Kappa,OmS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjrn,ijml->nlmr',f1,Kappa,OmS,optimize=True)
-                # f2                                   
-                Vn_lmr += np.einsum('ij,jjlm,ijnr->nlmr',f2,Omega,OmS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjlr,ijnm->nlmr',f2,Omega,OmS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjmr,ijnl->nlmr',f2,Omega,OmS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjln,ijmr->nlmr',f2,Kappa,KaS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjmn,ijlr->nlmr',f2,Kappa,KaS,optimize=True)
-                Vn_lmr += np.einsum('ij,jjrn,ijml->nlmr',f2,Kappa,KaS,optimize=True)
-                # f3                                   
-                Vn_lmr += np.einsum('ij,jjlm,iinr->nlmr',f3,Omega,Kappa,optimize=True)
-                Vn_lmr += np.einsum('ij,jjlr,iimn->nlmr',f3,Omega,Kappa,optimize=True)
-                Vn_lmr += np.einsum('ij,jjmr,iiln->nlmr',f3,Omega,Kappa,optimize=True)
-                Vn_lmr += np.einsum('ij,jjln,iimr->nlmr',f3,Kappa,Omega,optimize=True)
-                Vn_lmr += np.einsum('ij,jjmn,iilr->nlmr',f3,Kappa,Omega,optimize=True)
-                Vn_lmr += np.einsum('ij,jjrn,iiml->nlmr',f3,Kappa,Omega,optimize=True)
-                # i <-> j and symmetrization
-                Vn_lmr /= 3
+            if not hasattr(self,process[:4]):
+                argsVertexFn = ['vertex',process[:4],self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns]
+                vertexFn = pf.getFilename(*tuple(argsVertexFn),dirname=self.dataDn,extension='.npy')
+                if Path(vertexFn).is_file():
+                    setattr(self,'vertex'+process[:4],np.load(vertexFn))
+                else:
+                    if verbose:
+                        print("Computing ",process[:4]," vertex")
+                    self.computeVertex(process[:4])
+                if self.p.sca_saveVertex:
+                    np.save(vertexFn,getattr(self,'vertex'+process[:4]))
+            self.rates[process] = dic_processes[process](self)
+            if self.p.sca_saveRate:
+                np.save(decayFn,self.rates[process])
+        if self.p.sca_plotRate:
+            plotRate(self)
 
-                if scatteringType == '1to3_1':
-                    en = evals[:,None,None,None]
-                    el = evals[None,:,None,None]
-                    em = evals[None,None,:,None]
-                    er = evals[None,None,None,:]
-                    ## 1->3
-                    # Delta
-                    arg = en - el - em - er
-                    delta_vals = lorentz(arg,gamma)
-                    # Bose factor
-                    if temperature != 0:
-                        beta = 1/temperature
-                        bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*(el+em+er)) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1) / (np.exp(beta*er)-1)
-                    else:
-                        bose_factor = 1
-                    # Decay rate
-                    Gamma_1to3 = 6 * np.pi * np.einsum('nlmr,nlmr,nlmr->n',Vn_lmr**2,delta_vals,bose_factor)
-                    ## 3->1
-                    # Delta
-                    arg = el - en - em - er
-                    delta_vals = lorentz(arg,gamma)
-                    # Bose factor
-                    if temperature != 0:
-                        beta = 1/temperature
-                        bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1) / (np.exp(beta*er)-1)
-                    else:
-                        bose_factor = 1
-                    # Decay rate
-                    Gamma_3to1 = 18 * np.pi * np.einsum('lnmr,nlmr,nlmr->n',Vn_lmr**2,delta_vals,bose_factor)
-                    # Total
-                    Gamma_n = Gamma_1to3 + Gamma_3to1
-                if scatteringType == '1to3_2':
-                    en = evals[:,None,None]
-                    el = evals[None,:,None]
-                    em = evals[None,None,:]
-                    # Delta
-                    arg = 2*en + el - em
-                    delta_vals = lorentz(arg,gamma)
-                    # Bose Factor
-                    if temperature != 0:
-                        beta = 1/temperature
-                        bose_factor = (1-np.exp(-2*beta*en)) * np.exp(beta*em) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
-                    else:
-                        bose_factor = 1
-                    # Decay rate
-                    Gamma_n = 6 * np.pi * np.einsum('mnnl,nlm,nlm->n',Vn_lmr**2,delta_vals,bose_factor)
-                if scatteringType == '1to3_3':
-                    en = evals[:,None]
-                    el = evals[None,:]
-                    # Delta
-                    arg = 3*en - el
-                    delta_vals = lorentz(arg,gamma)
-                    # Bose Factor
-                    if temperature != 0:
-                        beta = 1/temperature
-                        bose_factor = (1-np.exp(-3*beta*en)) * np.exp(beta*el) / (np.exp(beta*el)-1)
-                    else:
-                        bose_factor = 1
-                    # Decay rate
-                    Gamma_n = np.pi * np.einsum('lnnn,nl,nl->n',Vn_lmr**2,delta_vals,bose_factor)
-            if scatteringType in ['2to2_1','2to2_2']:
-                # Terms I need
-                Omega = 1/2 * (U[:,None,:,None] * V[None,:,None,:] + U[:,None,None,:]*V[None,:,:,None])
-                Kappa = 1/2 * (U[:,None,:,None] * U[None,:,None,:] + V[:,None,:,None]*V[None,:,None,:])
-                OmS = Omega + np.transpose(Omega,(1,0,2,3))
-                KaS = Kappa + np.transpose(Kappa,(0,1,3,2))
-                # f1
-                print("f1")
-                Vnr_lm =  np.einsum('ij,jjlm,ijrn->nrlm',f1,Omega,OmS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjnr,ijlm->nrlm',f1,Omega,OmS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjlr,ijmn->nrlm',f1,Kappa,KaS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjmr,ijln->nrlm',f1,Kappa,KaS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjln,ijmr->nrlm',f1,Kappa,KaS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjmn,ijlr->nrlm',f1,Kappa,KaS,optimize=True)
-                # f2
-                print("f2")
-                Vnr_lm += np.einsum('ij,jjlm,ijrn->nrlm',f2,Omega,KaS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjnr,ijlm->nrlm',f2,Omega,KaS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjlr,ijnm->nrlm',f2,Kappa,OmS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjmr,ijnl->nrlm',f2,Kappa,OmS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjln,ijrm->nrlm',f2,Kappa,OmS,optimize=True)
-                Vnr_lm += np.einsum('ij,jjmn,ijrl->nrlm',f2,Kappa,OmS,optimize=True)
-                # f3
-                print("f3")
-                Vnr_lm += np.einsum('ij,jjlm,iinr->nrlm',f3,Omega,Omega,optimize=True)
-                Vnr_lm += np.einsum('ij,jjnr,iilm->nrlm',f3,Omega,Omega,optimize=True)
-                Vnr_lm += np.einsum('ij,jjlr,iimn->nrlm',f3,Kappa,Kappa,optimize=True)
-                Vnr_lm += np.einsum('ij,jjmr,iiln->nrlm',f3,Kappa,Kappa,optimize=True)
-                Vnr_lm += np.einsum('ij,jjln,iimr->nrlm',f3,Kappa,Kappa,optimize=True)
-                Vnr_lm += np.einsum('ij,jjmn,iilr->nrlm',f3,Kappa,Kappa,optimize=True)
-                # i <-> j and symmetrization
-                Vnr_lm *= 2
-
-                if scatteringType == '2to2_1':
-                    print("bose")
-                    en = evals[:,None,None,None]
-                    er = evals[None,:,None,None]
-                    el = evals[None,None,:,None]
-                    em = evals[None,None,None,:]
-                    # Delta
-                    arg = en + er - el - em
-                    delta_vals = lorentz(arg,gamma)
-                    # Bose Factor
-                    if temperature != 0:
-                        beta = 1/temperature
-                        bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*(em+el)) / (np.exp(beta*er)-1) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
-                    else:
-                        bose_factor = 1
-                    # Decay rate
-                    Gamma_n = 4 * np.pi * np.sum(Vnr_lm**2 * delta_vals * bose_factor,axis=(1,2,3))
-                if scatteringType == '2to2_2':
-                    en = evals[:,None,None]
-                    el = evals[None,:,None]
-                    em = evals[None,None,:]
-                    # Delta
-                    arg = 2*en - el - em
-                    delta_vals = lorentz(arg,gamma)
-                    # Bose Factor
-                    if temperature != 0:
-                        beta = 1/temperature
-                        bose_factor = (1-np.exp(-2*beta*en)) * np.exp(beta*(em+el)) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1)
-                    else:
-                        bose_factor = 1
-                    # Decay rate
-                    Gamma_n = 2 * np.pi * np.einsum('nnlm,nlm,nlm->n',Vnr_lm**2,delta_vals,bose_factor)
-            if verbose:
-                print("Computation took: %.3f seconds"%(time()-ti))
-            self.dataScattering[scatteringType] = Gamma_n
-            if self.p.sca_saveVertex:
-                if verbose:
-                    print("Saving result to file")
-                np.save(vertexFn,Gamma_n)
-        if self.p.sca_plotVertex:
-            plotVertex(self)
+    def computeVertex(self,vertex):
+        """ Compute the vertex of the interaction, may be 1->2, 1->3 or 2->2.
+        """
+        U = np.real(self.U_)
+        V = np.real(self.V_)
+        if vertex=='1to2':
+            # f_ij
+            f = self.g_i[0] / np.sqrt(2*self.S)/4/self.S * (1-self.D_i[0]) * np.sin(2 * self.thetas)
+            f /= 2 # Since we sum over all bonds, we count each twice
+            ### Vn(l,m)
+            Vn_lm = np.zeros((self.Ns,self.Ns,self.Ns))
+            # f1
+            Vn_lm += np.einsum('ij,in,jl,jm->nlm',f,V,V,U,optimize=True)
+            Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,U,U,U,optimize=True)
+            Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,V,U,V,optimize=True)
+            Vn_lm += np.einsum('ij,in,jl,jm->nlm',f,U,V,U,optimize=True)
+            Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,U,V,U,optimize=True)
+            Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,V,V,V,optimize=True)
+            # Symmetrize l,m
+            result = (
+                Vn_lm
+                + np.transpose(Vn_lm, (0,2,1))  # l↔m
+            ) / 2.0
+            # i <-> j counterpart
+            result *= 2
+        elif vertex=='2to2':
+            # f_ij
+            f1 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 + 1)
+            f2 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 - 1)
+            f3 = -self.g_i[0] / 4 / self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
+            f1 /= 2 # Since we sum over all bonds, we count each twice
+            f2 /= 2
+            f3 /= 2
+            ### V_nl(m,p)
+            Vnl_mp = np.zeros((self.Ns,self.Ns,self.Ns,self.Ns))
+            # f1
+            Vnl_mp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,V,U,U,optimize=True)
+            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,V,V,U,V,optimize=True) * 2
+            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f1,U,V,U,U,optimize=True) * 2
+            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f1,V,V,U,V,optimize=True)
+            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,U,U,U,V,optimize=True) * 2
+            Vnl_mp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,V,V,V,optimize=True)
+            Vnl_mp += np.einsum('ij,jn,jl,jm,ip->nlmp',f1,U,U,U,V,optimize=True)
+            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f1,U,V,V,V,optimize=True) * 2
+            # f2
+            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,U,U,U,U,optimize=True)
+            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,U,V,U,V,optimize=True) * 2
+            Vnl_mp += np.einsum('ij,jn,jl,jm,ip->nlmp',f2,U,V,U,V,optimize=True) * 2
+            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f2,V,V,V,V,optimize=True)
+            Vnl_mp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,U,V,U,V,optimize=True) * 2
+            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,V,V,V,V,optimize=True)
+            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f2,U,U,U,U,optimize=True)
+            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f2,U,V,U,V,optimize=True) * 2
+            # f3
+            Vnl_mp += np.einsum('ij,in,il,jm,jp->nlmp',f3,U,V,U,V,optimize=True)
+            Vnl_mp += np.einsum('ij,in,jl,im,jp->nlmp',f3,U,U,U,U,optimize=True)
+            Vnl_mp += np.einsum('ij,in,jl,im,jp->nlmp',f3,U,V,U,V,optimize=True)
+            Vnl_mp += np.einsum('ij,jn,il,jm,ip->nlmp',f3,U,V,U,V,optimize=True)
+            Vnl_mp += np.einsum('ij,in,jl,im,jp->nlmp',f3,V,V,V,V,optimize=True)
+            Vnl_mp += np.einsum('ij,jn,jl,im,ip->nlmp',f3,U,V,U,V,optimize=True)
+            # Symmetrize n,l and m,p
+            result = (
+                Vnl_mp
+                + np.transpose(Vnl_mp, (1,0,2,3))  # n↔l
+                + np.transpose(Vnl_mp, (0,1,3,2))  # m↔p
+                + np.transpose(Vnl_mp, (1,0,3,2))  # n↔l, m↔p
+            ) / 4.0
+            # i <-> j counterpart
+            result *= 2
+        elif vertex=='1to3':
+            # f_ij
+            f1 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 + 1)
+            f2 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 - 1)
+            f3 = -self.g_i[0] / 4 / self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
+            f1 /= 2 # Since we sum over all bonds, we count each twice
+            f2 /= 2
+            f3 /= 2
+            ### V_n(l,m,p)
+            Vn_lmp = np.zeros((self.Ns,self.Ns,self.Ns,self.Ns))
+            # f1
+            Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,V,V,U,U,optimize=True)
+            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,U,U,U,optimize=True)
+            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,V,U,V,U,optimize=True) * 2
+            Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,U,V,V,U,optimize=True)
+            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,V,V,U,optimize=True) * 2
+            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,V,V,V,V,optimize=True)
+            # f2
+            Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,U,V,U,U,optimize=True)
+            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,U,V,U,U,optimize=True)
+            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,V,V,V,U,optimize=True) * 2
+            Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,V,V,V,U,optimize=True)
+            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,U,U,V,U,optimize=True) * 2
+            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,V,U,V,V,optimize=True)
+            # f3
+            Vn_lmp += np.einsum('ij,in,il,jm,jp->nlmp',f3,U,U,V,U,optimize=True)
+            Vn_lmp += np.einsum('ij,in,il,jm,jp->nlmp',f3,V,V,V,U,optimize=True)
+            Vn_lmp += np.einsum('ij,jn,jl,im,ip->nlmp',f3,U,U,V,U,optimize=True)
+            Vn_lmp += np.einsum('ij,jn,jl,im,ip->nlmp',f3,V,V,V,U,optimize=True)
+            # Symmetrize l,m,p
+            perms = list(itertools.permutations(range(3)))
+            result = sum( np.transpose(Vn_lmp, (0,) + tuple(1 + np.array(perm))) for perm in perms ) / len(perms)
+            # i <-> j counterpart
+            result *= 2
+        setattr(self,'vertex'+vertex,result)
 
 ##########################################################
 ##########################################################

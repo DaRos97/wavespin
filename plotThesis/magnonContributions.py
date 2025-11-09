@@ -11,7 +11,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from scipy.fft import fftfreq, fftshift
 
-
 final = True
 if final:
     plt.rcParams.update({

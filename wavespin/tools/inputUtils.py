@@ -47,8 +47,9 @@ class myParameters:
     sca_types: tuple = ('2to2_1',)              #
     sca_temperature: float = 0.0                #
     sca_broadening: float = 0.5                 #
-    sca_saveVertex: bool = True                 #
-    sca_plotVertex: bool = False                #
+    sca_saveVertex: bool = False                #
+    sca_saveRate: bool = False                  #
+    sca_plotRate: bool = False                  #
 
 def importParameters(inputFn='',**kwargs):
     """ Function to import all the parameters for the calculation from the input file and store the in the class myParameters.

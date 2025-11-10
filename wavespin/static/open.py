@@ -156,15 +156,21 @@ class openHamiltonian(latticeClass):
             vals[i,i] = (-1)**(ix+iy+1) * val + disorder[i]
         return vals
 
+    def get_GSE(self):
+        """ Compute ground state energy
+        """
+        Nbonds = np.sum(self._NNterms(1)) // 2
+        GS_energy = -3/2 + np.sum(self.evals) / Nbonds / self.g1 / 2
+        return GS_energy
+
     def _temperature(self,Eref):
         """ Compute temperature given the energy.
         Since the E(T) function is not invertible we have to compute E for a bunch of Ts and extract graphically the T.
         """
         if Eref == -100:
             return 0
-        self.diagonalize()
         Nbonds = np.sum(self._NNterms(1)) // 2
-        GS_energy = -3/2 + np.sum(self.evals) / Nbonds / self.g1 / 2
+        GS_energy = self.get_GSE()
         if Eref < GS_energy:
             raise ValueError("Input state energy smaller than GS energy: %.3f"%GS_energy)
         tempE = np.zeros(self.Ns)

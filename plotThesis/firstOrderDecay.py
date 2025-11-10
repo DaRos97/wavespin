@@ -89,7 +89,7 @@ for it in range(2):
                            label='h=%.1f'%h,
                            s=70
                            )
-            if (ir==0 and ih==2) or (ir>0 and ih==0):
+            if (ir==2 and ih==2 and it==1):# or (ir>0 and ih==0):
                 ax.scatter(bm,
                        rates[it,ir,ih,bm],
                        marker='o',
@@ -184,7 +184,7 @@ ax.set_title("Modes' energies",size=15,y=1)
 ax.set_xlim(xmin,xmax)
 ax.set_ylim(ymin,ymax)
 
-
+# Adjust figure
 plt.subplots_adjust(
     bottom = 0.062,
     #top = 0.926,

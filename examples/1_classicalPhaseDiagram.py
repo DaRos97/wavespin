@@ -138,6 +138,7 @@ if 0:
         top=y_+h_
     )
     plt.show()
+
 if 1:
     """ Plot some of the spin configurations """
     import sys, os, argparse

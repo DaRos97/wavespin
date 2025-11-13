@@ -13,6 +13,12 @@ parameters = importParameters()
 parameters.lat_boundary = 'periodic'
 
 final = True
+if final:
+    plt.rcParams.update({
+        "text.usetex": True,              # Use LaTeX for all text
+        "font.family": "serif",           # Set font family
+        "font.serif": ["Computer Modern"], # Default LaTeX font
+    })
 
 save = True
 Lx = 50 if final else 20
@@ -64,76 +70,89 @@ for J in Js:
 
 from mpl_toolkits.mplot3d import Axes3D  # Needed for 3D plots
 from matplotlib.ticker import MaxNLocator
-if final:
-    plt.rcParams.update({
-        "text.usetex": True,              # Use LaTeX for all text
-        "font.family": "serif",           # Set font family
-        "font.serif": ["Computer Modern"], # Default LaTeX font
-    })
-fig = plt.figure(figsize=(24, 10))
-gs = fig.add_gridspec(3, 6, width_ratios=[2, 0.02, 1, 1, 1, 1], wspace=0.1, hspace=0.0)
+fig = plt.figure(figsize=(4.65,2.5))
+#fig = plt.figure(figsize=(24, 10))
+gs = fig.add_gridspec(
+    3, 6,
+    width_ratios=[2, 0.2, 1, 1, 1, 1],
+    wspace=0.1,
+    hspace=0.05,
+)
+s_norm = 10
+s_small = 9
+s_verysmall = 8
 
-# First column
-parameters_text = ["$J_1=1$\n$J_2=0$","$J_1=1$\n$J_2=1/2$","$J_1=1$\n$J_2=1$"]
-s_parameters = 30
-s_label = 20
-s_legend = 20
-s_ticklabel = 15
-c_th = 'b'
-c_gap = 'g'
-c_gse = 'r'
+### Line plots
+parameters_text = [
+    "Néel\n$J_2=0$",
+    "Critical\n$J_2=1/2$",
+    "Stripe\n$J_2=1$"]
+c_th = 'dodgerblue'
+c_gap = 'limegreen'
+c_gse = 'darksalmon'
 ax_col1 = [fig.add_subplot(gs[0, 0], sharex=None),]
 ax_col1 += [fig.add_subplot(gs[i, 0], sharex=None if i == 0 else ax_col1[0]) for i in range(1,3)]
 for i, ax in enumerate(ax_col1):
-    l1 = ax.plot(hlist, ths[i], color=c_th, marker='^',# if not final else '', 
-                 label="Canting angle")      #Thetas
+    # Theta
+    l1 = ax.plot(hlist, ths[i],
+                 color=c_th,
+                 marker='',# if not final else '', 
+                 label=r"$\theta$"
+                 )      #Thetas
     # x ticks -> same for all
+    ax.set_xticks([0,1,2,3],["$0$","$1$","$2$","$3$",])
     ax.tick_params(axis='x',
                    which='both',      # apply to both major and minor ticks
                    direction='in',    # ticks point inward
                    top=True,          # show ticks on top
                    bottom=True,       # show ticks on bottom
-                   labelsize=s_ticklabel,
+                   labelsize=7,
                    labeltop=True if i==0 else False,
                    labelbottom=False,
-                   pad=2,
-                   length=5)          # tick length (optional)
+                   pad=1,
+                   length=3,
+                   )          # tick length (optional)
     if i == 0:
         #ax.xaxis.tick_top()
-        ax.set_xlabel(r"Magnetic field $h$",size=s_label)
+        ax.set_xlabel(r"Magnetic field $h$",
+                      size=s_norm)
         ax.xaxis.set_label_position('top')
     # y -> theta
-    ax.set_yticks([0,np.pi/6,np.pi/4,np.pi/3,np.pi/2],[r"$0$",r"$\pi/6$",r"$\pi/4$",r"$\pi/3$",r"$\pi/2$"])
+    ax.set_yticks([0,np.pi/4,np.pi/2],[r"$0$",r"$\frac{\pi}{4}$",r"$\frac{\pi}{2}$"])
     ax.tick_params(axis='y',
                    which='both',      # apply to both major and minor ticks
                    direction='in',    # ticks point inward
                    left=True,          # show ticks on top
                    right=False,       # show ticks on bottom
-                   length=5,
-                   labelsize=s_ticklabel,
+                   length=3,
+                   labelsize=7,
                    colors=c_th
                    )          # tick length (optional)
     ax.set_ylabel(parameters_text[i],
                   rotation=0,
-                  size=s_parameters,
-                  labelpad=75,
+                  size=s_norm,
+                  labelpad=25,
                   bbox=dict(facecolor='white',    # box fill color
                         edgecolor='black',   # border color
                         boxstyle='round,pad=0.3')
                   )
     # Gap
     ax_r = ax.twinx()
-    l2 = ax_r.plot(hlist, gaps[i]/4, color=c_gap, marker='x',# if not final else '',
-                   label="Gap")      #Gap
+    l2 = ax_r.plot(hlist,
+                   gaps[i]/4,
+                   color=c_gap,
+                   marker='',# if not final else '',
+                   label="Gap"
+                   )      #Gap
     # y -> gap
     ax_r.tick_params(axis='y',
                    which='both',      # apply to both major and minor ticks
                    direction='in',    # ticks point inward
                    left=False,          # show ticks on top
                    right=True,       # show ticks on bottom
-                   length=10,
-                     width=2,
-                   labelsize=s_ticklabel,
+                   length=3,
+                   #width=2,
+                   labelsize=5,
                    colors=c_gap
                    )          # tick length (optional)
     #ax_r.yaxis.set_major_locator(MaxNLocator(nbins=3))  # try 3–6 for a sparser axis
@@ -141,10 +160,15 @@ for i, ax in enumerate(ax_col1):
         ax_r.set_yticks([0,0.1,0.2],[r"$0.0$",r"$0.1$",r"$0.2$"])
     else:
         ax_r.set_yticks([0,0.05,0.1],[r"$0.00$",r"$0.05$",r"$0.10$"])
+    #ax_r.set_yticklabels([])
     # GSE
     ax_r = ax.twinx()
-    l3 = ax_r.plot(hlist, gse[i]/4, color=c_gse, marker='o',# if not final else '',
-                   label="GS energy")      #GS energy
+    l3 = ax_r.plot(hlist,
+                   gse[i]/4,
+                   color=c_gse,
+                   marker='',# if not final else '',
+                   label=r"$E_{GS}$"
+                   )      #GS energy
     # y -> gap
     ax_r.set_yticks([-0.5,-0.3,-0.1],[r"$-0.5$",r"$-0.3$",r"$-0.1$"])
     ax_r.tick_params(axis='y',
@@ -152,24 +176,27 @@ for i, ax in enumerate(ax_col1):
                    direction='in',    # ticks point inward
                    left=False,          # show ticks on top
                    right=True,       # show ticks on bottom
-                   length=10,
-                     width=2,
-                     #pad=20,
-                   labelsize=s_ticklabel,
+                   length=3,
+                   #width=2,
+                   pad=-0.,
+                   labelsize=5,#s_verysmall,
                    colors=c_gse
                    )          # tick length (optional)
+    #ax_r.set_yticklabels([])
     # Legend
-    if i== 0:
+    if i==2:
         labels = [l.get_label() for l in l1+l2+l3]
         ax.legend(l1+l2+l3,
                   labels,
-                  fontsize=s_legend,
+                  fontsize=s_verysmall,
+                  handlelength=1,
+                  handletextpad=0.3,
+                  labelspacing=0.2,
                   loc=(0.05,0.1)
                   )
 
 
-# Dispersion
-s_ticks = 13
+### Dispersion
 pane_col = (1.0, 0.973, 0.906)#,0.5)
 
 h_title = [r"$h=0$",r"$h=1$",r"$h=2$",r"$h=3$"]
@@ -188,8 +215,18 @@ for i in range(3):      #row
         ax.zaxis.set_pane_color(pane_col)
         ax.grid(False)
         # x-y ticks
-        ax.set_xticks([0,np.pi,2*np.pi],[r"$0$",r"$\pi$",r"$2\pi$"],size=s_ticks)
-        ax.set_yticks([0,np.pi,2*np.pi],[r"$0$",r"$\pi$",r"$2\pi$"],size=s_ticks)
+        ax.set_xticks([0,np.pi,2*np.pi],[r"$0$",r"$\pi$",r"$2\pi$"])
+        ax.set_yticks([0,np.pi,2*np.pi],[r"$0$",r"$\pi$",r"$2\pi$"])
+        ax.tick_params(
+            axis='x',
+            pad=-6,
+            labelsize=5,
+        )
+        ax.tick_params(
+            axis='y',
+            pad=-6,
+            labelsize=5,
+        )
         # x-y grid
         xmin,xmax = ax.get_xlim()
         ymin,ymax = ax.get_ylim()
@@ -199,13 +236,18 @@ for i in range(3):      #row
         ax.set_xlim(xmin,xmax)
         ax.set_ylim(ymin,ymax)
         # z-labels
-        ax.zaxis.set_major_locator(MaxNLocator(nbins=4))
+        ax.zaxis.set_major_locator(MaxNLocator(nbins=3))
         if j!=3:
             ax.set_zticklabels([])
+        ax.tick_params(
+            axis='z',
+            labelsize=5,
+            pad=-4
+        )
         # Title
         if i==0:
             ax.set_title(h_title[j],
-                         size=s_parameters,
+                         size=s_norm,
                          bbox=dict(facecolor='white',    # box fill color
                                    edgecolor='black',   # border color
                                    boxstyle='round,pad=0.3')
@@ -223,15 +265,18 @@ for i in range(3):  # columns 2–5
         axes_3d[i][j].set_zlim(zmin, zmax)
 
 plt.subplots_adjust(
-    bottom = 0.014,
-    top = 0.944,
-    right = 0.987,
-    left = 0.104
+#    bottom = 0.014,
+#    top = 0.944,
+#    right = 0.987,
+#    left = 0.104
 )
 
 if final:
-    fig.savefig("Figures/dipsersions.png")
-plt.show()
+    plt.savefig(
+        "Figures/periodicDispersions.pdf",
+        bbox_inches="tight"
+    )
+#plt.show()
 
 
 

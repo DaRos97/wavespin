@@ -91,13 +91,14 @@ else:
                  )
 
 
-fig = plt.figure(figsize=(8.27*2,7))
-gs = fig.add_gridspec(1, 3, width_ratios=[1, 2, 1], wspace=0.1)
-s_legend = 20
-s_ticklabel = 15
-s_label = 20
+fig = plt.figure(figsize=(4.65,1.5))
+gs = fig.add_gridspec(1, 3, width_ratios=[1, 2, 1], wspace=0.25)
+s_norm = 10
+s_small = 8
+s_int = 8
+s_verysmall = 7
 
-# Full rate at different amplitudes
+### Full rate at different amplitudes
 ax = fig.add_subplot(gs[0])
 amplitudes = (0.5,1)#,10)
 
@@ -111,28 +112,32 @@ for iA,A in enumerate(amplitudes):
         evals[1:],
         data[1:],
         color=colors[iA],
+        s=4,
         label=r'$A=%.2f$'%A,
     )
 ax.legend(
     loc='upper left',
-    fontsize=s_legend
+    fontsize=s_verysmall,
+    handlelength=0.5,
+    handletextpad=0.5
 )
 
-ax.xaxis.set_major_locator(MaxNLocator(nbins=7))
+ax.xaxis.set_major_locator(MaxNLocator(nbins=6))
 ax.tick_params(axis='both',
                which='both',      # apply to both major and minor ticks
                direction='in',    # ticks point inward
                top=True,          # show ticks on top
                bottom=True,       # show ticks on bottom
                left=True,       # show ticks on bottom
-               labelsize=s_ticklabel,
-               #pad=2,
-               length=5)          # tick length (optional)
-ax.set_xlabel("Energy(g)",size=s_label)
-ax.set_ylabel("Decay rate [MHz]",size=s_label)
+               labelsize=s_verysmall,
+               pad=2,
+               length=3,
+               )          # tick length (optional)
+ax.set_xlabel("Energy(g)",size=s_small)
+ax.set_ylabel("Decay rate [MHz]",size=s_small)
 #ax.set_yscale('log')
 
-# Full rate as a function of amplitude for the first modes
+### Full rate as a function of amplitude for the first modes
 ax = fig.add_subplot(gs[1])
 #amplitudes = np.linspace(0.05,10,10)
 amplitudes = np.logspace(-0.5,2,20)
@@ -153,6 +158,8 @@ for i_n in ns:
         marker='o',
         #ls='--',
         color=cmap(norm(evals[i_n])),
+        markersize=2,
+        lw=0.5
     )
 ax.set_yscale('log')
 ax.set_xscale('log')
@@ -170,12 +177,16 @@ for i in range(len(pows)):
         ls='--',
         color=colors[i],
         zorder=10+i,
-        lw=2,
+        lw=1,
         label=r"$\sim A^%d$"%pows[i]
     )
 
 ax.set_ylim(ymin,ymax)
-ax.legend(fontsize=s_legend)
+ax.legend(
+    fontsize=s_verysmall,
+    handlelength=1,
+    #handletextpad=0.5
+)
 
 #ax.xaxis.set_major_locator(MaxNLocator(nbins=7))
 ax.tick_params(axis='both',
@@ -184,12 +195,13 @@ ax.tick_params(axis='both',
                top=True,          # show ticks on top
                bottom=True,       # show ticks on bottom
                left=True,       # show ticks on bottom
-               labelsize=s_ticklabel,
-               #pad=2,
-               length=5)          # tick length (optional)
-ax.set_xlabel("Amplitude",size=s_label)
+               labelsize=s_verysmall-2,
+               pad=2,
+               length=3
+               )          # tick length (optional)
+ax.set_xlabel("Amplitude",size=s_small)
 
-## Decay rate as a function of state energy for first few modes
+### Decay rate as a function of state energy for first few modes
 ax = fig.add_subplot(gs[2])
 
 for i_n in ns:
@@ -199,6 +211,8 @@ for i_n in ns:
         marker='o',
         ls='--',
         color=cmap(norm(evals[i_n])),
+        markersize=2,
+        lw=0.5
     )
 ax.set_yscale('log')
 ax.set_xscale('log')
@@ -208,10 +222,11 @@ ax.tick_params(axis='both',
                top=True,          # show ticks on top
                bottom=True,       # show ticks on bottom
                left=True,       # show ticks on bottom
-               labelsize=s_ticklabel,
-               #pad=2,
-               length=5)          # tick length (optional)
-ax.set_xlabel("State energy from GS",size=s_label)
+               labelsize=s_verysmall-2,
+               pad=2,
+               length=3,
+               )          # tick length (optional)
+ax.set_xlabel("State energy from GS",size=s_small)
 
 # Fit line
 ymin,ymax = ax.get_ylim()
@@ -222,31 +237,42 @@ ax.plot(
     ls='--',
     color='r',
     zorder=10,
-    lw=2,
+    lw=1,
     label=r"$\sim E$"
 )
-ax.legend(fontsize=s_legend)
+ax.legend(
+    fontsize=s_verysmall,
+    handlelength=1,
+    #handletextpad=0.5
+)
 
 # Colorbar
 sm = cm.ScalarMappable(cmap=cmap, norm=norm)
 sm.set_array([])  # required for colorbar
 cbar = plt.colorbar(sm, ax=ax)
-cbar.set_label('Energy(g)',size=s_label)
-
-
-# Adjust figure
-plt.subplots_adjust(
-    bottom = 0.092,
-    top = 0.96,
-    right = 0.956,
-    left = 0.054,
-#    wspace=0.15,
+cbar.set_label('Energy(g)',size=s_small)
+cbar.ax.tick_params(
+    axis='y',
+    length=2,
+    labelsize=s_verysmall
 )
 
-if final:
-    fig.savefig("Figures/lifetimeMagnons.png")
 
-plt.show()
+if 0:
+    # Adjust figure
+    plt.subplots_adjust(
+        bottom = 0.092,
+        top = 0.96,
+        right = 0.956,
+        left = 0.054,
+    #    wspace=0.15,
+    )
+
+if final:
+    fig.savefig(
+        "Figures/lifetimeMagnons.pdf",
+        bbox_inches="tight",
+    )
 
 
 

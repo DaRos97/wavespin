@@ -40,6 +40,7 @@ else:
     parameters.cor_correlatorType = 'zz'
     parameters.cor_transformType = 'dct'
     parameters.dia_excludeZeroMode = True
+    parameters.cor_perturbationSite = (3,4)
     num_k_bins = 50
     k_bins = np.linspace(0,np.sqrt(2)*np.pi, num_k_bins + 1)
     k_centers = 0.5 * (k_bins[:-1] + k_bins[1:])
@@ -77,10 +78,15 @@ else:
                  W_m=W_m)
 
 # Figure
-fig = plt.figure(figsize=(15,5))
-gs = fig.add_gridspec(1,5, wspace=0.05)
-
+fig = plt.figure(figsize=(4.65,1.5))
+gs = fig.add_gridspec(
+    1,5,
+    wspace=0.05
+)
 axes_2d = [fig.add_subplot(gs[j]) for j in range(5)]
+
+s_norm = 10
+s_small = 9
 
 min1 = []
 max1 = []
@@ -93,9 +99,6 @@ vmax = np.max(np.array(max1)) / 10
 
 mesh1 = []
 mesh2 = []
-s_title = 20
-s_tick = 15
-s_label = 20
 for i in range(5):
     ax = axes_2d[i]
     mag1 = corr[i][0]/10
@@ -106,40 +109,54 @@ for i in range(5):
                   W_m/10,
                   np.ma.masked_where(~mask1,mag1),
                   cmap='Reds',
-                  norm=SqrtNorm(vmin=vmin,vmax=vmax)
+                  norm=SqrtNorm(vmin=vmin,vmax=vmax),
+                  rasterized=True
                   )
                  )
     mesh2.append( ax.pcolormesh(K_m,
                   W_m/10,
                   np.ma.masked_where(~mask2,mag2),
                   cmap='Blues',
-                  norm=SqrtNorm(vmin=vmin,vmax=vmax)
+                  norm=SqrtNorm(vmin=vmin,vmax=vmax),
+                  rasterized=True
                   )
                  )
     ax.set_ylim(-4,4)
-    ax.set_title(r"$\alpha=%.3f$"%stopRatios[i],size=s_title)
+    ax.set_title(r"$\alpha=%.3f$"%stopRatios[i],size=s_norm)
     if i == 0:
-        ax.set_ylabel(r"$\omega(g)$",size=s_label)
+        ax.set_ylabel(r"$\omega(g)$",size=s_norm)
     else:
         ax.set_yticklabels([])
     ax.yaxis.set_ticks_position('both')  # place ticks on both sides
     ax.xaxis.set_ticks_position('both')  # place ticks on both sides
-    ax.tick_params(axis='both',direction='in',length=7,width=1,pad=3,labelsize=20)
+    ax.tick_params(
+        axis='both',
+        direction='in',
+        length=4,
+        width=0.8,
+        pad=3,
+        labelsize=s_small
+    )
     ax.set_xticks(np.arange(0,5,1),[str(i) for i in np.arange(0,5,1)])
-    ax.set_xlabel(r'$|k|$',fontsize=s_label)
+    ax.set_xlabel(
+        r'$|k|$',
+        fontsize=s_norm
+    )
 
 
 #Blue cb
+xb = 0.95
 yb = 0.14
 hb = 0.78
-cbar_ax2 = fig.add_axes([0.93, yb, 0.02, hb])  # [left, bottom, width, height]
+wb = 0.02
+cbar_ax2 = fig.add_axes([xb, yb, wb, hb])  # [left, bottom, width, height]
 cbar = fig.colorbar(mesh2[-1], cax=cbar_ax2)
-cbar.set_label("$2$-magnon",size=s_title)
+cbar.set_label("$2$-magnon",size=s_norm)
 cbar.ax.yaxis.set_label_position('left')
 cbar.set_ticks([])
-cbar_ax1 = fig.add_axes([0.95, yb, 0.02, hb])  # [left, bottom, width, height]
+cbar_ax1 = fig.add_axes([xb+wb, yb, wb, hb])  # [left, bottom, width, height]
 cbar = fig.colorbar(mesh1[-1], cax=cbar_ax1)
-cbar.set_label("$1$-magnon",size=s_title)
+cbar.set_label("$1$-magnon",size=s_norm)
 cbar.ax.yaxis.set_label_position('right')
 cbar.set_ticks([])
 
@@ -153,9 +170,11 @@ plt.subplots_adjust(
 
 
 if final:
-    fig.savefig("Figures/magnonContributions.png")
-
-plt.show()
+    plt.savefig(
+        "Figures/magnonContributions.pdf",
+        bbox_inches="tight",
+        dpi=600
+    )
 
 
 

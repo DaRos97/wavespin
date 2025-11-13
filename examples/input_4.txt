@@ -2,8 +2,8 @@
 # Use '#' to comment a line and ':' to assign a value
 
 # Lattice options
-Lx: 4
-Ly: 4
+Lx: 7
+Ly: 9
 # Tilted-rectangular proper: 84 
 #Lx: 12
 #Ly: 13

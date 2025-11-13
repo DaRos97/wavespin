@@ -11,6 +11,12 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
 final = True
+if final:
+    plt.rcParams.update({
+        "text.usetex": True,              # Use LaTeX for all text
+        "font.family": "serif",           # Set font family
+        "font.serif": ["Computer Modern"], # Default LaTeX font
+    })
 
 save = True
 Lx = 30
@@ -34,12 +40,6 @@ else:
     if save:
         np.savez(dataFn,phi=phi)
 
-if final:
-    plt.rcParams.update({
-        "text.usetex": True,              # Use LaTeX for all text
-        "font.family": "serif",           # Set font family
-        "font.serif": ["Computer Modern"], # Default LaTeX font
-    })
 
 
 X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
@@ -74,18 +74,17 @@ vmax = np.max(maxs)
 datasets = [data_a,data_diff,data_cos]
 mesh = []
 
-fig = plt.figure(figsize=(20,12))
-gs = fig.add_gridspec(3, 4, wspace=0.05, hspace=0.02)
+fig = plt.figure(figsize=(4.65,3))
+gs = fig.add_gridspec(3, 4, wspace=0.0, hspace=0.02)
+
+s_norm = 10
+s_small = 9
+s_verysmall = 7
 
 axes_3d = [[fig.add_subplot(gs[i, j], projection='3d') for j in range(4)] for i in [0,2]]
 axes_2d = [fig.add_subplot(gs[1, j]) for j in range(4)]
 
 pane_col = (1.0, 0.973, 0.906)#,0.5)
-s_label = 20
-s_label_cb = 20
-s_tick = 15
-s_title = 20
-s_text = 30
 for i in range(3):      #row
     data = datasets[i]
     for j in range(4):      #columns
@@ -96,24 +95,32 @@ for i in range(3):      #row
             ax.xaxis.set_pane_color(pane_col)
             ax.yaxis.set_pane_color(pane_col)
             ax.zaxis.set_pane_color(pane_col)
-            ax.set_zticks([-1,0,1],[r"$-1$",r"$0$",r"$1$"])
             #
-            ax.set_xlabel('x',size=s_label,labelpad=-10)
-            ax.set_ylabel('y',size=s_label,labelpad=-10)
+            ax.set_zticks([-1,0,1],[r"$-1$",r"$0$",r"$1$"])
+            ax.tick_params(
+                axis='z',
+                labelsize=s_verysmall,
+                pad=-3
+            )
+            #
+            ax.set_xlabel('x',size=s_verysmall,labelpad=-18)
+            ax.set_ylabel('y',size=s_verysmall,labelpad=-18)
             ax.set_xticklabels([])
             ax.set_yticklabels([])
         if i==0:
             ax.set_title(r"mode $n=%d$"%inds_a[j],
-                         size=s_title,
+                         size=s_small,
                          bbox=dict(facecolor=pane_col,    # box fill color
+                                   linewidth=0.2,
                                    edgecolor='black',   # border color
                                    boxstyle='round,pad=0.2')
                          )
         if i==2:
             ax.set_title(r"$k_x=%d$, $k_y=%d$"%inds_k[j],
-                         size=s_title,
-                         y=-0.25,
+                         size=s_small,
+                         y=-0.4,
                          bbox=dict(facecolor=pane_col,    # box fill color
+                                   linewidth=0.2,
                                    edgecolor='black',   # border color
                                    boxstyle='round,pad=0.2')
                          )
@@ -130,52 +137,60 @@ for i in range(3):      #row
                            left=True,          # show ticks on top
                            right=True,       # show ticks on bottom
                            top=True,
-                           length=8,
+                           length=3,
                            )          # tick length (optional)
+            ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
+            ax.xaxis.set_major_locator(MaxNLocator(nbins=5))
+            ax.set_aspect('equal')
             if 0:
-                ax.set_ylabel("y",size=s_label,rotation=0)
+                ax.set_ylabel("y",size=s_small,rotation=0)
             else:
                 ax.set_yticklabels([])
                 ax.set_xticklabels([])
             #ax.set_xlabel("x",size=s_label)
 
 # Colorbar
-cbar_ax = fig.add_axes([0.96, 0.375, 0.01, 0.285])  # [left, bottom, width, height]
+cbar_ax = fig.add_axes([0.98, 0.37, 0.015, 0.25])  # [left, bottom, width, height]
 cbar = fig.colorbar(mesh[2], cax=cbar_ax)
 if 0:
     plt.figtext(
         0.96, 0.67,             # x (centered), y (slightly above top)
         r"$\Delta^2$",    # label text
-        size=s_label + 3
+        size=s_norm
     )
 #cbar.ax.xaxis.set_label_position('top')  # move label to top
-cbar.ax.tick_params(labelsize=s_tick)
+cbar.ax.tick_params(labelsize=s_verysmall)
+cbar.ax.yaxis.set_major_locator(MaxNLocator(nbins=3))
 
 # titles
-xd = 0.01
+xd = 0.005
 hd = 0.81
 wd = 0.305
 txt = ["Eigenstate","Difference","Cosine"]
 for i in range(3):
     plt.figtext(xd,hd-i*wd,
                 txt[i],
-                size=s_text,
+                size=s_norm,
                 bbox=dict(facecolor='white',    # box fill color
+                          linewidth=0.1,
                           edgecolor='black',   # border color
                           boxstyle='round,pad=0.3')
                 )
 
 
-plt.subplots_adjust(
-    bottom = 0.078,
-    top = 0.956,
-    right = 0.951,
-    left = 0.107
-)
+if 1:
+    plt.subplots_adjust(
+        #bottom = 0.078,
+        #top = 0.956,
+        right = 0.99,
+        left = 0.15
+    )
 
 if final:
-    fig.savefig("Figures/awesomeFunctions.png")
-plt.show()
+    plt.savefig(
+        "Figures/awesomeFunctions.pdf",
+        bbox_inches="tight"
+    )
 
 
 

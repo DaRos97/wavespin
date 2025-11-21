@@ -16,8 +16,11 @@ class latticeClass():
         self.indexToSite = self._mapIndexSite()
         self.Ns = self.Lx*self.Ly - len(self.offSiteList)
         self.boundary = p.lat_boundary
-        if self.boundary == 'periodic' and len(self.offSiteList) != 0:
-            raise ValueError("Periodic and non-rectangular lattice not implemented")
+        if self.boundary == 'periodic':
+            if len(self.offSiteList) != 0:
+                raise ValueError("Periodic and non-rectangular lattice not implemented")
+            if self.Lx%2 or self.Ly%2:
+                raise ValueError("For PBC we need even Lx and Ly")
         # Precompute neighbors
         self.NN = self._build_nn()
         self.NNN = self._build_nnn()

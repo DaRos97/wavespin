@@ -31,6 +31,7 @@ class myParameters:
     dia_uniformQA: bool = True                  #
     dia_saveWf: bool = False                    #
     dia_plotWf: bool = False                    #
+    dia_plotDiffusionSolutions: bool = False    #
     dia_plotMomenta: bool = False               #
     # Correlators
     cor_correlatorType: str = 'zz'              #

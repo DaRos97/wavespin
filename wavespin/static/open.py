@@ -32,6 +32,7 @@ class openHamiltonian(latticeClass):
         self.h_i = self._Hterms(self.h,self.h_disorder)
         # Diagonalize Hamiltonian to get eigenvalues and Bogoliubov fuunctions
         self.diagonalize()
+        self.GSE = self.get_GSE()
         # self.realSpaceHamiltonian = self._realSpaceHamiltonian()
         if self.boundary == 'periodic':
             self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
@@ -167,7 +168,7 @@ class openHamiltonian(latticeClass):
         """ Compute temperature given the energy.
         Since the E(T) function is not invertible we have to compute E for a bunch of Ts and extract graphically the T.
         """
-        if Eref == -100:
+        if Eref == self.GSE:
             return 0
         Nbonds = np.sum(self._NNterms(1)) // 2
         GS_energy = self.get_GSE()
@@ -182,6 +183,8 @@ class openHamiltonian(latticeClass):
             raise ValueError("Input state energy larger then max magnon one %.3f"%tempE[-1])
         Tmin = self.evals[ np.argmin( (Eref-tempE)[Eref>tempE] ) ]
         Tmax = self.evals[ np.argmin( (Eref-tempE)[Eref>tempE] ) +1 ]
+        if Tmin==0:
+            Tmin += 0.5
         Tlist = np.linspace(Tmin,Tmax,100)
         e_list = np.zeros(len(Tlist))
         for i in range(len(Tlist)):
@@ -342,6 +345,8 @@ class openHamiltonian(latticeClass):
             psi_ = (A+B)@phi_/self.evals       # Problem also here
             self.U_ = 1/2*(phi_+psi_)
             self.V_ = 1/2*(phi_-psi_)
+            if self.p.dia_excludeZeroMode:
+                self.evals[0] = 0               # Set again to 0 the gapless mode
             self.Phi = np.real(self.U_-self.V_)
             for n in range(self.Ns):
                 x,y = self._xy(n)
@@ -364,7 +369,7 @@ class openHamiltonian(latticeClass):
             self.V_[:,0] *= 0
         if self.p.dia_plotWf:
             #plotWf3D(self)
-            plotWf2D(self,nModes=30)#self.Ns)
+            plotWf2D(self,nModes=self.Ns if self.Ns<=30 else 30)
             #plotWfCos(self)
         if self.p.dia_plotMomenta:
             plotBogoliubovMomenta(self,**kwargs)
@@ -525,6 +530,7 @@ class openSystem(openHamiltonian):
         """ Here we compute the correlator in real space.
         """
         temperature = self._temperature(self.p.cor_energy)
+        print("Temperature: %.3f MHz"%temperature)
         txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
         argsFn = ('correlatorXT',self.p.cor_correlatorType,self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian,
                   txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
@@ -549,48 +555,75 @@ class openSystem(openHamiltonian):
             H_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.U_,self.U_,optimize=True)
             if temperature != 0:
                 exp_e_c = np.exp(1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
-                BF = 1/(np.exp(self.evals/temperature)-1)
+                #exp_e_c = exp_e.conj()
+                BF = np.zeros(self.Ns)
+                BF[1:] = 1/(np.exp(self.evals[1:]/temperature)-1)
+                #
                 A2  = np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e, optimize=True)
-                A2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e_c,optimize=True)
+                #A2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e_c,optimize=True)
                 #A2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.U_,exp_e, optimize=True)
                 #A2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.V_,exp_e_c,optimize=True)
                 #
                 B2  = np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e, optimize=True)
-                B2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e_c,optimize=True)
+                #B2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e_c,optimize=True)
                 #B2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.V_,exp_e, optimize=True)
                 #B2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.U_,exp_e_c,optimize=True)
                 #
                 G2  = np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e, optimize=True)
-                G2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e_c,optimize=True)
+                #G2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e_c,optimize=True)
                 #G2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.V_,exp_e, optimize=True)
                 #G2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.U_,exp_e_c,optimize=True)
                 #
                 H2  = np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e, optimize=True)
-                H2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e_c,optimize=True)
+                #H2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e_c,optimize=True)
                 #H2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.U_,exp_e, optimize=True)
                 #H2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.V_,exp_e_c,optimize=True)
             else:
                 A2 = B2 = G2 = H2 = 0
             Af = A_GS + A2
             Bf = B_GS + B2
-            Gf = G_GS + G2
-            Hf = H_GS + H2
+            Gf = G_GS + 2*G2
+            Hf = H_GS + 2*H2
+            if 0:
+                print("A_ij")
+                print("GS : %.3f,%.3f"%(np.max(np.absolute(np.real(A_GS))),np.max(np.absolute(np.imag(A_GS)))))
+                print("T  : %.3f,%.3f"%(np.max(np.absolute(np.real(A2  ))),np.max(np.absolute(np.imag(A2  )))))
+                print("fin: %.3f,%.3f"%(np.max(np.absolute(np.real(Af  ))),np.max(np.absolute(np.imag(Af  )))))
+                print("B_ij")
+                print("GS : %.3f,%.3f"%(np.max(np.absolute(np.real(B_GS))),np.max(np.absolute(np.imag(B_GS)))))
+                print("T  : %.3f,%.3f"%(np.max(np.absolute(np.real(B2  ))),np.max(np.absolute(np.imag(B2  )))))
+                print("fin: %.3f,%.3f"%(np.max(np.absolute(np.real(Bf  ))),np.max(np.absolute(np.imag(Bf  )))))
+                print("G_ij")
+                print("GS : %.3f,%.3f"%(np.max(np.absolute(np.real(G_GS))),np.max(np.absolute(np.imag(G_GS)))))
+                print("T  : %.3f,%.3f"%(np.max(np.absolute(np.real(G2  ))),np.max(np.absolute(np.imag(G2  )))))
+                print("fin: %.3f,%.3f"%(np.max(np.absolute(np.real(Gf  ))),np.max(np.absolute(np.imag(Gf  )))))
+                print("H_ij")
+                print("GS : %.3f,%.3f"%(np.max(np.absolute(np.real(H_GS))),np.max(np.absolute(np.imag(H_GS)))))
+                print("T  : %.3f,%.3f"%(np.max(np.absolute(np.real(H2  ))),np.max(np.absolute(np.imag(H2  )))))
+                print("fin: %.3f,%.3f"%(np.max(np.absolute(np.real(Hf  ))),np.max(np.absolute(np.imag(Hf  )))))
+                input()
             if temperature != 0 and 0:
                 fig = plt.figure(figsize=(12,12))
-                funcs = [A_GS,B_GS,G_GS,H_GS]
-                funcs2 = [A2,B2,G2,H2]
-                ss = [-1,+1,-self.Ly,self.Ly]
-                for iA in range(4):
-                    f = np.real(funcs[iA][:,self.perturbationIndex,:])
-                    fi = np.imag(funcs[iA][:,self.perturbationIndex,:])
-                    f2 = np.real(funcs2[iA][:,self.perturbationIndex,:])
-                    f2i = np.imag(funcs2[iA][:,self.perturbationIndex,:])
+                funcs = [Af,Bf,Gf,Hf,Gf+Hf]
+                funcs1 = [A_GS,B_GS,G_GS,H_GS,G_GS+H_GS]
+                funcs2 = [A2,B2,G2,H2,G2+H2]
+                pI = self.perturbationIndex
+                ss = pI + np.array([-1,+1,-self.Ly,self.Ly],dtype=int)
+                for iA in range(5):
+                    f = np.real(funcs[iA][:,pI,:])
+                    fi = np.imag(funcs[iA][:,pI,:])
+                    f1 = np.real(funcs1[iA][:,pI,:])
+                    f1i = np.imag(funcs1[iA][:,pI,:])
+                    f2 = np.real(funcs2[iA][:,pI,:])
+                    f2i = np.imag(funcs2[iA][:,pI,:])
                     for ix in range(4):
-                        ax = fig.add_subplot(4,4,iA*4+ix+1)
-                        ax.plot(self.measureTimeList,f[self.perturbationIndex+ss[ix],:],color='r')
-                        ax.plot(self.measureTimeList,fi[self.perturbationIndex+ss[ix],:],color='orange')
-                        ax.plot(self.measureTimeList,f2[self.perturbationIndex+ss[ix],:],color='b')
-                        ax.plot(self.measureTimeList,f2i[self.perturbationIndex+ss[ix],:],color='aqua')
+                        ax = fig.add_subplot(5,4,iA*4+ix+1)
+                        #ax.plot(self.measureTimeList,f[ss[ix],:],color='r')
+                        ax.plot(self.measureTimeList,fi[ss[ix],:],color='orange')
+                        #ax.plot(self.measureTimeList,f1[ss[ix],:],color='g')
+                        ax.plot(self.measureTimeList,f1i[ss[ix],:],color='forestgreen')
+                        #ax.plot(self.measureTimeList,f2[ss[ix],:],color='b')
+                        ax.plot(self.measureTimeList,f2i[ss[ix],:],color='aqua')
                         ax.set_xlim(0,0.1)
                 plt.show()
             #
@@ -708,7 +741,7 @@ class openRamp():
         iterBog = tqdm(range(self.nP),desc="Computing Bogoliubov transformation and correlator") if verbose else range(self.nP)
         for i in iterBog:
             # Compute Bogoliubov transformation matrices and eigenvalues
-            self.rampElements[i].diagonalize(verbose=verbose)
+            #self.rampElements[i].diagonalize(verbose=verbose)
             # Compute Correlators
             self.rampElements[i].realSpaceCorrelator(verbose=verbose)
             # Bond correlators

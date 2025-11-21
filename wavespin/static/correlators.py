@@ -385,3 +385,4 @@ dicCorrelators = {
     'xx':xxCorrelator,
     'jj':jjCorrelator,
 }
+

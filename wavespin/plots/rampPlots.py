@@ -99,10 +99,8 @@ def plotRampKW(ramp, **kwargs):
                 P_k_omega[i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
         P_k_omega_p.append(P_k_omega)
     # Figure
-    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4),nRows=2,nCols=nP//2)
+    fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))
     #fig, axes = plt.subplots(1,5,figsize=(14,4))
-    rows = 1
-    cols = 5
     if hasattr(sys0,'magnonModes'):
         txtMagnon = ', magnons mode(s): '
         for i in sys0.magnonModes:
@@ -114,16 +112,13 @@ def plotRampKW(ramp, **kwargs):
     title = 'Commutator: ' + sys0.p.cor_correlatorType + ', momentum transform: ' + transformType + txtMagnon
     #plt.suptitle(title,fontsize=20)
     ylim = kwargs.get('ylim',7)
-    vmax1 = np.max(P_k_omega_p[:5])
-    vmax2 = np.max(P_k_omega_p[5:])
+    vmax = np.max(np.array(P_k_omega_p))/10
     for iP in range(nP):
         W_mesh = W_mesh_p[iP]
         K_mesh = K_mesh_p[iP]
         W_mesh /= 10
         P_k_omega = P_k_omega_p[iP]
         P_k_omega /= 10
-        vmax = vmax1 if iP<5 else vmax2
-        vmax /= 10
         ax = axes[iP]
         ax.set_facecolor('black')
         mesh = ax.pcolormesh(K_mesh, W_mesh, P_k_omega,
@@ -144,10 +139,12 @@ def plotRampKW(ramp, **kwargs):
         ax.tick_params(axis='both',direction='in',length=7,width=1,pad=3,labelsize=20)
         if iP >=5 :
             ax.set_xlabel(r'$|k|$',fontsize=20)
-        if iP < 5:
+        if iP < 5 or 1:
             ax.set_xticklabels([])
             stopRatio = ramp.rampElements[iP].g1 / 10
-            ax.set_title(r"$\alpha=$%.3f"%stopRatio,size=25)
+            #ax.set_title(r"$\alpha=$%.3f"%stopRatio,size=25)
+            cor_en = ramp.rampElements[iP].p.cor_energy
+            ax.set_title(r"$E=$%.3f"%cor_en,size=25)
 
         x_cb = 0.94
         y_cb2 = 0.081
@@ -242,6 +239,30 @@ def plotWf2D(system,nModes=25):
         axes[ik].axis('off')
     plt.suptitle("Modes from bogoliubov transformation",size=20)
     fig.tight_layout()
+
+    if system.p.dia_plotDiffusionSolutions:
+        from wavespin.tools.functions import solve_diffusion_eigenmodes_xy
+        sites = []
+        for ix in range(system.Lx):
+            for iy in range(system.Ly):
+                sites.append((ix,iy))
+        for i in system.offSiteList:
+            sites.remove(i)
+        diffEvals, diffEvecs = solve_diffusion_eigenmodes_xy(sites)
+        fig, axes, rows, cols = createFigure(nModes)#,nRows=Lx,nCols=Ly)#nCols=nModes//2 if nModes!=system.Ns else Lx,nRows=nModes//2 if nModes!=system.Ns else Lx)
+        for n in range(nModes):
+            ax = axes[n]
+            formattedDiff = system.patchFunction(diffEvecs[:,n])
+            ax.pcolormesh(X,Y,
+                          formattedDiff,
+                          cmap='bwr'
+                          )
+            ax.set_title("Mode: %d, Evals: %.3f"%(n,diffEvals[n]))
+            ax.set_aspect('equal')
+        for ik in range(nModes,len(axes)):
+            axes[ik].axis('off')
+        plt.suptitle("Modes from diffusion equation",size=20)
+        fig.tight_layout()
     plt.show()
 
 def plotWfCos(system,nModes=6):

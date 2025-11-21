@@ -22,29 +22,156 @@ parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 """ Initialize and diagonalize system """
 parameters.dia_Hamiltonian = (10,0,0,0,0,0)
 sca_types = (
-    #'1to2_1','1to2_2',
+    '1to2_1','1to2_2',
     '2to2_1','2to2_2',
-    #'1to3_1','1to3_2','1to3_3',
+    '1to3_1','1to3_2','1to3_3',
 )
-
 parameters.sca_types = sca_types
-system = openHamiltonian(parameters)
-
-#best_modes = np.array([17,18,19,20,24,25,26,27,30,31,32,34])
-#kwargs = {'best_modes':best_modes}
-#system.diagonalize(verbose=verbose,**kwargs)
-
-#system.decayRates(temperature=parameters.sca_temperature,verbose=verbose)
-
-if 1:
+listTs = [8,]
+data = []
+for T in listTs:
+    parameters.sca_temperature = T
+    system = openHamiltonian(parameters)
+    if T==listTs[0]:
+        Phi = system.Phi
+        evals = system.evals[1:]/10
+        Ns = system.Ns
+        maxN = np.zeros(Ns-1)
+        for n in range(1,Ns):
+            maxN[n-1] = np.max(np.absolute(Phi[:,n]))
     system.computeRate(verbose=verbose)
+    data.append(
+        (
+            system.rates['1to2_1']+system.rates['1to3_1']+system.rates['2to2_1'],
+            system.rates['1to2_2']+system.rates['1to3_2']+system.rates['2to2_2'],
+            system.rates['1to3_3'],
+         )
+    )
+
+if 0:   #plot all different scatterings separately
     fig = plt.figure(figsize=(18,10))
     lr = len(sca_types)
     for i in range(lr):
         ax = fig.add_subplot(2,4,1+i%4+4*(i//4))
-        ax.scatter(np.arange(1,system.Ns),system.rates[sca_types[i]][1:])
+        ax.scatter(np.arange(1,system.Ns),system.rates[sca_types[i]])
         ax.set_title(sca_types[i],size=20)
     fig.tight_layout()
+    plt.show()
+
+if 1:
+    fig = plt.figure(figsize=(21,12))
+    s_ = 10
+    ss_ = 15
+    sss_ = 20
+    colors = ['orange','navy','forestgreen']
+    As = [0,0.5,1]
+    for ia in range(len(As)):
+        ax = fig.add_subplot(2,len(As),1+ia)
+        for it in range(len(listTs)):
+            gamma = data[it][0].copy()
+            gamma += data[it][1] * (As[ia] / 2 )**2
+            gamma += data[it][2] * (As[ia] / 2 )**4
+            ax.scatter(
+                np.arange(1,Ns),
+                gamma,
+                marker='o',
+                color=colors[it],
+                label="T: %.1f"%listTs[it]
+            )
+            for n in range(Ns-1):
+                ax.text(
+                    n+1,
+                    gamma[n],
+                    str(n+1),
+                    va='bottom',
+                    size=s_
+                )
+        #ax.legend()
+        ax.set_title("Amplitude: %.1f"%As[ia],size=ss_)
+        ax.set_xlabel("Mode number",size=ss_)
+        ax.set_ylabel(r"$\Gamma$",size=ss_)
+    for ia in range(len(As)):
+        ax = fig.add_subplot(2,len(As),1+len(As)+ia)
+        for it in range(len(listTs)):
+            gamma = data[it][0].copy()
+            gamma += data[it][1] * (As[ia] / 2 )**2
+            gamma += data[it][2] * (As[ia] / 2 )**4
+            ax.scatter(
+                evals,
+                gamma,
+                marker='o',
+                color=colors[it],
+                label="T: %.1f"%listTs[it]
+            )
+            Mg = np.max(gamma)
+            mg = np.min(gamma)
+            for n in range(Ns-1):
+                ax.text(
+                    evals[n],
+                    gamma[n]+1/abs(evals[n]-evals[(n+2)%(Ns-1)])/50 + np.random.rand()*(Mg-mg)/15,
+                    str(n+1),
+                    va='bottom',
+                    size=s_
+                )
+        #ax.legend()
+        ax.set_xlabel("Energy (g)",size=ss_)
+        ax.set_ylabel(r"$\Gamma$",size=ss_)
+    #fig.tight_layout()
+    #plt.suptitle("7x8 rectangle",size=sss_)
+    plt.suptitle("58-sites diamond",size=sss_)
+    plt.show()
+
+if 0:
+    fig = plt.figure(figsize=(8,6))
+    ax = fig.add_subplot()
+    sc = np.zeros((3,system.Ns-1))
+    lr = len(sca_types)
+    for i in range(lr):
+        ty = sca_types[i]
+        sc[int(ty[-1])-1] += system.rates[ty]
+    As = [0,]
+    ls = []
+    for ia in range(len(As)):
+        A = As[ia]
+        data = sc[0]+A**2/2*sc[1]+A**4/4*sc[2]
+        # insert mode 12 at position 8
+        data[7], data[8], data[9], data[10], data[11] = data[11], data[7], data[8], data[9], data[10]
+        ls.append(ax.plot(
+            np.arange(1,system.Ns),
+            data,
+            marker='*',
+            label="A:%.1f"%A,
+            markersize=10
+        )[0])
+    ax_r = ax.twinx()
+    data = system.evals[1:]
+    data[7], data[8], data[9], data[10], data[11] = data[11], data[7], data[8], data[9], data[10]
+    ls.append(ax_r.plot(
+        np.arange(1,system.Ns),
+        data,
+        marker='o',
+        color='r',
+        label='Energies'
+    )[0])
+    ax_r = ax.twinx()
+    from wavespin.tools.functions import solve_diffusion_eigenmodes_xy
+    sites = []
+    for ix in range(system.Lx):
+        for iy in range(system.Ly):
+            sites.append((ix,iy))
+    for i in system.offSiteList:
+        sites.remove(i)
+    diffEvals, diffEvecs = solve_diffusion_eigenmodes_xy(sites)
+    data = diffEvals[1:]
+    data[7], data[8], data[9], data[10], data[11] = data[11], data[7], data[8], data[9], data[10]
+    ls.append( ax_r.plot(
+        np.arange(1,system.Ns),
+        data,
+        marker='o',
+        color='g',
+        label=r'$k^2$'
+    )[0])
+    ax.legend(ls,[lll.get_label() for lll in ls],fontsize=20)
     plt.show()
 
 if 0:

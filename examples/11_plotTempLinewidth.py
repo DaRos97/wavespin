@@ -21,16 +21,43 @@ verbose = inputArguments.verbose
 parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 """ Initialize all the systems and store them in a ramp object """
-energies = np.linspace(-0.55,-0.5,3)
+energies = np.linspace(-0.55,-0.4,3)
 ramp = openRamp()
+parameters.lat_Lx = 7
+parameters.lat_Ly = 9
+Lx = parameters.lat_Lx
+Ly = parameters.lat_Ly
+parameters.cor_plotKW = True
+parameters.cor_perturbationSite = (Lx//2,Ly//2)
 for en in energies:
-    parameters.cor_energy = en if en != energies[0] else -100
     parameters.dia_Hamiltonian = (10,0,0,0,0,0)
     mySystem = openSystem(parameters)
+    mySystem.p.cor_energy = en if en != energies[0] else mySystem.GSE
     ramp.addSystem(mySystem)
 """ Compute correlator XT and KW for all systems in the ramp """
 ramp.correlatorsXT(verbose=verbose)
+
+fig = plt.figure(figsize=(15,15))
+px,py = parameters.cor_perturbationSite
+for ix in range(Lx):
+    for iy in range(Ly):
+        ax = fig.add_subplot(Lx,Ly,1+iy+Ly*ix)
+        for ie in range(len(energies)):
+            idx = ramp.rampElements[ie]._idx(ix,iy)
+            corr = ramp.rampElements[ie].correlatorXT[idx,:100]
+            times = ramp.rampElements[ie].measureTimeList[:100]
+            #ax.plot(times,np.real(corr),label='real E=%.3f'%energies[ie])
+            ax.plot(times,np.imag(corr),label='imag E=%.3f'%energies[ie])
+        ax.set_title("Site: %d,%d"%(ix,iy))
+        if ix==0 and iy==0:
+            ax.legend()
+fig.tight_layout()
+plt.show()
+#exit()
+
 ramp.correlatorsKW(verbose=verbose)
+
+exit()
 
 sys0 = ramp.rampElements[0]
 Ns = sys0.Ns

@@ -19,6 +19,7 @@
 - Same for input parameters
 
 ## Static
+- Define frequently used lattices in lattice class
 - Pass to hdf5 for saving data compactly
 - Put together periodic and open for real space computation
 - Remove ramp class?

@@ -537,18 +537,8 @@ class openSystem(openHamiltonian):
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorXT = np.zeros((self.Ns,self.nTimes),dtype=complex)
-            #
-            #U = np.zeros((2*Ns,2*Ns),dtype=complex)
-            #U[:Ns,:Ns] = self.U_
-            #U[:Ns,Ns:] = self.V_
-            #U[Ns:,:Ns] = self.V_
-            #U[Ns:,Ns:] = self.U_
             #Correlator -> can make this faster, we actually only need U_ and V_
             exp_e = np.exp(-1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
-            #A_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[Ns:,Ns:],optimize=True)
-            #B_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
-            #G_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
-            #H_GS = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[Ns:,Ns:],optimize=True)
             A_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.V_,self.U_,optimize=True)
             B_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.U_,self.V_,optimize=True)
             G_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.V_,self.V_,optimize=True)
@@ -560,24 +550,16 @@ class openSystem(openHamiltonian):
                 BF[1:] = 1/(np.exp(self.evals[1:]/temperature)-1)
                 #
                 A2  = np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e, optimize=True)
-                #A2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e_c,optimize=True)
-                #A2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.U_,exp_e, optimize=True)
-                #A2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.V_,exp_e_c,optimize=True)
+                A2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e_c,optimize=True)
                 #
                 B2  = np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e, optimize=True)
-                #B2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e_c,optimize=True)
-                #B2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.V_,exp_e, optimize=True)
-                #B2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.U_,exp_e_c,optimize=True)
+                B2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e_c,optimize=True)
                 #
                 G2  = np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e, optimize=True)
-                #G2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e_c,optimize=True)
-                #G2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.V_,exp_e, optimize=True)
-                #G2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.U_,exp_e_c,optimize=True)
+                G2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e_c,optimize=True)
                 #
                 H2  = np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e, optimize=True)
-                #H2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e_c,optimize=True)
-                #H2 += np.einsum('l,in,jn,tn->ijt',BF,self.U_,self.U_,exp_e, optimize=True)
-                #H2 += np.einsum('l,in,jn,tn->ijt',BF,self.V_,self.V_,exp_e_c,optimize=True)
+                H2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e_c,optimize=True)
             else:
                 A2 = B2 = G2 = H2 = 0
             Af = A_GS + A2
@@ -639,8 +621,7 @@ class openSystem(openHamiltonian):
     def realSpaceCorrelatorBond(self,verbose=False):
         """ Here we compute the correlator in real space for each bond, like for the jj.
         """
-        #temperature = self._temperature(self.p.cor_energy)
-        temperature = 0
+        temperature = self._temperature(self.p.cor_energy)
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
@@ -653,44 +634,43 @@ class openSystem(openHamiltonian):
             self.correlatorXT_h = np.zeros((Lx-1,Ly,self.nTimes),dtype=complex)
             self.correlatorXT_v = np.zeros((Lx,Ly-1,self.nTimes),dtype=complex)
             #
-            U = np.zeros((2*Ns,2*Ns),dtype=complex)
-            U[:Ns,:Ns] = self.U_
-            U[:Ns,Ns:] = self.V_
-            U[Ns:,:Ns] = self.V_
-            U[Ns:,Ns:] = self.U_
-            #Correlator -> can make this faster, we actually only need U_ and V_
             exp_e = np.exp(-1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
-            A = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[Ns:,Ns:],optimize=True)
-            B = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[:Ns,Ns:],optimize=True)
-            G = np.einsum('tk,ik,jk->ijt',exp_e,U[Ns:,:Ns],U[:Ns,Ns:],optimize=True)
-            H = np.einsum('tk,ik,jk->ijt',exp_e,U[:Ns,:Ns],U[Ns:,Ns:],optimize=True)
+            A_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.V_,self.U_,optimize=True)
+            B_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.U_,self.V_,optimize=True)
+            G_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.V_,self.V_,optimize=True)
+            H_GS = np.einsum('tk,ik,jk->ijt',exp_e,self.U_,self.U_,optimize=True)
             if temperature != 0:
                 exp_e_c = np.exp(1j*2*np.pi*self.measureTimeList[:,None]*self.evals[None,:])
-                BF = 1/(np.exp(self.evals/temperature)-1)
-                A += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.U_,self.V_,exp_e_c,optimize=True)
-                A += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.V_,self.U_,exp_e,  optimize=True)
-                A += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.V_,self.U_,exp_e, optimize=True)
+                #exp_e_c = exp_e.conj()
+                BF = np.zeros(self.Ns)
+                BF[1:] = 1/(np.exp(self.evals[1:]/temperature)-1)
                 #
-                B += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.V_,self.U_,exp_e_c,optimize=True)
-                B += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.U_,self.V_,exp_e,  optimize=True)
-                B += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.U_,self.V_,exp_e, optimize=True)
+                A2  = np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e, optimize=True)
+                A2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e_c,optimize=True)
                 #
-                G += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.U_,self.U_,exp_e_c,optimize=True)
-                G += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.V_,self.V_,exp_e,  optimize=True)
-                G += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.V_,self.V_,exp_e, optimize=True)
+                B2  = np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.V_,exp_e, optimize=True)
+                B2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.U_,exp_e_c,optimize=True)
                 #
-                H += np.einsum('l,p,il,jp,tl->ijt',BF,BF,self.V_,self.V_,exp_e_c,optimize=True)
-                H += np.einsum('l,p,ip,jl,tp->ijt',BF,BF,self.U_,self.U_,exp_e,  optimize=True)
-                H += np.einsum('l,ip,jp,tp->ijt',  BF**2,self.U_,self.U_,exp_e, optimize=True)
+                G2  = np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e, optimize=True)
+                G2 += np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e_c,optimize=True)
+                #
+                H2  = np.einsum('l,il,jl,tl->ijt',BF,self.U_,self.U_,exp_e, optimize=True)
+                H2 += np.einsum('l,il,jl,tl->ijt',BF,self.V_,self.V_,exp_e_c,optimize=True)
+            else:
+                A2 = B2 = G2 = H2 = 0
+            Af = A_GS + A2
+            Bf = B_GS + B2
+            Gf = G_GS + 2*G2
+            Hf = H_GS + 2*H2
             #
             for ihx in range(Lx-1):
                 for ihy in range(Ly):
                     ind_i = self._idx(ihx,ihy)
-                    self.correlatorXT_h[ihx,ihy] = correlators.jjCorrelatorBond(self,ind_i,A,B,G,H,'h')
+                    self.correlatorXT_h[ihx,ihy] = correlators.jjCorrelatorBond(self,ind_i,Af,Bf,Gf,Hf,'h')
             for ivx in range(Lx):
                 for ivy in range(Ly-1):
                     ind_i = self._idx(ivx,ivy)
-                    self.correlatorXT_v[ivx,ivy] = correlators.jjCorrelatorBond(self,ind_i,A,B,G,H,'v')
+                    self.correlatorXT_v[ivx,ivy] = correlators.jjCorrelatorBond(self,ind_i,Af,Bf,Gf,Hf,'v')
             if self.p.cor_saveXTbonds:
                 if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in directory: "+self.dataDn)

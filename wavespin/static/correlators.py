@@ -323,25 +323,45 @@ def computeCombinations(op_list,ind_list,time_list,S):
     X_j = sqrt(S/2)(a_j+b_j)
     Y_j = -i*sqrt(S/2)(a_j-b_j)
     Z_j = S-b_ja_j
-    return a list of 3-tuple, with first element a coefficient (pm (i) S**n) second element an operator list ('abba..') and third element a list of sites ([ind_i,ind_j,..]) of same length as the operator string
+    Returns:
+        list of 3-tuple:
+            1-coefficient (pm (i) S**n)
+            2-operator list ('abba..')
+            3-list of sites ([ind_i,ind_j,..]) of same length as the operator string
     """
-    op_dic = {'X':[np.sqrt(S/2),'a'], 'Y':'(a-b)', 'Z':'S-ba'}
-    coeff_dic = {'X':np.sqrt(S/2), 'Y':1j*np.sqrt(S/2), 'Z':1}
     terms = []
     coeff = 1
     for i in range(len(op_list)):
         if op_list[i]=='X':
-            terms.append([ [np.sqrt(S/2),'a',[ind_list[i]], time_list[i]] , [np.sqrt(S/2),'b',[ind_list[i]], time_list[i] ]])
+            terms.append([
+                [np.sqrt(S/2),'a',[ind_list[i],], time_list[i]],
+                [np.sqrt(S/2),'b',[ind_list[i],], time_list[i]],
+                [-1/4/np.sqrt(2*S),'baa',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
+                [-1/4/np.sqrt(2*S),'bba',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
+            ])
         if op_list[i]=='Y':
-            terms.append([ [-1j*np.sqrt(S/2),'a',[ind_list[i]], time_list[i]] , [1j*np.sqrt(S/2),'b',[ind_list[i] ], time_list[i] ]])
+            terms.append([
+                [-1j*np.sqrt(S/2),'a',[ind_list[i],], time_list[i]],
+                [ 1j*np.sqrt(S/2),'b',[ind_list[i],], time_list[i]],
+                [1j/4/np.sqrt(2*S), 'baa',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
+                [-1j/4/np.sqrt(2*S),'bba',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
+            ])
         if op_list[i]=='Z':
-            terms.append([ [S,'',[],''] , [-1,'ba',[ind_list[i],ind_list[i]], time_list[i]+time_list[i] ]])
+            terms.append([
+                [S,'',[],''],
+                [-1,'ba',[ind_list[i],ind_list[i]], time_list[i]+time_list[i]]
+            ])
     for i in range(len(op_list)-1): #n-1 multiplications
         new_terms = []
         mult = []
         for j in range(len(terms[0])):
             for l in range(len(terms[1])):
-                mult.append( [terms[0][j][0]*terms[1][l][0], terms[0][j][1]+terms[1][l][1], terms[0][j][2]+terms[1][l][2], terms[0][j][3]+terms[1][l][3] ]  )
+                mult.append([
+                    terms[0][j][0]*terms[1][l][0],
+                    terms[0][j][1]+terms[1][l][1],
+                    terms[0][j][2]+terms[1][l][2],
+                    terms[0][j][3]+terms[1][l][3]
+                ])
         new_terms.append(mult)
         #remaining part
         for j in range(2,len(terms)):

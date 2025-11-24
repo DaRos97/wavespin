@@ -50,9 +50,9 @@ def plotSitesGrid(lattice,**kwargs):
                     ax.plot([ix,ix],[iy,iy+1],c='y',ls='--',lw=0.5,zorder=-1)
                 else:
                     ax.plot([ix,ix],[iy,iy+1],c='k',lw=2,zorder=-1)
-    if hasattr(lattice,'perturbationSite'):
-        perturbationSite = lattice.perturbationSite
-        ax.scatter(perturbationSite[0],perturbationSite[1],c='w',edgecolor='m',lw=2,marker='o',s=200,zorder=1)
+    if hasattr(lattice.p,'cor_perturbationSite'):
+        perturbationSite = lattice.p.cor_perturbationSite
+        ax.scatter(perturbationSite[0],perturbationSite[1],c='w',edgecolor='m',lw=2,marker='o',s=300,zorder=1)
     if hasattr(lattice,'thetas') and kwargs.get('angles',False):    # Plot Q-angles -> only when called from an Hamiltonian object
         arrowColor = kwargs.get('arrowColor','royalblue')
         order = kwargs.get('order','c-Neel')

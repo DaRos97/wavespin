@@ -1,6 +1,6 @@
 # Spin wave expansion and simulation of extended XY-model
 
-Here I make order of the code written for the papers ... with additions for future directions.
+Code used for simulations in ...
 
 The main idea is to simulate XY-like Hamiltonians undergoing a quench from a staggered magnetic field into a symmetry-broken phase.
 

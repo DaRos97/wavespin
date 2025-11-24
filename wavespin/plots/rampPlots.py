@@ -92,11 +92,15 @@ def plotRampKW(ramp, **kwargs):
         K_mesh_p.append(K_mesh)
         W_mesh_p.append(W_mesh)
         corr_flat = ramp.rampElements[iP].correlatorKW#.reshape(Lx*Ly, nOmega)
+        if iP == 0 or 1:
+            corr_flat = np.abs(corr_flat)
+        else:
+            corr_flat = np.abs(corr_flat-ramp.rampElements[0].correlatorKW)
         P_k_omega = np.zeros((num_k_bins,nOmega))
         for i in range(num_k_bins):
             mask = (K_flat >= k_bins[i]) & (K_flat < k_bins[i+1])
             if np.any(mask):
-                P_k_omega[i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
+                P_k_omega[i, :] = np.mean(corr_flat[mask, :], axis=0)
         P_k_omega_p.append(P_k_omega)
     # Figure
     fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))

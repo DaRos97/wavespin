@@ -27,18 +27,21 @@ sca_types = (
     '1to3_1','1to3_2','1to3_3',
 )
 parameters.sca_types = sca_types
-listTs = [8,]
+# Sweep amplitude at fixed E
+listEs = [-0.5,]
+#listTs = [8,]
 data = []
-for T in listTs:
-    parameters.sca_temperature = T
+for E in listEs:
     system = openHamiltonian(parameters)
-    if T==listTs[0]:
+    system.p.sca_temperature = system._temperature(E)
+    #
+    if E==listEs[0]:
         Phi = system.Phi
         evals = system.evals[1:]/10
         Ns = system.Ns
-        maxN = np.zeros(Ns-1)
+        normPhi = np.zeros(Ns-1)
         for n in range(1,Ns):
-            maxN[n-1] = np.max(np.absolute(Phi[:,n]))
+            normPhi[n-1] = np.sqrt(np.sum(Phi[:,n]**2))
     system.computeRate(verbose=verbose)
     data.append(
         (
@@ -48,77 +51,42 @@ for T in listTs:
          )
     )
 
-if 0:   #plot all different scatterings separately
-    fig = plt.figure(figsize=(18,10))
-    lr = len(sca_types)
-    for i in range(lr):
-        ax = fig.add_subplot(2,4,1+i%4+4*(i//4))
-        ax.scatter(np.arange(1,system.Ns),system.rates[sca_types[i]])
-        ax.set_title(sca_types[i],size=20)
-    fig.tight_layout()
-    plt.show()
-
 if 1:
-    fig = plt.figure(figsize=(21,12))
+    fig = plt.figure(figsize=(15,3))
     s_ = 10
     ss_ = 15
     sss_ = 20
     colors = ['orange','navy','forestgreen']
-    As = [0,0.5,1]
+    As = [0,0.5,1,1.5,2,12]
     for ia in range(len(As)):
-        ax = fig.add_subplot(2,len(As),1+ia)
-        for it in range(len(listTs)):
-            gamma = data[it][0].copy()
-            gamma += data[it][1] * (As[ia] / 2 )**2
-            gamma += data[it][2] * (As[ia] / 2 )**4
+        ax = fig.add_subplot(1,len(As),1+ia)
+        for ie in range(len(listEs)):
+            gamma = data[ie][0].copy()
+            gamma += data[ie][1] * (As[ia] / 2 / normPhi )**2
+            gamma += data[ie][2] * (As[ia] / 2 / normPhi )**4
             ax.scatter(
                 np.arange(1,Ns),
                 gamma,
                 marker='o',
-                color=colors[it],
-                label="T: %.1f"%listTs[it]
+                color=colors[ie],
+                label="E: %.2f"%listEs[ie]
             )
-            for n in range(Ns-1):
-                ax.text(
-                    n+1,
-                    gamma[n],
-                    str(n+1),
-                    va='bottom',
-                    size=s_
-                )
-        #ax.legend()
+            if 0:
+                for n in range(Ns-1):
+                    ax.text(
+                        n+1,
+                        gamma[n],
+                        str(n+1),
+                        va='bottom',
+                        size=s_
+                    )
+        ax.legend()
         ax.set_title("Amplitude: %.1f"%As[ia],size=ss_)
         ax.set_xlabel("Mode number",size=ss_)
-        ax.set_ylabel(r"$\Gamma$",size=ss_)
-    for ia in range(len(As)):
-        ax = fig.add_subplot(2,len(As),1+len(As)+ia)
-        for it in range(len(listTs)):
-            gamma = data[it][0].copy()
-            gamma += data[it][1] * (As[ia] / 2 )**2
-            gamma += data[it][2] * (As[ia] / 2 )**4
-            ax.scatter(
-                evals,
-                gamma,
-                marker='o',
-                color=colors[it],
-                label="T: %.1f"%listTs[it]
-            )
-            Mg = np.max(gamma)
-            mg = np.min(gamma)
-            for n in range(Ns-1):
-                ax.text(
-                    evals[n],
-                    gamma[n]+1/abs(evals[n]-evals[(n+2)%(Ns-1)])/50 + np.random.rand()*(Mg-mg)/15,
-                    str(n+1),
-                    va='bottom',
-                    size=s_
-                )
-        #ax.legend()
-        ax.set_xlabel("Energy (g)",size=ss_)
-        ax.set_ylabel(r"$\Gamma$",size=ss_)
-    #fig.tight_layout()
-    #plt.suptitle("7x8 rectangle",size=sss_)
-    plt.suptitle("58-sites diamond",size=sss_)
+        if ia == 0:
+            ax.set_ylabel(r"$\Gamma$",size=ss_)
+    fig.tight_layout()
+    plt.suptitle("24-diamond",size=sss_)
     plt.show()
 
 if 0:

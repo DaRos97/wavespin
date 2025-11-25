@@ -75,6 +75,7 @@ def rate_2to2_1(system):
     # Broadening
     edif = evals[2:] - evals[1:-1]
     gamma = system.p.sca_broadening * np.mean(edif)
+    print(gamma)
     en = evals[:,None,None,None]
     el = evals[None,:,None,None]
     em = evals[None,None,:,None]

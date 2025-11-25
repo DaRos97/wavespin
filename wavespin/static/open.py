@@ -379,13 +379,13 @@ class openHamiltonian(latticeClass):
         """
         self.rates = {}
         for process in self.p.sca_types:
-            argsDecayFn = ['decay',process,self.p.sca_temperature,self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.p.sca_broadening]
+            argsDecayFn = ['decay',process,self.p.sca_temperature,self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary,self.p.sca_broadening]
             decayFn = pf.getFilename(*tuple(argsDecayFn),dirname=self.dataDn,extension='.npy')
             if Path(decayFn).is_file():
                 self.rates[process] = np.load(decayFn)
                 continue
             if not hasattr(self,process[:4]):
-                argsVertexFn = ['vertex',process[:4],self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns]
+                argsVertexFn = ['vertex',process[:4],self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary]
                 vertexFn = pf.getFilename(*tuple(argsVertexFn),dirname=self.dataDn,extension='.npy')
                 if Path(vertexFn).is_file():
                     setattr(self,'vertex'+process[:4],np.load(vertexFn))

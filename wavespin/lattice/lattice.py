@@ -10,17 +10,17 @@ import copy
 class latticeClass():
     def __init__(self,p):
         self.p = copy.deepcopy(p)
-        self.Lx = p.lat_Lx
-        self.Ly = p.lat_Ly
-        self.offSiteList = p.lat_offSiteList
+        self.Lx = self.p.lat_Lx
+        self.Ly = self.p.lat_Ly
+        self.offSiteList = self.p.lat_offSiteList
         self.indexToSite = self._mapIndexSite()
         self.Ns = self.Lx*self.Ly - len(self.offSiteList)
-        self.boundary = p.lat_boundary
+        self.boundary = self.p.lat_boundary
         if self.boundary == 'periodic':
             if len(self.offSiteList) != 0:
                 raise ValueError("Periodic and non-rectangular lattice not implemented")
             if self.Lx%2 or self.Ly%2:
-                raise ValueError("For PBC we need even Lx and Ly")
+                raise ValueError("For a periodic boundary you need even Lx and Ly!")
         # Precompute neighbors
         self.NN = self._build_nn()
         self.NNN = self._build_nnn()

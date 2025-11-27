@@ -116,13 +116,13 @@ def plotRampKW(ramp, **kwargs):
     title = 'Commutator: ' + sys0.p.cor_correlatorType + ', momentum transform: ' + transformType + txtMagnon
     #plt.suptitle(title,fontsize=20)
     ylim = kwargs.get('ylim',7)
-    vmax = np.max(np.array(P_k_omega_p))/10
+    vmax = np.max(np.array(P_k_omega_p)) #/10
     for iP in range(nP):
         W_mesh = W_mesh_p[iP]
         K_mesh = K_mesh_p[iP]
-        W_mesh /= 10
+        #W_mesh /= 10
         P_k_omega = P_k_omega_p[iP]
-        P_k_omega /= 10
+        #P_k_omega /= 10
         ax = axes[iP]
         ax.set_facecolor('black')
         mesh = ax.pcolormesh(K_mesh, W_mesh, P_k_omega,
@@ -130,9 +130,10 @@ def plotRampKW(ramp, **kwargs):
                              cmap='Blues',
                              norm=SqrtNorm(vmin=0,vmax=vmax)
                             )
-        ax.set_yticks(np.arange(-6,7,3),[str(i) for i in np.arange(-6,7,3)])
+        #ax.set_yticks(np.arange(-6,7,3),[str(i) for i in np.arange(-6,7,3)])
+        ax.set_yticks(np.linspace(-ylim,ylim,7),["%.2f"%i for i in np.linspace(-ylim,ylim,7)])
         ax.set_xticks(np.arange(0,5,1),[str(i) for i in np.arange(0,5,1)])
-        if iP in [0,5]:
+        if iP in [0,3]:
             ax.set_ylabel(r"$\omega(g)$",size=25)
         else:
             ax.set_yticklabels([])
@@ -145,10 +146,11 @@ def plotRampKW(ramp, **kwargs):
             ax.set_xlabel(r'$|k|$',fontsize=20)
         if iP < 5 or 1:
             ax.set_xticklabels([])
-            stopRatio = ramp.rampElements[iP].g1 / 10
+            #stopRatio = ramp.rampElements[iP].g1 / 10
             #ax.set_title(r"$\alpha=$%.3f"%stopRatio,size=25)
-            cor_en = ramp.rampElements[iP].p.cor_energy
-            ax.set_title(r"$E=$%.3f"%cor_en,size=25)
+            #cor_en = ramp.rampElements[iP].p.cor_energy
+            J2 = np.linspace(0,0.5,6)[iP]
+            ax.set_title(r"$J_2=$%.2f"%J2,size=25)
 
         x_cb = 0.94
         y_cb2 = 0.081
@@ -167,7 +169,7 @@ def plotRampKW(ramp, **kwargs):
             cbar.ax.tick_params(labelsize=16)
     for i in range(nP,len(axes)):       #set to blank extra plots
         axes[i].axis('off')
-    fig.subplots_adjust(left=0.052, right=0.925, top=0.942, bottom=0.08, wspace=0.095, hspace=0.095)
+    #fig.subplots_adjust(left=0.052, right=0.925, top=0.942, bottom=0.08, wspace=0.095, hspace=0.095)
     #plt.tight_layout()
     #
     if transformType=='dat' and 0:
@@ -230,15 +232,20 @@ def plotWf2D(system,nModes=25):
     X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
     phi = system.Phi
     fig, axes, rows, cols = createFigure(nModes)#,nRows=Lx,nCols=Ly)#nCols=nModes//2 if nModes!=system.Ns else Lx,nRows=nModes//2 if nModes!=system.Ns else Lx)
-    for n in range(nModes):
+    for n in range(0,nModes,1):
         ax = axes[n]
-        formattedPhi = system.patchFunction(phi[:,n])
-        ax.pcolormesh(X,Y,
-                      formattedPhi,
-                      cmap='bwr'
-                      )
+        formattedPhi = system.patchFunction(phi[:,n])#-phi[:,n+1])
+        mm = np.max(np.abs(formattedPhi))
+        pm = ax.pcolormesh(
+            X,Y,
+            formattedPhi,
+            cmap='bwr',
+            vmin=-mm,
+            vmax=mm
+        )
         ax.set_title("Mode: "+str(n))
         ax.set_aspect('equal')
+        fig.colorbar(pm,ax=ax)
     for ik in range(nModes,len(axes)):
         axes[ik].axis('off')
     plt.suptitle("Modes from bogoliubov transformation",size=20)
@@ -257,10 +264,11 @@ def plotWf2D(system,nModes=25):
         for n in range(nModes):
             ax = axes[n]
             formattedDiff = system.patchFunction(diffEvecs[:,n])
-            ax.pcolormesh(X,Y,
-                          formattedDiff,
-                          cmap='bwr'
-                          )
+            pm = ax.pcolormesh(
+                X,Y,
+                formattedDiff,
+                cmap='bwr'
+            )
             ax.set_title("Mode: %d, Evals: %.3f"%(n,diffEvals[n]))
             ax.set_aspect('equal')
         for ik in range(nModes,len(axes)):
@@ -368,8 +376,9 @@ def plotRampDispersions(ramp, **kwargs):
         #if iP in np.arange((rows-1)*cols,rows*cols):
         #ax.set_xlabel(r'$k_x$',fontsize=15)
 
-        stopRatio = ramp.rampElements[iP].g1 / 10
-        ax.set_title(r"$\alpha=$%.2f"%stopRatio,size=20)
+        #stopRatio = ramp.rampElements[iP].g1 / 10
+        #J2 = np.linspace(0.5,1,6)[iP]
+        #ax.set_title(r"$J_2=$%.2f"%J2,size=20)
     plt.suptitle("Dispersion relation of periodic system",size=20)
     #plt.tight_layout()
     plt.show()

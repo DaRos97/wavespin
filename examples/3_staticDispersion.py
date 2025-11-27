@@ -34,10 +34,10 @@ h_p = (1-pValues)*hInitial + pValues*hFinal
 """ Initialize all the systems and store them in a ramp object """
 #ramp = periodicRamp()
 ramp = openRamp()
-g1 = 1/2
-g2 = 0
-for i in range(4):
-    parameters.dia_Hamiltonian = (g1,g2,0,0,i,0)
+J1 = 1
+J2s = np.linspace(0,J1/2,6)
+for i in range(len(J2s)):
+    parameters.dia_Hamiltonian = (J1/2,J2s[i]/2,0,0,0,0)
     #ramp.addSystem(periodicHamiltonian(parameters))
     ramp.addSystem(openHamiltonian(parameters))
 #    print(ramp.rampElements[i].theta/np.pi*180)

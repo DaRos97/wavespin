@@ -21,7 +21,7 @@ gInitial = 0
 gFinal = 10
 hInitial = 15
 hFinal = 0
-stopRatios = [0,]#np.linspace(0.1,1,10)
+stopRatios = [1,]#np.linspace(0.1,1,10)
 Nr = len(stopRatios)
 
 for ir in range(Nr):

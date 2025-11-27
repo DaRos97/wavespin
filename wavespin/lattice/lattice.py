@@ -52,7 +52,7 @@ class latticeClass():
                 x,y = self._xy(ind)
                 NN[ind] = [
                     self._idx((x+1)%self.Lx, y),
-                    self._idx((x-1)%self.Ly, y),
+                    self._idx((x-1)%self.Lx, y),
                     self._idx(x, (y+1)%self.Ly),
                     self._idx(x, (y-1)%self.Ly),
                 ]
@@ -86,9 +86,9 @@ class latticeClass():
                 x,y = self._xy(ind)
                 NNN[ind] = [
                     self._idx((x+1)%self.Lx, (y+1)%self.Ly),
-                    self._idx((x-1)%self.Ly, (y+1)%self.Ly),
+                    self._idx((x-1)%self.Lx, (y+1)%self.Ly),
                     self._idx((x+1)%self.Lx, (y-1)%self.Ly),
-                    self._idx((x-1)%self.Ly, (y-1)%self.Ly),
+                    self._idx((x-1)%self.Lx, (y-1)%self.Ly),
                 ]
             else:
                 NNN[ind] = self._open_nnn(ind)

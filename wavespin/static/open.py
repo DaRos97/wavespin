@@ -25,14 +25,15 @@ class openHamiltonian(latticeClass):
         super().__init__(p)
         # Hamiltonian parameters
         self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = self.p.dia_Hamiltonian
-        self.order = 'canted-Néel' if self.g2<=self.g1/2 else 'canted-stripe'
+        self.order = 'canted-Neel' if self.g2<=self.g1/2 else 'canted-stripe'
         self.S = 0.5     #spin value
         self.g_i = (self._NNterms(self.g1), self._NNNterms(self.g2))
         self.D_i = (self._NNterms(self.d1), self._NNNterms(self.d2))
         self.h_i = self._Hterms(self.h,self.h_disorder)
         # Diagonalize Hamiltonian to get eigenvalues and Bogoliubov fuunctions
         self.diagonalize()
-        self.GSE = self.get_GSE()
+        if self.g1!=0:
+            self.GSE = self.get_GSE()
         # self.realSpaceHamiltonian = self._realSpaceHamiltonian()
         if self.boundary == 'periodic':
             self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
@@ -168,7 +169,7 @@ class openHamiltonian(latticeClass):
         """ Compute temperature given the energy.
         Since the E(T) function is not invertible we have to compute E for a bunch of Ts and extract graphically the T.
         """
-        if Eref == self.GSE:
+        if Eref == self.GSE or Eref==-100:
             return 0
         Nbonds = np.sum(self._NNterms(1)) // 2
         GS_energy = self.get_GSE()
@@ -204,17 +205,17 @@ class openHamiltonian(latticeClass):
 
     def quantizationAxisAngles(self,verbose=False):
         """ Here we get the quantization axis angles to use for the diagonalization.
-        Phi is 0, we would need it just when the dynamics is implemented.
+        phi is 0, we would need it just when the dynamics is implemented.
         """
         self.theta, self.phi = quantizationAxis(self.S,self.g_i,self.D_i,self.h_i)
         self.phis = np.zeros(self.Ns)
         if self.p.dia_uniformQA:
             self.thetas = np.ones(self.Ns)*self.theta
-            if self.order == 'canted-Néel':
+            if self.order == 'canted-Neel':
                 for i in range(self.Ns):
                     x,y = self._xy(i)
                     self.thetas[i] += np.pi*((x+y)%2)
-            else:       # canted-stripe
+            elif self.order == 'canted-stripe':
                 for i in range(self.Ns):
                     x,y = self._xy(i)
                     if x%2==1 and y%2==0:
@@ -299,29 +300,34 @@ class openHamiltonian(latticeClass):
         self.quantizationAxisAngles(verbose)
         self.computeTs()
         self.computePs()
+        ## Nearest neighbor
         p_zz = self.Ps[0,:,:,0,0]
         p_xx = self.Ps[0,:,:,1,1]
         p_yy = self.Ps[0,:,:,2,2]
+        ## Second eearest neighbor
+        p2_zz = self.Ps[1,:,:,0,0]
+        p2_xx = self.Ps[1,:,:,1,1]
+        p2_yy = self.Ps[1,:,:,2,2]
         #
         ham = np.zeros((2*Ns,2*Ns),dtype=complex)
-        #p_zz sums over nn but is on-site -> problem when geometry is not rectangular
-        ham[:Ns,:Ns] = -h_i*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
-        ham[Ns:,Ns:] = -h_i*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S
-        #off_diag 1 - nn
-        off_diag_1_nn = (p_xx+p_yy) / 4 / S
-        ham[:Ns,:Ns] += off_diag_1_nn
-        ham[Ns:,Ns:] += off_diag_1_nn
-        #off_diag 2 - nn
-        off_diag_2_nn = (p_xx-p_yy) / 4 / S
-        ham[:Ns,Ns:] += off_diag_2_nn
-        ham[Ns:,:Ns] += off_diag_2_nn.T.conj()
+        #p_zz sums over neighbor but is on-site -> problem when geometry is not rectangular ?
+        ham[:Ns,:Ns] = -h_i*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S - np.diag(np.sum(p2_zz,axis=1)) / 2 / S
+        ham[Ns:,Ns:] = -h_i*np.cos(np.diag(self.thetas)) / 2 / S - np.diag(np.sum(p_zz,axis=1)) / 2 / S - np.diag(np.sum(p2_zz,axis=1)) / 2 / S
+        #off_diag 1
+        off_diag_1 = (p_xx+p_yy + p2_xx+p2_yy) / 4 / S
+        ham[:Ns,:Ns] += off_diag_1
+        ham[Ns:,Ns:] += off_diag_1.T.conj()
+        #off_diag 2
+        off_diag_2 = (p_xx-p_yy + p2_xx-p2_yy) / 4 / S
+        ham[:Ns,Ns:] += off_diag_2
+        ham[Ns:,:Ns] += off_diag_2.T.conj()
         return ham
 
     def diagonalize(self,verbose=False,**kwargs):
         """ Compute the Bogoliubov transformation for the real-space Hamiltonian.
         Initialize U_, V_ and evals : bogoliubov transformation matrices U and V and eigenvalues.
         """
-        argsFn = ('bogWf',self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian)
+        argsFn = ('bogWf',self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian,self.boundary)
         transformationFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
         hamiltonian = self._realSpaceHamiltonian(verbose)
         if not Path(transformationFn).is_file():
@@ -334,11 +340,16 @@ class openHamiltonian(latticeClass):
             try:
                 K = scipy.linalg.cholesky(A-B)
             except:
-                K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-4)
+                print("Zero mode(s)")
+                K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-10)
             lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
             if self.p.dia_excludeZeroMode:
-                lam2[0] = 1
+                lam2[lam2<1e-8] = 1
+                #
             self.evals = np.sqrt(lam2)         #dispersion -> positive
+            #print(lam2)
+            #print(self.evals)
+            #exit()
             #
             chi = chi_ / self.evals**(1/2)     #normalized eigenvectors: divide each column of chi_ by the corresponding eigenvalue -> of course for the gapless mode there is a problem here
             phi_ = K.T.conj()@chi
@@ -346,11 +357,27 @@ class openHamiltonian(latticeClass):
             self.U_ = 1/2*(phi_+psi_)
             self.V_ = 1/2*(phi_-psi_)
             if self.p.dia_excludeZeroMode:
-                self.evals[0] = 0               # Set again to 0 the gapless mode
+                self.evals[lam2<1e-8] = 0               # Set again to 0 the gapless mode
             self.Phi = np.real(self.U_-self.V_)
-            for n in range(self.Ns):
-                x,y = self._xy(n)
-                self.Phi[n,:] *= 2/np.pi*(-1)**(x+y+1)
+            #print(self.evals)
+            for ind in range(self.Ns):
+                x,y = self._xy(ind)
+                if self.order=='canted-Neel':
+                    self.Phi[ind,:] *= 2/np.pi*(-1)**(x+y)
+                    continue
+                elif self.order=='canted-stripe':
+                    self.Phi[ind,:] *= (-1)**(x%2)
+                    continue
+                    if x%2==1 and y%2==0:
+                        self.Phi[ind,:] *= 2/np.pi*(-1)**(x+y)
+                        continue
+                    if x%2==0 and y%2==1:
+                        continue
+                        #self.thetas[i] *= -1
+                        #self.thetas[i] += np.pi
+                    if x%2==1 and y%2==1:
+                        self.Phi[ind,:] *= 2/np.pi*(-1)**(x+y)
+                    #raise ValueError("Not implemented")
             if self.p.dia_saveWf:
                 if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in directory: "+self.dataDn)
@@ -518,11 +545,14 @@ class openSystem(openHamiltonian):
         self.perturbationIndex = self._idx(*self.perturbationSite)
         #
         self.site0 = 0 #if h_t_i[0,0,0]<0 else 1     #decide sublattice A and B of reference lattice site
-        self.fullTimeMeasure = 0.8     #measure time in ms
-        self.nTimes = 401        #time steps after ramp for the measurement
+        #self.fullTimeMeasure, self.nTimes, self.nOmega = (0.8,401,2000)
+        self.fullTimeMeasure, self.nTimes, self.nOmega = (16,401,2000)
+        print("Using fullTimeMeasure=%d"%self.fullTimeMeasure)
+        #self.fullTimeMeasure = 0.8     #measure time in ms
+        #self.nTimes = 401        #time steps after ramp for the measurement
         self.measureTimeList = np.linspace(0,self.fullTimeMeasure,self.nTimes)
         #KW correlator parameters
-        self.nOmega = 2000
+        #self.nOmega = 2000
         # Diagonalize
         #self.diagonalize()
 
@@ -738,9 +768,9 @@ class openRamp():
         if self.rampElements[0].p.cor_plotKW:
             """ Plot the Fourier-transformed correlators of the ramp """
             plotRampKW(self,
-                       kwargs={
+                       **{
                            'numKbins' : 50,
-                           'ylim' : 70,            #MHz
+                           'ylim' : 7 if self.rampElements[0].g1==10 else 3.5,
                            'saveFigure' : self.rampElements[0].p.cor_savePlotKW,
                            'showFigure' : True,
                        }

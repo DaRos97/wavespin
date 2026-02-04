@@ -26,7 +26,7 @@ def plotSitesGrid(lattice,**kwargs):
     Ly = lattice.Ly
     offSiteList = lattice.offSiteList
     indexesMap = lattice.indexToSite
-    printIndices = kwargs.get('indices',True)
+    printIndices = kwargs.get('indices',False)
     #
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot()

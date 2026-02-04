@@ -37,7 +37,7 @@ class openHamiltonian(latticeClass):
         # self.realSpaceHamiltonian = self._realSpaceHamiltonian()
         if self.boundary == 'periodic':
             self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
-            self._momentumGrid()
+            self.gridk = self._momentumGrid()
             self.gamma = self._gamma()
             self.dispersion = self._dispersion()
             self.gap = np.min(self.dispersion)
@@ -54,11 +54,12 @@ class openHamiltonian(latticeClass):
         """
         dx = 2*np.pi/self.Lx
         dy = 2*np.pi/self.Ly
-        self.gridk = np.zeros((self.Lx,self.Ly,2))
+        result = np.zeros((self.Lx,self.Ly,2))
         for i1 in range(self.Lx):
             for i2 in range(self.Ly):
-                self.gridk[i1,i2,0] = dx*(1+i1) #- np.pi
-                self.gridk[i1,i2,1] = dy*(1+i2) #- np.pi
+                result[i1,i2,0] = dx*(1+i1) #- np.pi
+                result[i1,i2,1] = dy*(1+i2) #- np.pi
+        return result
 
     def _gamma(self):
         r""" Compute the '$\Gamma$' dispersion at first and second nearest neighbor.
@@ -340,16 +341,13 @@ class openHamiltonian(latticeClass):
             try:
                 K = scipy.linalg.cholesky(A-B)
             except:
-                print("Zero mode(s)")
+                if verbose:
+                    print("Zero mode(s)")
                 K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-10)
             lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
             if self.p.dia_excludeZeroMode:
                 lam2[lam2<1e-8] = 1
-                #
             self.evals = np.sqrt(lam2)         #dispersion -> positive
-            #print(lam2)
-            #print(self.evals)
-            #exit()
             #
             chi = chi_ / self.evals**(1/2)     #normalized eigenvectors: divide each column of chi_ by the corresponding eigenvalue -> of course for the gapless mode there is a problem here
             phi_ = K.T.conj()@chi
@@ -406,131 +404,140 @@ class openHamiltonian(latticeClass):
         """
         self.rates = {}
         for process in self.p.sca_types:
-            argsDecayFn = ['decay',process,self.p.sca_temperature,self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary,self.p.sca_broadening]
-            decayFn = pf.getFilename(*tuple(argsDecayFn),dirname=self.dataDn,extension='.npy')
+            argsDecayFn = ['decay',process,self.p.sca_temperature,self.p.sca_broadening,self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary,self.p.sca_broadening]
+            decayFn = pf.getFilename(*tuple(argsDecayFn),dirname=self.dataDn,extension='.npy',floatPrecision=8)
             if Path(decayFn).is_file():
                 self.rates[process] = np.load(decayFn)
+                if verbose:
+                    print("Loading rates of process %s"%process)
                 continue
-            if not hasattr(self,process[:4]):
-                argsVertexFn = ['vertex',process[:4],self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary]
-                vertexFn = pf.getFilename(*tuple(argsVertexFn),dirname=self.dataDn,extension='.npy')
-                if Path(vertexFn).is_file():
-                    setattr(self,'vertex'+process[:4],np.load(vertexFn))
-                else:
-                    if verbose:
-                        print("Computing ",process[:4]," vertex")
-                    self.computeVertex(process[:4])
-                if self.p.sca_saveVertex:
-                    np.save(vertexFn,getattr(self,'vertex'+process[:4]))
+            if not hasattr(self,'vertex'+process[:4]):
+                self.computeVertex(process[:4],verbose=verbose)
             self.rates[process] = dic_processes[process](self)
             if self.p.sca_saveRate:
                 np.save(decayFn,self.rates[process])
         if self.p.sca_plotRate:
             plotRate(self)
 
-    def computeVertex(self,vertex):
+    def computeVertex(self,vertex,verbose=False):
         """ Compute the vertex of the interaction, may be 1->2, 1->3 or 2->2.
         """
-        U = np.real(self.U_)
-        V = np.real(self.V_)
-        if vertex=='1to2':
-            # f_ij
-            f = self.g_i[0] / np.sqrt(2*self.S)/4/self.S * (1-self.D_i[0]) * np.sin(2 * self.thetas)
-            f /= 2 # Since we sum over all bonds, we count each twice
-            ### Vn(l,m)
-            Vn_lm = np.zeros((self.Ns,self.Ns,self.Ns))
-            # f1
-            Vn_lm += np.einsum('ij,in,jl,jm->nlm',f,V,V,U,optimize=True)
-            Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,U,U,U,optimize=True)
-            Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,V,U,V,optimize=True)
-            Vn_lm += np.einsum('ij,in,jl,jm->nlm',f,U,V,U,optimize=True)
-            Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,U,V,U,optimize=True)
-            Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,V,V,V,optimize=True)
-            # Symmetrize l,m
-            result = (
-                Vn_lm
-                + np.transpose(Vn_lm, (0,2,1))  # l↔m
-            ) / 2.0
-            # i <-> j counterpart
-            result *= 2
-        elif vertex=='2to2':
-            # f_ij
-            f1 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 + 1)
-            f2 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 - 1)
-            f3 = -self.g_i[0] / 4 / self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
-            f1 /= 2 # Since we sum over all bonds, we count each twice
-            f2 /= 2
-            f3 /= 2
-            ### V_nl(m,p)
-            Vnl_mp = np.zeros((self.Ns,self.Ns,self.Ns,self.Ns))
-            # f1
-            Vnl_mp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,V,U,U,optimize=True)
-            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,V,V,U,V,optimize=True) * 2
-            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f1,U,V,U,U,optimize=True) * 2
-            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f1,V,V,U,V,optimize=True)
-            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,U,U,U,V,optimize=True) * 2
-            Vnl_mp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,V,V,V,optimize=True)
-            Vnl_mp += np.einsum('ij,jn,jl,jm,ip->nlmp',f1,U,U,U,V,optimize=True)
-            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f1,U,V,V,V,optimize=True) * 2
-            # f2
-            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,U,U,U,U,optimize=True)
-            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,U,V,U,V,optimize=True) * 2
-            Vnl_mp += np.einsum('ij,jn,jl,jm,ip->nlmp',f2,U,V,U,V,optimize=True) * 2
-            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f2,V,V,V,V,optimize=True)
-            Vnl_mp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,U,V,U,V,optimize=True) * 2
-            Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,V,V,V,V,optimize=True)
-            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f2,U,U,U,U,optimize=True)
-            Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f2,U,V,U,V,optimize=True) * 2
-            # f3
-            Vnl_mp += np.einsum('ij,in,il,jm,jp->nlmp',f3,U,V,U,V,optimize=True)
-            Vnl_mp += np.einsum('ij,in,jl,im,jp->nlmp',f3,U,U,U,U,optimize=True)
-            Vnl_mp += np.einsum('ij,in,jl,im,jp->nlmp',f3,U,V,U,V,optimize=True)
-            Vnl_mp += np.einsum('ij,jn,il,jm,ip->nlmp',f3,U,V,U,V,optimize=True)
-            Vnl_mp += np.einsum('ij,in,jl,im,jp->nlmp',f3,V,V,V,V,optimize=True)
-            Vnl_mp += np.einsum('ij,jn,jl,im,ip->nlmp',f3,U,V,U,V,optimize=True)
-            # Symmetrize n,l and m,p
-            result = (
-                Vnl_mp
-                + np.transpose(Vnl_mp, (1,0,2,3))  # n↔l
-                + np.transpose(Vnl_mp, (0,1,3,2))  # m↔p
-                + np.transpose(Vnl_mp, (1,0,3,2))  # n↔l, m↔p
-            ) / 4.0
-            # i <-> j counterpart
-            result *= 2
-        elif vertex=='1to3':
-            # f_ij
-            f1 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 + 1)
-            f2 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 - 1)
-            f3 = -self.g_i[0] / 4 / self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
-            f1 /= 2 # Since we sum over all bonds, we count each twice
-            f2 /= 2
-            f3 /= 2
-            ### V_n(l,m,p)
-            Vn_lmp = np.zeros((self.Ns,self.Ns,self.Ns,self.Ns))
-            # f1
-            Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,V,V,U,U,optimize=True)
-            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,U,U,U,optimize=True)
-            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,V,U,V,U,optimize=True) * 2
-            Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,U,V,V,U,optimize=True)
-            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,V,V,U,optimize=True) * 2
-            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,V,V,V,V,optimize=True)
-            # f2
-            Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,U,V,U,U,optimize=True)
-            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,U,V,U,U,optimize=True)
-            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,V,V,V,U,optimize=True) * 2
-            Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,V,V,V,U,optimize=True)
-            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,U,U,V,U,optimize=True) * 2
-            Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,V,U,V,V,optimize=True)
-            # f3
-            Vn_lmp += np.einsum('ij,in,il,jm,jp->nlmp',f3,U,U,V,U,optimize=True)
-            Vn_lmp += np.einsum('ij,in,il,jm,jp->nlmp',f3,V,V,V,U,optimize=True)
-            Vn_lmp += np.einsum('ij,jn,jl,im,ip->nlmp',f3,U,U,V,U,optimize=True)
-            Vn_lmp += np.einsum('ij,jn,jl,im,ip->nlmp',f3,V,V,V,U,optimize=True)
-            # Symmetrize l,m,p
-            perms = list(itertools.permutations(range(3)))
-            result = sum( np.transpose(Vn_lmp, (0,) + tuple(1 + np.array(perm))) for perm in perms ) / len(perms)
-            # i <-> j counterpart
-            result *= 2
+        argsVertexFn = ['vertex',vertex,self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary]
+        vertexFn = pf.getFilename(*tuple(argsVertexFn),dirname=self.dataDn,extension='.npy')
+        if Path(vertexFn).is_file():
+            result = np.load(vertexFn)
+            if 0:   # Checks on sparsity
+                sparsity = np.count_nonzero(result==0) / result.size
+                sparsity = result[np.absolute(result)<np.max(np.absolute(result))/100].size / result.size
+                print(vertexFn)
+                print("Vertex: %s has sparcity %.5f"%(vertex,sparsity))
+                print(np.max(result**2))
+                input()
+        else:
+            if verbose:
+                print("Computing ",vertex," vertex")
+            U = np.real(self.U_)
+            V = np.real(self.V_)
+            if vertex=='1to2':
+                # f_ij
+                f = self.g_i[0] / np.sqrt(2*self.S)/4/self.S * (1-self.D_i[0]) * np.sin(2 * self.thetas)
+                f /= 2 # Since we sum over all bonds, we count each twice
+                ### Vn(l,m)
+                Vn_lm = np.zeros((self.Ns,self.Ns,self.Ns))
+                # f1
+                Vn_lm += np.einsum('ij,in,jl,jm->nlm',f,V,V,U,optimize=True)
+                Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,U,U,U,optimize=True)
+                Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,V,U,V,optimize=True)
+                Vn_lm += np.einsum('ij,in,jl,jm->nlm',f,U,V,U,optimize=True)
+                Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,U,V,U,optimize=True)
+                Vn_lm += np.einsum('ij,jn,il,jm->nlm',f,V,V,V,optimize=True)
+                # Symmetrize l,m
+                result = (
+                    Vn_lm
+                    + np.transpose(Vn_lm, (0,2,1))  # l↔m
+                ) / 2.0
+                # i <-> j counterpart
+                result *= 2
+            elif vertex=='2to2':
+                # f_ij
+                f1 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 + 1)
+                f2 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 - 1)
+                f3 = -self.g_i[0] / 4 / self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
+                f1 /= 2 # Since we sum over all bonds, we count each twice
+                f2 /= 2
+                f3 /= 2
+                ### V_nl(m,p)
+                Vnl_mp = np.zeros((self.Ns,self.Ns,self.Ns,self.Ns))
+                # f1
+                Vnl_mp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,V,U,U,optimize=True)
+                Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,V,V,U,V,optimize=True) * 2
+                Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f1,U,V,U,U,optimize=True) * 2
+                Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f1,V,V,U,V,optimize=True)
+                Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,U,U,U,V,optimize=True) * 2
+                Vnl_mp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,V,V,V,optimize=True)
+                Vnl_mp += np.einsum('ij,jn,jl,jm,ip->nlmp',f1,U,U,U,V,optimize=True)
+                Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f1,U,V,V,V,optimize=True) * 2
+                # f2
+                Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,U,U,U,U,optimize=True)
+                Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,U,V,U,V,optimize=True) * 2
+                Vnl_mp += np.einsum('ij,jn,jl,jm,ip->nlmp',f2,U,V,U,V,optimize=True) * 2
+                Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f2,V,V,V,V,optimize=True)
+                Vnl_mp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,U,V,U,V,optimize=True) * 2
+                Vnl_mp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,V,V,V,V,optimize=True)
+                Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f2,U,U,U,U,optimize=True)
+                Vnl_mp += np.einsum('ij,jn,jl,im,jp->nlmp',f2,U,V,U,V,optimize=True) * 2
+                # f3
+                Vnl_mp += np.einsum('ij,in,il,jm,jp->nlmp',f3,U,V,U,V,optimize=True)
+                Vnl_mp += np.einsum('ij,in,jl,im,jp->nlmp',f3,U,U,U,U,optimize=True)
+                Vnl_mp += np.einsum('ij,in,jl,im,jp->nlmp',f3,U,V,U,V,optimize=True)
+                Vnl_mp += np.einsum('ij,jn,il,jm,ip->nlmp',f3,U,V,U,V,optimize=True)
+                Vnl_mp += np.einsum('ij,in,jl,im,jp->nlmp',f3,V,V,V,V,optimize=True)
+                Vnl_mp += np.einsum('ij,jn,jl,im,ip->nlmp',f3,U,V,U,V,optimize=True)
+                # Symmetrize n,l and m,p
+                result = (
+                    Vnl_mp
+                    + np.transpose(Vnl_mp, (1,0,2,3))  # n↔l
+                    + np.transpose(Vnl_mp, (0,1,3,2))  # m↔p
+                    + np.transpose(Vnl_mp, (1,0,3,2))  # n↔l, m↔p
+                ) / 4.0
+                # i <-> j counterpart
+                result *= 2
+            elif vertex=='1to3':
+                # f_ij
+                f1 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 + 1)
+                f2 = self.g_i[0] / 16 / self.S**2 * (np.cos(self.thetas)**2 + self.D_i[0]*np.sin(self.thetas)**2 - 1)
+                f3 = -self.g_i[0] / 4 / self.S**2 * (np.sin(self.thetas)**2 + self.D_i[0]*np.cos(self.thetas)**2)
+                f1 /= 2 # Since we sum over all bonds, we count each twice
+                f2 /= 2
+                f3 /= 2
+                ### V_n(l,m,p)
+                Vn_lmp = np.zeros((self.Ns,self.Ns,self.Ns,self.Ns))
+                # f1
+                Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,V,V,U,U,optimize=True)
+                Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,U,U,U,optimize=True)
+                Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,V,U,V,U,optimize=True) * 2
+                Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f1,U,V,V,U,optimize=True)
+                Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,U,V,V,U,optimize=True) * 2
+                Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f1,V,V,V,V,optimize=True)
+                # f2
+                Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,U,V,U,U,optimize=True)
+                Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,U,V,U,U,optimize=True)
+                Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,V,V,V,U,optimize=True) * 2
+                Vn_lmp += np.einsum('ij,in,jl,jm,jp->nlmp',f2,V,V,V,U,optimize=True)
+                Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,U,U,V,U,optimize=True) * 2
+                Vn_lmp += np.einsum('ij,jn,il,jm,jp->nlmp',f2,V,U,V,V,optimize=True)
+                # f3
+                Vn_lmp += np.einsum('ij,in,il,jm,jp->nlmp',f3,U,U,V,U,optimize=True)
+                Vn_lmp += np.einsum('ij,in,il,jm,jp->nlmp',f3,V,V,V,U,optimize=True)
+                Vn_lmp += np.einsum('ij,jn,jl,im,ip->nlmp',f3,U,U,V,U,optimize=True)
+                Vn_lmp += np.einsum('ij,jn,jl,im,ip->nlmp',f3,V,V,V,U,optimize=True)
+                # Symmetrize l,m,p
+                perms = list(itertools.permutations(range(3)))
+                result = sum( np.transpose(Vn_lmp, (0,) + tuple(1 + np.array(perm))) for perm in perms ) / len(perms)
+                # i <-> j counterpart
+                result *= 2
+            if self.p.sca_saveVertex:
+                np.save(vertexFn,result)
         setattr(self,'vertex'+vertex,result)
 
 ##########################################################

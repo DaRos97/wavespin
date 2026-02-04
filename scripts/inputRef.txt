@@ -1,0 +1,12 @@
+# Input file for momentum identification
+# Use '#' to comment a line and ':' to assign a value
+
+Lx: 7
+Ly: 9
+plotLattice: False
+uniformQA: True
+excludeZeroMode: True
+
+saveWf: False
+plotWf: False
+plotMomenta: False

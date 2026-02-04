@@ -33,25 +33,67 @@ parsLattices = {
         10,
         ( (0,0), (0,1), (0,2), (0,3), (0,6), (0,7), (0,8), (0,9), (1,0), (1,1), (1,2), (1,7), (1,8), (1,9), (2,0), (2,1), (2,8), (2,9), (3,0), (3,9), (6,0), (6,9), (7,0), (7,1), (7,8), (7,9), (8,0), (8,1), (8,2), (8,7), (8,8), (8,9), (9,0), (9,1), (9,2), (9,3), (9,6), (9,7), (9,8), (9,9) )
     ],
+    '60-diamond2': [
+        10,
+        10,
+        (
+            (0,0), (0,1), (0,2), (0,7), (0,8), (0,9),
+            (1,0), (1,1), (1,8), (1,9),
+            (2,0), (2,9),
+            (7,0), (7,9),
+            (8,0), (8,1), (8,8), (8,9),
+            (9,0), (9,1), (9,2), (9,7), (9,8), (9,9)
+        )
+    ],
     '7x8-rectangle': [
         7,
         8,
         (),
-    ]
+    ],
+    '80-diamond': [
+        7,      #not finished
+        8,
+        (),
+    ],
+    '144-diamond': [
+        16,      #not finished
+        16,
+        (
+            (0,0), (0,1), (0,2), (0,3), (0,4), (0,5), (0,6), (0,9), (0,10), (0,11), (0,12), (0,13), (0,14), (0,15),
+            (1,0), (1,1), (1,2), (1,3), (1,4), (1,5), (1,10), (1,11), (1,12), (1,13), (1,14), (1,15),
+            (2,0), (2,1), (2,2), (2,3), (2,4), (2,11), (2,12), (2,13), (2,14), (2,15),
+            (3,0), (3,1), (3,2), (3,3), (3,12), (3,13), (3,14), (3,15),
+            (4,0), (4,1), (4,2), (4,13), (4,14), (4,15),
+            (5,0), (5,1), (5,14), (5,15),
+            (6,0), (6,15),
+            (9,0), (9,15),
+            (10,0), (10,1), (10,14), (10,15),
+            (11,0), (11,1), (11,2), (11,13), (11,14), (11,15),
+            (12,0), (12,1), (12,2), (12,3), (12,12), (12,13), (12,14), (12,15),
+            (13,0), (13,1), (13,2), (13,3), (13,4), (13,11), (13,12), (13,13), (13,14), (13,15),
+            (14,0), (14,1), (14,2), (14,3), (14,4), (14,5), (14,10), (14,11), (14,12), (14,13), (14,14), (14,15),
+            (15,0), (15,1), (15,2), (15,3), (15,4), (15,5), (15,6), (15,9), (15,10), (15,11), (15,12), (15,13), (15,14), (15,15),
+        )
+    ],
 }
 
 save = True
 lattices = (
-    '24-diamond','60-diamond',
-    '7x8-rectangle',
+#    '24-diamond',
+#    '60-diamond',
+    '60-diamond2',
+#    '144-diamond',
+#    '7x8-rectangle',
 )
-amps = (0,0.5,1,1.5,2,12)
-energy1 = -0.5
-energies = tuple(np.linspace(-0.53,-0.15,10))
+#amps = (0,0.5,1,1.5,2,12)
+amps = tuple(np.linspace(0.5,4,8))
+energy1 = -0.50
+energies = tuple(np.linspace(-0.54,-0.15,10))
+amp1 = 1
 
-dataFn = pf.getFilename(*('ampSweep',lattices,amps,energy1,energies),dirname='Data/',extension='.pkl')
+dataFn = pf.getFilename(*('ampSweep',lattices,amps,energy1,energies,amp1),dirname='Data/',extension='.pkl')
 enFn = pf.getFilename(*('energySweep',lattices),dirname='Data/',extension='.pkl')
-if Path(dataFn).is_file() and Path(enFn).is_file():
+if 0 and Path(dataFn).is_file() and Path(enFn).is_file():
     with open(dataFn,"rb") as f:
         gammaAmp, gammaEn = pickle.load(f)
     with open(enFn,"rb") as f:
@@ -63,6 +105,7 @@ else:
         parameters.lat_Lx = parsLattices[lattice][0]
         parameters.lat_Ly = parsLattices[lattice][1]
         parameters.lat_offSiteList = parsLattices[lattice][2]
+        parameters.lat_plotLattice = True
         system = openHamiltonian(parameters)
         evalsDic[lattice] = system.evals
         system.p.sca_temperature = system._temperature(energy1)
@@ -70,9 +113,6 @@ else:
         Phi = system.Phi
         evals = system.evals[1:]/10
         Ns = system.Ns
-        normPhi = np.zeros(Ns-1)
-        for n in range(1,Ns):
-            normPhi[n-1] = np.sqrt(np.sum(Phi[:,n]**2))
         system.computeRate()
         data = (
             system.rates['1to2_1']+system.rates['1to3_1']+system.rates['2to2_1'],
@@ -101,18 +141,22 @@ else:
         gammaAmp[lattice] = np.zeros((len(amps),system.Ns-1))
         for ia in range(len(amps)):
             A = amps[ia]
-            gammaAmp[lattice][ia] = data[0] + data[1]*(A/2/normPhi)**2 + data[2]*(A/2/normPhi)**4
+            gammaAmp[lattice][ia] = data[0] + data[1]*(A/2)**2 + data[2]*(A/2)**4
     gammaEn = {}
     for lattice in lattices:
         parameters.lat_Lx = parsLattices[lattice][0]
         parameters.lat_Ly = parsLattices[lattice][1]
         parameters.lat_offSiteList = parsLattices[lattice][2]
         system = openHamiltonian(parameters)
+        Ns = system.Ns
         gammaEn[lattice] = np.zeros((len(energies),system.Ns-1))
         for ie,E in enumerate(energies):
             system.p.sca_temperature = system._temperature(energies[ie])
             system.computeRate()
-            gammaEn[lattice][ie] = system.rates['1to2_1']+system.rates['1to3_1']+system.rates['2to2_1']
+            gamma1 = system.rates['1to2_1']+system.rates['1to3_1']+system.rates['2to2_1']
+            gamma2 = system.rates['1to2_2']+system.rates['1to3_2']+system.rates['2to2_2']
+            gamma3 = system.rates['1to3_3']
+            gammaEn[lattice][ie] = gamma1 + gamma2*(amp1/2)**2 + gamma3*(amp1/2)**4
     if save:
         with open(dataFn,"wb") as f:
             pickle.dump((gammaAmp,gammaEn),f)

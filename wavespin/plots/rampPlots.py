@@ -46,7 +46,7 @@ def createFigure(n_subplots, subplotSize=(4, 4), plot3D=False, nRows=-1, nCols=-
 
 class SqrtNorm(mcolors.Normalize):
     def __call__(self, value, clip=None):
-        return (super().__call__(value, clip))**(1/2)
+        return (super().__call__(value, clip))**(1/4)
 
 def plotRampKW(ramp, **kwargs):
     """ Plot frequency over mod k for the different ramp parameters.
@@ -115,9 +115,10 @@ def plotRampKW(ramp, **kwargs):
         txtMagnon = ''
     title = 'Commutator: ' + sys0.p.cor_correlatorType + ', momentum transform: ' + transformType + txtMagnon
     #plt.suptitle(title,fontsize=20)
-    ylim = kwargs.get('ylim',7)
+    ylim = 7#kwargs.get('ylim',7)
     vmax = np.max(np.array(P_k_omega_p)) #/10
     for iP in range(nP):
+        #vmax = np.max(np.array(P_k_omega_p[iP])) #/10
         W_mesh = W_mesh_p[iP]
         K_mesh = K_mesh_p[iP]
         #W_mesh /= 10
@@ -149,8 +150,10 @@ def plotRampKW(ramp, **kwargs):
             #stopRatio = ramp.rampElements[iP].g1 / 10
             #ax.set_title(r"$\alpha=$%.3f"%stopRatio,size=25)
             #cor_en = ramp.rampElements[iP].p.cor_energy
-            J2 = np.linspace(0,0.5,6)[iP]
-            ax.set_title(r"$J_2=$%.2f"%J2,size=25)
+            #J2 = np.linspace(0,0.5,6)[iP]
+            #ax.set_title(r"$J_2=$%.2f"%J2,size=25)
+            H = np.linspace(0,3,6)[iP]
+            ax.set_title(r"$H=$%.2f"%H,size=25)
 
         x_cb = 0.94
         y_cb2 = 0.081
@@ -231,9 +234,17 @@ def plotWf2D(system,nModes=25):
     V_ = system.V_
     X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
     phi = system.Phi
+    #mmodes = [21,22,24,32,33,34,36,37,38,43,56]
+    #mmodes = [10,11,12,14,15,17,18,19,20,24,25,26,27,30,31,32,34]
+    #mmodes = [27,28,29,30]
+    #nModes=len(mmodes)
+    ninitial = 0
+    #nModes = 55
     fig, axes, rows, cols = createFigure(nModes)#,nRows=Lx,nCols=Ly)#nCols=nModes//2 if nModes!=system.Ns else Lx,nRows=nModes//2 if nModes!=system.Ns else Lx)
-    for n in range(0,nModes,1):
-        ax = axes[n]
+    for n in range(ninitial,ninitial+nModes,1):
+    #for ind,n in enumerate(mmodes):
+        ind = n-ninitial
+        ax = axes[ind]
         formattedPhi = system.patchFunction(phi[:,n])#-phi[:,n+1])
         mm = np.max(np.abs(formattedPhi))
         pm = ax.pcolormesh(
@@ -243,7 +254,8 @@ def plotWf2D(system,nModes=25):
             vmin=-mm,
             vmax=mm
         )
-        ax.set_title("Mode: "+str(n))
+        color='k'
+        ax.set_title("Mode: "+str(n),color=color)
         ax.set_aspect('equal')
         fig.colorbar(pm,ax=ax)
     for ik in range(nModes,len(axes)):

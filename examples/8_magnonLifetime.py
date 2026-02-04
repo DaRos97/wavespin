@@ -51,7 +51,7 @@ for E in listEs:
          )
     )
 
-if 1:
+if 0:
     fig = plt.figure(figsize=(15,3))
     s_ = 10
     ss_ = 15

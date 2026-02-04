@@ -346,7 +346,8 @@ class openHamiltonian(latticeClass):
                 K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-10)
             lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
             if self.p.dia_excludeZeroMode:
-                lam2[lam2<1e-8] = 1
+                mask0modes = lam2<1e-8
+                lam2[mask0modes] = 1
             self.evals = np.sqrt(lam2)         #dispersion -> positive
             #
             chi = chi_ / self.evals**(1/2)     #normalized eigenvectors: divide each column of chi_ by the corresponding eigenvalue -> of course for the gapless mode there is a problem here
@@ -355,9 +356,9 @@ class openHamiltonian(latticeClass):
             self.U_ = 1/2*(phi_+psi_)
             self.V_ = 1/2*(phi_-psi_)
             if self.p.dia_excludeZeroMode:
-                self.evals[lam2<1e-8] = 0               # Set again to 0 the gapless mode
+                self.evals[mask0modes] = 0               # Set again to 0 the gapless mode
             self.Phi = np.real(self.U_-self.V_)
-            #print(self.evals)
+            # Re-rotate back to normal basis
             for ind in range(self.Ns):
                 x,y = self._xy(ind)
                 if self.order=='canted-Neel':

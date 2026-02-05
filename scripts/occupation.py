@@ -11,10 +11,12 @@ import matplotlib as mpl
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.patches import Patch
+from matplotlib.colors import TwoSlopeNorm
 
+inp = sys.argv[1]
 parameters = importParameters()
 
-if 0:       # Compute the mean occupation per site in PBC and OBC for different system sizes
+if inp=='0':       # Compute the mean occupation per site in PBC and OBC for different system sizes
     J1 = 1
     J2 = 0
     h = 0
@@ -57,7 +59,7 @@ if 0:       # Compute the mean occupation per site in PBC and OBC for different 
     ax.set_ylabel(r"$\langle n_i \rangle$",size=15)
     ax.legend(fontsize=15)
     plt.show()
-if 0:       # Compute site occupation in OBC for different system sizes
+if inp=='1':       # Compute site occupation in OBC for different system sizes
     J1 = 1
     J2 = 0
     h = 0
@@ -107,10 +109,10 @@ if 0:       # Compute site occupation in OBC for different system sizes
         axs[i//4,i%4].set_ylim(yMin,yMax)
 
     fig2,axs = plt.subplots(2,4,figsize=(10,6))
-    zMin = np.min([np.min(siteOBC[i]) for i in range(len(Llist))])
-    zMax = np.max([np.max(siteOBC[i]) for i in range(len(Llist))])
     for i in range(len(Llist)):
         ax = axs[i//4,i%4]
+        zMin = np.min(siteOBC[i])
+        zMax = np.max(siteOBC[i])
         X,Y = np.meshgrid(np.arange(Llist[i]),np.arange(Llist[i]),indexing='ij')
         pm = ax.pcolormesh(
             X,Y,
@@ -122,7 +124,7 @@ if 0:       # Compute site occupation in OBC for different system sizes
         ax.set_title("%dx%d lattice"%(Llist[i],Llist[i]),size=15)
         ax.set_aspect('equal')
     plt.show()
-if 0:           # Compute position of sites with high occupation
+if inp=='2':           # Compute position of sites with high occupation
     J1 = 1
     J2 = 0
     h = 0
@@ -150,12 +152,12 @@ if 0:           # Compute position of sites with high occupation
     ax.set_xlim(-0.5,Lx+0.5)
     ax.set_ylim(-0.5,Ly+0.5)
     plt.show()
-if 0:           # Frustrated branch
+if inp=='3':           # Frustrated branch
     J1 = 1
     h = 0
-    J2s = np.linspace(0.4,0.5,50,endpoint=False)
+    J2s = np.linspace(0.,0.5,50,endpoint=False)
 
-    Lx = Ly = 30
+    Lx = Ly = 10
     parameters.lat_Lx = Lx
     parameters.lat_Ly = Ly
     parameters.dia_plotWf = 0#True
@@ -190,10 +192,11 @@ if 0:           # Frustrated branch
     ax.axhline(0.06,color='r',ls='dashed',label="Infinite PBC limit (J2=h=0)")
     ax.set_xlabel(r"$J_2$",size=15)
     ax.set_ylabel(r"$\langle n_i \rangle$",size=15)
+    ax.set_ylim(0,0.41)
     ax.legend(fontsize=15)
     ax.set_title("%dx%d lattice"%(Lx,Ly),size=15)
     plt.show()
-if 0:           # Critical branch
+if inp=='4':           # Critical branch
     J1 = 1
     J2 = 0
     Hs = np.linspace(0,3,30,endpoint=False)
@@ -239,7 +242,7 @@ if 0:           # Critical branch
     plt.show()
 """ Include temperature: """
 """ Spectrum in PBC has maximum at 2*sqrt(2) and minimum approaching 0 in system size. For L=6 minimum is 1. """
-if 0:       # Compute the occupation in PBC and OBC for a range of temperatures for different system sizes
+if inp=='5':       # Compute the occupation in PBC and OBC for a range of temperatures for different system sizes
     J1 = 1
     J2 = 0
     h = 0
@@ -331,7 +334,7 @@ if 0:       # Compute the occupation in PBC and OBC for a range of temperatures 
         loc='lower right'
     )
     plt.show()
-if 0:       # Compute site occupation in OBC for a range of temperatures
+if inp=='6':       # Compute site occupation in OBC for a range of temperatures
     J1 = 1
     J2 = 0
     h = 0
@@ -382,7 +385,7 @@ if 0:       # Compute site occupation in OBC for a range of temperatures
             if t==0:
                 ax.set_ylabel("%dx%d"%(Llist[i],Llist[i]),size=15)
     plt.show()
-if 0:           # Frustrated branch for a range of temperatures
+if inp=='7':           # Frustrated branch for a range of temperatures
     J1 = 1
     h = 0
     J2s = np.linspace(0.,0.5,50,endpoint=False)
@@ -474,16 +477,18 @@ if 0:           # Frustrated branch for a range of temperatures
         loc='upper left'
     )
     plt.show()
-if 0:           # Site-dependent frustrated branch for a range of temperatures
+if inp=='8':           # Site-dependent frustrated branch for a range of temperatures
     J1 = 1
     h = 0
     J2s = np.linspace(0.4,0.5,10,endpoint=False)
+    J2s = [0.4,0.45,0.46,0.465,0.47,0.48,0.49,0.495]
     """ With increasing J2 the spectrum (10x10 PBC):
             - the minimum goes from ~0.618 to 0.062 for J2=0.49
             - the maximum goes from 2*sqrt(2) to 2.02 for J2=0.49
         We keep the SAME temperature range for all J2s.
     """
-    Tlist = np.linspace(0,2*np.sqrt(2),3)
+    Tlist = np.linspace(0,2*np.sqrt(2),4)
+    Tlist = np.array([0,0.1,0.5,2*np.sqrt(2)])
 
     Lx = Ly = 10
     parameters.lat_Lx = Lx
@@ -507,34 +512,34 @@ if 0:           # Site-dependent frustrated branch for a range of temperatures
     fig,axs = plt.subplots(len(Tlist),len(J2s)+1,figsize=(len(J2s)*2-3,len(Tlist)*2),width_ratios=list(np.ones(len(J2s)))+[0.2,])
     X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
     for t in range(len(Tlist)):
-        zMin = np.amin(siteOBC[:,t])
-        zMax = np.amax(siteOBC[:,t])
         for i2 in range(len(J2s)):
+            zMin = np.amin(siteOBC[i2,t])
+            zMax = np.amax(siteOBC[i2,t])
+            mean = np.mean(siteOBC[i2,t])
+            norm = TwoSlopeNorm(vmin=zMin,vcenter=mean,vmax=zMax)
             ax = axs[t,i2]
             pm = ax.pcolormesh(
                 X,Y,
                 siteOBC[i2,t],
                 cmap='bwr',
-                vmin=zMin,
-                vmax=zMax
+                norm=norm
             )
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_aspect('equal')
             if t==0:
-                ax.set_title(r"$J_2=%.2f$"%J2s[i2],size=15)
+                ax.set_title(r"$J_2=%.3f$"%J2s[i2],size=15)
             if i2==0:
                 ax.set_ylabel("T=%.2f"%Tlist[t],size=15)
         ax = axs[t,-1]
         cmap = plt.cm.bwr
-        norm = mpl.colors.Normalize(vmin=zMin, vmax=zMax)
         sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cbar = fig.colorbar(sm, cax=ax)
-        cbar.set_label("Ocupation",fontsize=15)
+        cbar.set_label("Occupation",fontsize=15)
     fig.tight_layout()
     plt.show()
-if 0:           # Site-dependent critical branch in gapless side for a range of temperatures
+if inp=='9':           # Site-dependent critical branch in gapless side for a range of temperatures
     J1 = 1
     J2 = 0
     Hs = np.linspace(0,2,10,endpoint=False)
@@ -545,7 +550,7 @@ if 0:           # Site-dependent critical branch in gapless side for a range of 
     """
     Tlist = np.linspace(0,2*np.sqrt(2),3)
 
-    Lx = Ly = 20
+    Lx = Ly = 10
     parameters.lat_Lx = Lx
     parameters.lat_Ly = Ly
     parameters.dia_plotWf = 0#True
@@ -567,16 +572,17 @@ if 0:           # Site-dependent critical branch in gapless side for a range of 
     fig,axs = plt.subplots(len(Tlist),len(Hs)+1,figsize=(len(Hs)*2-3,len(Tlist)*2),width_ratios=list(np.ones(len(Hs)))+[0.2,])
     X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
     for t in range(len(Tlist)):
-        zMin = np.amin(siteOBC[:,t])
-        zMax = np.amax(siteOBC[:,t])
         for ih in range(len(Hs)):
+            zMin = np.amin(siteOBC[ih,t])
+            zMax = np.amax(siteOBC[ih,t])
+            mean = np.mean(siteOBC[ih,t])
+            norm = TwoSlopeNorm(vmin=zMin,vcenter=mean,vmax=zMax)
             ax = axs[t,ih]
             pm = ax.pcolormesh(
                 X,Y,
                 siteOBC[ih,t],
                 cmap='bwr',
-                vmin=zMin,
-                vmax=zMax
+                norm=norm
             )
             ax.set_xticks([])
             ax.set_yticks([])
@@ -591,10 +597,10 @@ if 0:           # Site-dependent critical branch in gapless side for a range of 
         sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cbar = fig.colorbar(sm, cax=ax)
-        cbar.set_label("Ocupation",fontsize=15)
+        cbar.set_label("Occupation",fontsize=15)
     fig.tight_layout()
     plt.show()
-if 0:           # Site-dependent critical branch in gapped side for a range of temperatures
+if inp=='10':           # Site-dependent critical branch in gapped side for a range of temperatures
     J1 = 1
     J2 = 0
     Hs = np.linspace(2.1,3,10)
@@ -605,7 +611,7 @@ if 0:           # Site-dependent critical branch in gapped side for a range of t
     """
     Tlist = np.linspace(0,2*np.sqrt(2),3)
 
-    Lx = Ly = 30
+    Lx = Ly = 20
     parameters.lat_Lx = Lx
     parameters.lat_Ly = Ly
     parameters.dia_plotWf = 0#True
@@ -629,16 +635,17 @@ if 0:           # Site-dependent critical branch in gapped side for a range of t
     fig,axs = plt.subplots(len(Tlist),len(Hs)+1,figsize=(len(Hs)*2-3,len(Tlist)*2),width_ratios=list(np.ones(len(Hs)))+[0.2,])
     X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
     for t in range(len(Tlist)):
-        zMin = np.amin(siteOBC[:,t])
-        zMax = np.amax(siteOBC[:,t])
         for ih in range(len(Hs)):
+            zMin = np.amin(siteOBC[ih,t])
+            zMax = np.amax(siteOBC[ih,t])
+            mean = np.mean(siteOBC[ih,t])
+            norm = TwoSlopeNorm(vmin=zMin,vcenter=mean,vmax=zMax)
             ax = axs[t,ih]
             pm = ax.pcolormesh(
                 X,Y,
                 siteOBC[ih,t],
                 cmap='bwr',
-                vmin=zMin,
-                vmax=zMax
+                norm=norm
             )
             ax.set_xticks([])
             ax.set_yticks([])
@@ -653,7 +660,7 @@ if 0:           # Site-dependent critical branch in gapped side for a range of t
         sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
         cbar = fig.colorbar(sm, cax=ax)
-        cbar.set_label("Ocupation",fontsize=15)
+        cbar.set_label("Occupation",fontsize=15)
     fig.tight_layout()
     plt.show()
 

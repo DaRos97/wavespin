@@ -15,8 +15,7 @@ def rate_1to2_1(system):
     T = system.p.sca_temperature
     evals = system.evals[1:]
     # Broadening
-    edif = evals[2:] - evals[1:-1]
-    gamma = system.p.sca_broadening * np.mean(edif)
+    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None,None]
     el = evals[None,:,None]
     em = evals[None,None,:]
@@ -50,8 +49,7 @@ def rate_1to2_2(system):
     T = system.p.sca_temperature
     evals = system.evals[1:]
     # Broadening
-    edif = evals[2:] - evals[1:-1]
-    gamma = system.p.sca_broadening * np.mean(edif)
+    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None]
     el = evals[None,:]
     ### 2 -> 1
@@ -73,8 +71,8 @@ def rate_2to2_1(system):
     T = system.p.sca_temperature
     evals = system.evals[1:]
     # Broadening
-    edif = evals[2:] - evals[1:-1]
-    gamma = system.p.sca_broadening * np.mean(edif)
+    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
+    #
     en = evals[:,None,None,None]
     el = evals[None,:,None,None]
     em = evals[None,None,:,None]
@@ -98,8 +96,7 @@ def rate_2to2_2(system):
     T = system.p.sca_temperature
     evals = system.evals[1:]
     # Broadening
-    edif = evals[2:] - evals[1:-1]
-    gamma = system.p.sca_broadening * np.mean(edif)
+    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None,None]
     el = evals[None,:,None]
     em = evals[None,None,:]
@@ -118,12 +115,11 @@ def rate_1to3_1(system):
     """ Decay rate of 1 to 3 process at first order.
     """
     # Vertex, T and evals
-    Vn_lmp = system.vertex1to3[1:,1:,1:,1:]
+    Vn_lmp = system.vertex1to3[1:,1:,1:,1:]     #remove 0-energy mode from each mode index
     T = system.p.sca_temperature
-    evals = system.evals[1:]
+    evals = system.evals[1:]                    #remove 0-energy eigenvalue
     # Broadening
-    edif = evals[2:] - evals[1:-1]
-    gamma = system.p.sca_broadening * np.mean(edif)
+    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None,None,None]
     el = evals[None,:,None,None]
     em = evals[None,None,:,None]
@@ -158,8 +154,7 @@ def rate_1to3_2(system):
     T = system.p.sca_temperature
     evals = system.evals[1:]
     # Broadening
-    edif = evals[2:] - evals[1:-1]
-    gamma = system.p.sca_broadening * np.mean(edif)
+    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None,None]
     el = evals[None,:,None]
     em = evals[None,None,:]
@@ -182,8 +177,7 @@ def rate_1to3_3(system):
     T = system.p.sca_temperature
     evals = system.evals[1:]
     # Broadening
-    edif = evals[2:] - evals[1:-1]
-    gamma = system.p.sca_broadening * np.mean(edif)
+    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None]
     el = evals[None,:]
     ### 3 -> 1

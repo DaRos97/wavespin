@@ -224,7 +224,7 @@ def plotWf3D(system,nModes=16):
     plt.suptitle("Modes from bogoliubov transformation",size=20)
     plt.show()
 
-def plotWf2D(system,nModes=25):
+def plotWf2D(system,nModes=50):
     """ Here we plot just the wavefunctions (first n modes)
     """
     Lx = system.Lx

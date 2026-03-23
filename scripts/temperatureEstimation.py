@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 #lat = '60-diamond'
 lat = '7x8-rectangle'
+lat = '6x8-rectangle'
 
 parameters = importParameters()
 if lat == '24-diamond':
@@ -34,14 +35,23 @@ elif lat == '7x8-rectangle':
     offSiteList = ()
     TMax = 15
     Eref = -0.5
-g1 = 10
+elif lat == '6x8-rectangle':
+    Lx = 6
+    Ly = 8
+    offSiteList = ()
+    TMax = 1
+    Eref = -0.5
+
+J1 = 1
+J2 = 0.4
 h = 0
+g1 = J1/2
 
 """ Initialize and diagonalize system """
 parameters.lat_Lx = Lx
 parameters.lat_Ly = Ly
 parameters.lat_offSiteList = offSiteList
-parameters.dia_Hamiltonian = (g1,0,0,0,h,0)
+parameters.dia_Hamiltonian = (J1/2,J2/2,0,0,h,0)
 system = openHamiltonian(parameters)
 Ns = system.Ns
 U = np.real(system.U_)[:,1:]
@@ -84,7 +94,7 @@ else:
             exGS -= 1/(2*Nbonds) * np.sum(V[i,:]*U[j,:])
 print('Energy of GS from explicit XX+YY: %.3f'%exGS)
 
-Tlist = np.linspace(1e-1,TMax,100)
+Tlist = np.linspace(0.01,TMax,100)
 
 # E(T) using eigenvalues
 evT = np.zeros(len(Tlist))
@@ -109,6 +119,8 @@ for iT,T in tqdm(enumerate(Tlist)):
             yyt = yy0[i,j] - 2*np.sum(BT*(U-V)[i,:]*(V-U)[j,:]) - BTsum * np.sum((U-V)[i,:]*(V-U)[j,:])
             exT[iT] += (xxt+yyt)/2/Nbonds
 
+np.savez("Data/temperature_J2=%.1f_6x8.npz"%J2,energiesFull=evT,energiesXXYY=exT,temperatures=Tlist)
+
 # Figure
 fig = plt.figure(figsize=(12,12))
 ax = fig.add_subplot()
@@ -121,17 +133,17 @@ ax.axvline(bestT,color='g')
 for k in range(Ns-1):
     ax.axvline(evals[k],color='lime')
 ax.set_xlim(0,Tlist[-1])
-ax.set_xticks([0,]+list(evals[(evals<Tlist[-1])&(evals>1)]),["0",] + [r"mag \#%s"%i for i in range(len(evals[(evals<Tlist[-1])]))],size=12)
+#ax.set_xticks([0,]+list(evals[(evals<Tlist[-1])&(evals>1)]),["0",] + [r"mag \#%s"%i for i in range(len(evals[(evals<Tlist[-1])]))],size=12)
 props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
 ax.text(
     0.3,0.7,
-    r"T $\sim$ %.2f MHz"%bestT,
+    r"T $\sim$ %.5f"%bestT,
     transform=ax.transAxes,
     bbox=props,
     size=20
 )
-ax.set_xlabel('Temperature [MHz]',size=20)
-ax.set_ylabel("Energy (g)",size=20)
+ax.set_xlabel('Temperature',size=20)
+ax.set_ylabel("Energy",size=20)
 ax.set_title(lat,size=25)
 plt.show()
 

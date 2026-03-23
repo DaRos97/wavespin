@@ -87,7 +87,7 @@ class openHamiltonian(latticeClass):
         result = np.zeros(N_11.shape)
         mask = (N_11**2>=np.absolute(N_12)**2)
         result[mask] = np.sqrt(N_11[mask]**2-np.absolute(N_12[mask])**2)
-        return result
+        return result*2     #*2 put to have same result with diagonalize -> why?
 
     def _E0(self):
         r""" Compute $E_0$ as in notes.

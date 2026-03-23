@@ -33,7 +33,7 @@ if 0:       # Compute rate for J2=h=0, different types of first order at various
     h = 0
     parameters.dia_Hamiltonian = (J1/2,J2/2,0,0,h,0)
 
-    Ts = [0,0.2,0.4,0.8,1.3,1.9,2.5]
+    Ts = np.linspace(0,2*np.sqrt(2),5)
     resPBC1to2 = []
     resPBC2to2 = []
     resPBC1to3 = []
@@ -60,12 +60,6 @@ if 0:       # Compute rate for J2=h=0, different types of first order at various
         resOBC2to2.append(mySystem.rates['2to2_1'])
         resOBC1to3.append(mySystem.rates['1to3_1'])
         enOBC = mySystem.evals[1:]
-        if 0:
-            print("Temperature: ",temperature)
-            print("OBC first mode: ",enOBC[0])
-            print("OBC last mode: ",enOBC[-1])
-            print("PBC first mode: ",enPBC[0])
-            print("PBC last mode: ",enPBC[-1])
 
     resPBC = [resPBC1to2,resPBC2to2,resPBC1to3]
     resOBC = [resOBC1to2,resOBC2to2,resOBC1to3]
@@ -95,7 +89,7 @@ if 0:       # Compute rate for J2=h=0, different types of first order at various
     plt.suptitle("%dx%d lattice"%(Lx,Ly), size=s_+5)
     #fig.tight_layout()
     plt.show()
-if 0:       # Compute rate for frustrated branch 
+if 1:       # Compute rate for frustrated branch 
     Lx = Ly = 10
     parameters.lat_Lx = Lx
     parameters.lat_Ly = Ly
@@ -294,7 +288,7 @@ if 0:       # Compute rate for critical branch
     cbar = fig3.colorbar(sm, cax=cax)
     cbar.set_label("Temperature",size=s_)
     fig3.savefig("Figures/decayCriticalBranch/full_1to2.png")
-if 1:       # Compute rate for J2=h=0, different types of first order at various broadenings 
+if 0:       # Compute rate for J2=h=0, different types of first order at various broadenings 
     Lx = Ly = 10
     parameters.lat_Lx = Lx
     parameters.lat_Ly = Ly

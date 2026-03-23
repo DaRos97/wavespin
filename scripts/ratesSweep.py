@@ -12,7 +12,9 @@ from pathlib import Path
 import pickle
 
 parameters = importParameters()
-parameters.dia_Hamiltonian = (10,0,0,0,0,0)
+J1 = 1
+J2 = 0.0
+parameters.dia_Hamiltonian = (J1/2,J2/2,0,0,0,0)
 sca_types = (
     '1to2_1','1to2_2',
     '2to2_1','2to2_2',
@@ -50,6 +52,16 @@ parsLattices = {
         8,
         (),
     ],
+    '8x6-rectangle': [
+        8,
+        6,
+        (),
+    ],
+    '10x10-rectangle': [
+        10,
+        10,
+        (),
+    ],
     '80-diamond': [
         7,      #not finished
         8,
@@ -81,12 +93,14 @@ save = True
 lattices = (
 #    '24-diamond',
 #    '60-diamond',
-    '60-diamond2',
+#    '60-diamond2',
 #    '144-diamond',
 #    '7x8-rectangle',
+    '8x6-rectangle',
+#    '10x10-rectangle',
 )
-#amps = (0,0.5,1,1.5,2,12)
-amps = tuple(np.linspace(0.5,4,8))
+amps = (0,0.5,1)#,1.5,2,12)
+#amps = tuple(np.linspace(0.5,4,8))
 energy1 = -0.50
 energies = tuple(np.linspace(-0.54,-0.15,10))
 amp1 = 1
@@ -105,13 +119,24 @@ else:
         parameters.lat_Lx = parsLattices[lattice][0]
         parameters.lat_Ly = parsLattices[lattice][1]
         parameters.lat_offSiteList = parsLattices[lattice][2]
-        parameters.lat_plotLattice = True
+        parameters.lat_plotLattice = 0#True
+        parameters.dia_plotWf = 0#True
         system = openHamiltonian(parameters)
+        print(system.GSE)
+        print(system.evals)
+        fig = plt.figure()
+        ax = fig.add_subplot()
+        ax.scatter(
+            np.arange(48),
+            system.evals/system.evals[-1]
+        )
+        plt.show()
+        exit()
         evalsDic[lattice] = system.evals
         system.p.sca_temperature = system._temperature(energy1)
         #
         Phi = system.Phi
-        evals = system.evals[1:]/10
+        #evals = system.evals[1:]/10
         Ns = system.Ns
         system.computeRate()
         data = (

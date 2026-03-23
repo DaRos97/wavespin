@@ -49,7 +49,7 @@ if 0:       # Compute PBC bands in frustrated branch
         axs[i].set_zlim(min(zms),max(zMs))
     fig.tight_layout()
     plt.show()
-if 1:       # Compute PBC bands in critical branch
+if 0:       # Compute PBC bands in critical branch
     J1 = 1
     J2 = 0
     Hs = [0,1.5,2,2.5,3]
@@ -173,4 +173,43 @@ if 1:       # Compute PBC bands in critical branch
         left = 0.,
         wspace=0.025
     )
+    plt.show()
+if 1:       # Compute PBC bands in critical branch
+    J1 = 1
+    J2 = 0
+    Hs = np.linspace(0,2,41)
+
+    Lx = Ly = 20
+    parameters.lat_boundary = 'periodic'
+    parameters.lat_Lx = Lx
+    parameters.lat_Ly = Ly
+    parameters.dia_plotWf = 0#True
+    parameters.dia_saveWf = True
+
+    resPBC = []
+    for h in Hs:
+        print(h)
+        parameters.dia_Hamiltonian = (J1/2,J2/2,0,0,h,0)
+        mySystem = openHamiltonian(parameters)
+        disp = mySystem.dispersion
+        resPBC.append(np.max(disp)-disp[-1,-1])
+    res = np.array(resPBC)
+
+    fig = plt.figure(figsize=(7,7))
+    ax = fig.add_subplot()
+    ax.scatter(
+        Hs,
+        res,
+        color='r'
+    )
+    ax.set_xlabel("h",size=15)
+    ax.set_ylabel(r"max - $E(\pi,\pi)$",size=15)
+
+    hcrit = Hs[np.where(res>1e-3)[0][np.argmin(res[res>1e-3])]]
+    ax.axvline(
+        hcrit,
+        color='r',
+        ls='dashed'
+    )
+    print(hcrit)
     plt.show()

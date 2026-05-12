@@ -28,9 +28,9 @@ offSiteList = [
     (5,4),
     (5,5)
 ]
-#Lx = 7
-#Ly = 8
-#offSiteList = []
+Lx = 7
+Ly = 8
+offSiteList = ()
 
 plotWf = 1
 debug = 0

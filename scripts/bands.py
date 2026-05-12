@@ -12,23 +12,28 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 parameters = importParameters()
 
-if 0:       # Compute PBC bands in frustrated branch
+if 1:       # Compute PBC bands in frustrated branch
     J1 = 1
     h = 0
     J2s = np.linspace(0,0.5,6,endpoint=True)
 
-    Lx = Ly = 20
+    Lx = 20
+    Ly = 20
     parameters.lat_boundary = 'periodic'
     parameters.lat_Lx = Lx
     parameters.lat_Ly = Ly
     parameters.dia_plotWf = 0#True
-    parameters.dia_saveWf = True
+    parameters.dia_saveWf = 0#True
 
     resPBC = []
     for J2 in J2s:
         print(J2)
         parameters.dia_Hamiltonian = (J1/2,J2/2,0,0,h,0)
         mySystem = openHamiltonian(parameters)
+        if 0:
+            print(np.sort(mySystem.dispersion.ravel()))
+            print(mySystem.evals)
+            input()
         resPBC.append(mySystem.dispersion)
 
     fig = plt.figure(figsize=(15,3))
@@ -174,7 +179,7 @@ if 0:       # Compute PBC bands in critical branch
         wspace=0.025
     )
     plt.show()
-if 1:       # Compute PBC bands in critical branch
+if 0:       # Compute PBC bands in critical branch
     J1 = 1
     J2 = 0
     Hs = np.linspace(0,2,41)

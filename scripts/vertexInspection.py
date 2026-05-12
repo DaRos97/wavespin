@@ -161,9 +161,9 @@ lattices = (
 #    '41-sharp4',
 #    '50-sharp2',
 #    '3corner',
-#    '97-diamond',
+    '97-diamond',
 #    '7x8-rectangle',
-    '12x12-rectangle',
+#    '12x12-rectangle',
 )
 if 1:       # Check elements of vertex
     fig=plt.figure(figsize=(10,10))
@@ -171,14 +171,15 @@ if 1:       # Check elements of vertex
         parameters.lat_Lx = parsLattices[lattice][0]
         parameters.lat_Ly = parsLattices[lattice][1]
         parameters.lat_offSiteList = parsLattices[lattice][2]
-        parameters.lat_boundary = 'periodic'
+        parameters.lat_boundary = 'open'
         Ns = parameters.lat_Lx*parameters.lat_Ly - len(parameters.lat_offSiteList)
         print(Ns," sites")
         #parameters.dia_plotWf = True
         #parameters.lat_plotLattice = True
         system = openHamiltonian(parameters)
-        system.computeVertex('2to2')
+        system.computeVertex('1to3')
         V = system.vertex2to2
+        exit()
 
         if 0:
             ax = fig.add_subplot(projection='3d')

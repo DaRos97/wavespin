@@ -95,8 +95,8 @@ lattices = (
 #    '60-diamond',
 #    '60-diamond2',
 #    '144-diamond',
-#    '7x8-rectangle',
-    '8x6-rectangle',
+    '7x8-rectangle',
+#    '8x6-rectangle',
 #    '10x10-rectangle',
 )
 amps = (0,0.5,1)#,1.5,2,12)
@@ -119,9 +119,11 @@ else:
         parameters.lat_Lx = parsLattices[lattice][0]
         parameters.lat_Ly = parsLattices[lattice][1]
         parameters.lat_offSiteList = parsLattices[lattice][2]
-        parameters.lat_plotLattice = 0#True
-        parameters.dia_plotWf = 0#True
+        parameters.lat_plotLattice = True
+        parameters.dia_plotWf = True
+        parameters.dia_plotMomenta = True
         system = openHamiltonian(parameters)
+        exit()
         print(system.GSE)
         print(system.evals)
         fig = plt.figure()

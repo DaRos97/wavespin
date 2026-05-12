@@ -34,14 +34,13 @@ class openHamiltonian(latticeClass):
         self.diagonalize()
         if self.g1!=0:
             self.GSE = self.get_GSE()
-        # self.realSpaceHamiltonian = self._realSpaceHamiltonian()
+            #print("J2=%.2f, boundary: %s, GSE:%.4f"%(self.g2*2,self.boundary,self.GSE))
         if self.boundary == 'periodic':
             self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
             self.gridk = self._momentumGrid()
             self.gamma = self._gamma()
             self.dispersion = self._dispersion()
             self.gap = np.min(self.dispersion)
-            self.GSenergy = np.sum(self.dispersion)/self.Ns/2 + self._E0()
 
 # Periodic functions
     def _momentumGrid(self):
@@ -538,8 +537,9 @@ class openHamiltonian(latticeClass):
                 # i <-> j counterpart
                 result *= 2
             if self.p.sca_saveVertex:
-                np.save(vertexFn,result)
-        setattr(self,'vertex'+vertex,result)
+                    print("Saving vertex %s"%vertex)
+                    np.save(vertexFn,result)
+            setattr(self,'vertex'+vertex,result)
 
 ##########################################################
 ##########################################################

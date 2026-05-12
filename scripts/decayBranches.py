@@ -90,11 +90,13 @@ if 0:       # Compute rate for J2=h=0, different types of first order at various
     #fig.tight_layout()
     plt.show()
 if 1:       # Compute rate for frustrated branch 
-    Lx = Ly = 10
+    Lx = 8
+    Ly = 6
     parameters.lat_Lx = Lx
     parameters.lat_Ly = Ly
     # Scattering parameters
     sca_types = ('1to2_1','2to2_1','1to3_1')
+    #sca_types = ('2to2_1')
     parameters.sca_types = sca_types
 
     # Hamiltonian parameters
@@ -105,7 +107,7 @@ if 1:       # Compute rate for frustrated branch
     fig3 = plt.figure(figsize=(15,6))
     for i2,J2 in enumerate(J2s):
         parameters.dia_Hamiltonian = (J1/2,J2/2,0,0,h,0)
-        Ts = [0,0.2,0.4,0.8,1.3,1.9,2.5]
+        Ts = [0,0.2,0.4,]#0.8,1.3,1.9,2.5]
         resPBC1to2 = []
         resPBC2to2 = []
         resPBC1to3 = []

@@ -11,141 +11,108 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 parameters = importParameters()
-parameters.dia_Hamiltonian = (10,0,0,0,0,0)
-sca_types = ('2to2_1',)
-
-parameters.sca_types = sca_types
+parameters = importParameters()
+parameters.dia_plotWf = False
+parameters.dia_saveWf = False#True
+parameters.sca_saveVertex = False#True
+parameters.sca_saveRate = False#True
 parameters.sca_broadening = 0.5
-parameters.sca_saveVertex = True
-parameters.sca_temperature = 8
 
-# Rectangular
-sizes = [6,8,10,12]
-gamma = []
-evals = []
-for iL in range(len(sizes)):
-    Lx = sizes[iL]
-    Ly = sizes[iL]
-    print("%dx%d"%(Lx,Ly))
-    evals.append( np.zeros((2,Lx*Ly-1)) )
-    gamma.append( np.zeros((2,Lx*Ly-1)) )
+s_ = 15
+if 1:       # Compare rates for frustrated branch 
+    Lx = 8
+    Ly = 6
     parameters.lat_Lx = Lx
     parameters.lat_Ly = Ly
-    parameters.lat_plotLattice = False
+    # Scattering parameters
+    sca_types = ('2to2_1',)
+    parameters.sca_types = sca_types
+    temperatures = [0.3697, 0.2994, 0.2112]
 
-    #Open
-    print("Computing OBC")
-    parameters.lat_boundary = 'open'
-    system = openHamiltonian(parameters)
-    system.computeRate()
-    gamma[-1][0] = system.rates[sca_types[0]]
-    evals[-1][0] = system.evals[1:]
+    # Hamiltonian parameters
+    J1 = 1
+    h = 0
+    NJ2 = 1
+    J2s = [0,0.2,0.4]#np.linspace(0.2,0.5,NJ2,endpoint=False)
+    fig1 = plt.figure(figsize=(12,4))
+    fig2 = plt.figure(figsize=(12,4))
+    for i2,J2 in enumerate(J2s):
+        temperature = temperatures[i2]
+        print(J2,temperature)
+        parameters.sca_temperature = temperature
+        parameters.dia_Hamiltonian = (J1/2,J2/2,0,0,h,0)
+        # PBC
+        parameters.lat_boundary = 'periodic'
+        mySystem = openHamiltonian(parameters)
+        mySystem.computeRate()
+        resPBC2to2 = mySystem.rates['2to2_1']
+        enPBC = mySystem.evals[1:]
+        # OBC
+        parameters.lat_boundary = 'open'
+        mySystem = openHamiltonian(parameters)
+        mySystem.computeRate()
+        resOBC2to2 = mySystem.rates['2to2_1']
+        enOBC = mySystem.evals[1:]
 
-    #Periodic
-    print("Computing PBC")
-    parameters.lat_boundary = 'periodic'
-    system = openHamiltonian(parameters)
-    system.computeRate()
-    gamma[-1][1] = system.rates[sca_types[0]]
-    evals[-1][1] = system.evals[1:]
-
-    # Save
-    if Lx==12:
-        fn = "Data/periodic12.npz"
-        np.savez(
-            fn,
-            evals=evals[-1][1],
-            rates=gamma[-1][1],
-        )
-# Diamond
-diamonds = [
-    ['24-diamond',
-     6,
-     6,
-     ( (0,0), (0,1), (0,4), (0,5), (1,0), (1,5), (4,0), (4,5), (5,0), (5,1), (5,4), (5,5) )
-    ],
-    ['60-diamond',
-     10,
-     10,        ( (0,0), (0,1), (0,2), (0,3), (0,6), (0,7), (0,8), (0,9), (1,0), (1,1), (1,2), (1,7), (1,8), (1,9), (2,0), (2,1), (2,8), (2,9), (3,0), (3,9), (6,0), (6,9), (7,0), (7,1), (7,8), (7,9), (8,0), (8,1), (8,2), (8,7), (8,8), (8,9), (9,0), (9,1), (9,2), (9,3), (9,6), (9,7), (9,8), (9,9) )
-    ]
-]
-gammaD = []
-evalsD = []
-for iD in range(len(diamonds)):
-    print("Diamond ",diamonds[iD][0])
-    Lx,Ly,offSiteList = diamonds[iD][1:]
-    parameters.lat_Lx = Lx
-    parameters.lat_Ly = Ly
-    parameters.lat_offSiteList = offSiteList
-    parameters.lat_plotLattice = False
+        # Figure
+        ax1 = fig1.add_subplot(1,3,i2+1)
+        ax1.scatter(enPBC,resPBC2to2,color='r',label='PBC')
+        ax1.scatter(enOBC,resOBC2to2,color='b',label='OBC')
+        ax1.set_xlabel("Mode energy",size=s_)
+        ax2 = fig2.add_subplot(1,3,i2+1)
+        ax2.scatter(np.arange(1,48),resPBC2to2,color='r',label='PBC')
+        ax2.scatter(np.arange(1,48),resOBC2to2,color='b',label='OBC')
+        ax2.set_xlabel("Mode number",size=s_)
+        #
+        ax1.set_title(r"$J_2=$%.1f, $T=$%.4f"%(J2,temperature),size=s_)
+        ax2.set_title(r"$J_2=$%.1f, $T=$%.4f"%(J2,temperature),size=s_)
     #
-    parameters.lat_boundary = 'open'
-    system = openHamiltonian(parameters)
-    system.computeRate()
-    gammaD.append( system.rates[sca_types[0]] )
-    evalsD.append( system.evals[1:] )
+    fig1.tight_layout()
+    fig2.tight_layout()
+    plt.show()
+if 0:       # Compare rates for critical branch 
+    Lx = 8
+    Ly = 6
+    parameters.lat_Lx = Lx
+    parameters.lat_Ly = Ly
+    # Scattering parameters
+    sca_types = ('2to2_1',)
+    parameters.sca_types = sca_types
+    temperature = 0.5
+    parameters.sca_temperature = temperature
 
-# Figure
-fig = plt.figure(figsize=(13,5))
-ax0 = fig.add_subplot(1,3,1)
-ax1 = fig.add_subplot(1,3,2)
-ax2 = fig.add_subplot(1,3,3)
+    # Hamiltonian parameters
+    J1 = 1
+    J2 = 0
+    Nh = 1
+    Hs = np.linspace(1.,1.5,Nh,endpoint=True)
+    fig = plt.figure(figsize=(16,4))
+    for ih,h in enumerate(Hs):
+        print(h)
+        parameters.dia_Hamiltonian = (J1/2,J2/2,0,0,h,0)
+        # PBC
+        parameters.lat_boundary = 'periodic'
+        mySystem = openHamiltonian(parameters)
+        mySystem.computeRate()
+        resPBC2to2 = mySystem.rates['2to2_1']
+        enPBC = mySystem.evals[1:]
+        # OBC
+        parameters.lat_boundary = 'open'
+        mySystem = openHamiltonian(parameters)
+        mySystem.computeRate()
+        resOBC2to2 = mySystem.rates['2to2_1']
+        enOBC = mySystem.evals[1:]
 
-cmap = plt.cm.cividis
-from matplotlib.colors import Normalize
-norm = Normalize(vmin=sizes[0], vmax=sizes[-1])
-for iL in range(len(sizes)):
-    Lx = sizes[iL]
-    Ly = sizes[iL]
-    ax0.scatter(
-        evals[iL][0],
-        gamma[iL][0],
-        color=cmap(norm(Lx)),
-        label="Size:%dx%d"%(Lx,Ly)
-    )
-    ax1.scatter(
-        evals[iL][1],
-        gamma[iL][1],
-        color=cmap(norm(Lx)),
-    )
-
-norm = Normalize(vmin=24, vmax=60)
-for iD in range(len(diamonds)):
-    Lx,Ly,offSiteList = diamonds[iD][1:]
-    Ns = Lx*Ly - len(offSiteList)
-    ax2.scatter(
-        evalsD[iD],
-        gammaD[iD],
-        color=cmap(norm(Ns)),
-        label="%d-sites"%Ns
-    )
-
-ax0.legend(fontsize=15)
-ax2.legend(fontsize=15)
-# y limit
-ax0.set_title("Open rectangle",size=20)
-ymin0,ymax0 = ax0.get_ylim()
-ax1.set_title("Periodic system",size=20)
-ymin1,ymax1 = ax1.get_ylim()
-ax2.set_title("Open diamond",size=20)
-ymin2,ymax2 = ax2.get_ylim()
-
-ax0.set_ylim(min(ymin0,ymin1,ymin2),max(ymax0,ymax1,ymax2))
-ax1.set_ylim(min(ymin0,ymin1,ymin2),max(ymax0,ymax1,ymax2))
-ax2.set_ylim(min(ymin0,ymin1,ymin2),max(ymax0,ymax1,ymax2))
-
-# labels
-ax0.set_xlabel("Energy",size=15)
-ax1.set_xlabel("Energy",size=15)
-ax2.set_xlabel("Energy",size=15)
-ax0.set_ylabel(r"$\Gamma(2\rightarrow 2)$",size=15)
-ax1.set_ylabel(r"$\Gamma(2\rightarrow 2)$",size=15)
-ax2.set_ylabel(r"$\Gamma(2\rightarrow 2)$",size=15)
-
-
-#
-fig.tight_layout()
-plt.show()
+        # Figure
+        ax = fig.add_subplot(1+Nh//6,Nh,ih+1)
+        ax.scatter(enPBC,resPBC2to2,color='r',label='PBC')
+        ax.scatter(enOBC,resOBC2to2,color='b',label='OBC')
+        if ih>=5:
+            ax.set_xlabel("Mode energy",size=s_)
+        ax.set_title(r"$h=$%.3f"%h,size=s_)
+    #
+    fig.tight_layout()
+    plt.show()
 
 
 

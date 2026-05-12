@@ -13,39 +13,35 @@ from pathlib import Path
 from tqdm import tqdm
 
 #lat = '60-diamond'
-lat = '7x8-rectangle'
-lat = '6x8-rectangle'
+#lat = '7x8-rectangle'
+lat = '8x6-rectangle'
+
+J1 = 1
+J2 = float(sys.argv[1])
+h = 0
+g1 = J1/2
+Eref = -0.5644
+TMax = 1
 
 parameters = importParameters()
+
+""" Lattices """
 if lat == '24-diamond':
     Lx = 6
     Ly = 6
     offSiteList = ( (0,0), (0,1), (0,4), (0,5), (1,0), (1,5), (4,0), (4,5), (5,0), (5,1), (5,4), (5,5) )
-    TMax = 15
-    Eref = -0.4
 elif lat == '60-diamond':
     Lx = 10
     Ly = 10
     offSiteList = ( (0,0), (0,1), (0,2), (0,3), (0,6), (0,7), (0,8), (0,9), (1,0), (1,1), (1,2), (1,7), (1,8), (1,9), (2,0), (2,1), (2,8), (2,9), (3,0), (3,9), (6,0), (6,9), (7,0), (7,1), (7,8), (7,9), (8,0), (8,1), (8,2), (8,7), (8,8), (8,9), (9,0), (9,1), (9,2), (9,3), (9,6), (9,7), (9,8), (9,9) )
-    TMax = 15
-    Eref = -0.5
 elif lat == '7x8-rectangle':
     Lx = 7
     Ly = 8
     offSiteList = ()
-    TMax = 15
-    Eref = -0.5
-elif lat == '6x8-rectangle':
-    Lx = 6
-    Ly = 8
+elif lat == '8x6-rectangle':
+    Lx = 8
+    Ly = 6
     offSiteList = ()
-    TMax = 1
-    Eref = -0.5
-
-J1 = 1
-J2 = 0.4
-h = 0
-g1 = J1/2
 
 """ Initialize and diagonalize system """
 parameters.lat_Lx = Lx
@@ -63,9 +59,11 @@ Nbonds = np.sum(system._NNterms(1)) // 2      #number of bonds in the system: (L
 
 # GS energy from evals
 evGS = -3/2 + np.sum(evals)/Nbonds/g1/2
-print('Energy of GS from evals: %.3f and %.3f'%(evGS,system.GSE))
+#evGS = -3/2 + np.sum(evals)/J1/system.Ns*2
+#evGS = evGS / 2 * Nbonds / system.Ns
+print('Energy of GS from evals: %.4f and %.4f'%(evGS,system.GSE))
 
-# GS energy from XX+YY explicit
+# GS energy from XX+YY at 1st nn, explicit
 exGS = 0
 if 1:
     xx = - 3 + (np.sum(V**2+U**2,axis=1)[:,None] + np.sum(V**2+U**2,axis=1)[None,:])
@@ -92,9 +90,8 @@ else:
             exGS += 1/(2*Nbonds) * np.sum(U[i,:]*U[j,:])
             exGS += 1/(2*Nbonds) * np.sum(V[i,:]*V[j,:])
             exGS -= 1/(2*Nbonds) * np.sum(V[i,:]*U[j,:])
-print('Energy of GS from explicit XX+YY: %.3f'%exGS)
-
-Tlist = np.linspace(0.01,TMax,100)
+print('Energy of GS from explicit XX+YY: %.4f'%exGS)
+Tlist = np.linspace(0.01,TMax,1000)
 
 # E(T) using eigenvalues
 evT = np.zeros(len(Tlist))
@@ -121,26 +118,37 @@ for iT,T in tqdm(enumerate(Tlist)):
 
 np.savez("Data/temperature_J2=%.1f_6x8.npz"%J2,energiesFull=evT,energiesXXYY=exT,temperatures=Tlist)
 
-# Figure
+""" Figure """
 fig = plt.figure(figsize=(12,12))
 ax = fig.add_subplot()
-ax.plot(Tlist,evT,marker='^',label=r'$E(T)$')
-ax.plot(Tlist,exT,marker='*',label=r'$<XX+YY>_T$',alpha=0.5)
+ax.plot(Tlist,evT,marker='^',label=r'$E(T)$',color='orange')
+ax.plot(Tlist,exT,marker='*',label=r'$<XX+YY>_T$',alpha=0.5,color='b')
 ax.legend(fontsize=20)
 ax.axhline(Eref,color='r')
-bestT = Tlist[np.argmin(np.absolute(-Eref+evT))]
-ax.axvline(bestT,color='g')
+bestTev = Tlist[np.argmin(np.absolute(-Eref+evT))]
+bestTex = Tlist[np.argmin(np.absolute(-Eref+exT))]
+ax.axvline(bestTev,color='aqua')
+ax.axvline(bestTex,color='y')
 for k in range(Ns-1):
     ax.axvline(evals[k],color='lime')
 ax.set_xlim(0,Tlist[-1])
 #ax.set_xticks([0,]+list(evals[(evals<Tlist[-1])&(evals>1)]),["0",] + [r"mag \#%s"%i for i in range(len(evals[(evals<Tlist[-1])]))],size=12)
 props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
 ax.text(
-    0.3,0.7,
-    r"T $\sim$ %.5f"%bestT,
+    bestTev/Tlist[-1],0.7,
+    r"T = %.4f"%bestTev,
     transform=ax.transAxes,
     bbox=props,
-    size=20
+    size=20,
+    color='b'
+)
+ax.text(
+    bestTex/Tlist[-1],0.7,
+    r"T = %.4f"%bestTex,
+    transform=ax.transAxes,
+    bbox=props,
+    size=20,
+    color='orange'
 )
 ax.set_xlabel('Temperature',size=20)
 ax.set_ylabel("Energy",size=20)

@@ -327,12 +327,13 @@ def plotBogoliubovMomenta(system,**kwargs):
     Lx = system.Lx
     Ly = system.Ly
     Ns = system.Ns
-    U_ = system.U_
-    V_ = system.V_
-    phi_ik = np.real(U_ - V_)
-    for i in range(Ns):
-        ix,iy = system.indexesMap[i]
-        phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    # U_ = system.U_
+    # V_ = system.V_
+    # phi_ik = np.real(U_ - V_)
+    # for i in range(Ns):
+    #     ix,iy = system.indexesMap[i]
+    #     phi_ik[i,:] *= 2/np.pi*(-1)**(ix+iy+1)
+    phi_ik = system.Phi
     #
     printEnergies = kwargs.get('printEnergies',True)
     printIndexes = kwargs.get('printIndexes',True)

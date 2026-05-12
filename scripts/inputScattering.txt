@@ -1,7 +1,0 @@
-# Input file for scattering script
-# Use '#' to comment a line and ':' to assign a value
-Lx: 7
-Ly: 8
-saveWf: False
-excludeZeroMode: True
-Hamiltonian: (20,0,0,0,0,0)

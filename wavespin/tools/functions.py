@@ -27,6 +27,12 @@ def lorentz(arg,gamma):
     """
     return (1.0/np.pi) * (gamma / (arg**2 + gamma**2))
 
+def lorentz_n(arg,gamma_n,axis=0):
+    """ Lorentz distribution used for scattering and decay rates in self-consistent method.
+    """
+    gamma = gamma_n[:,None,None,None] + gamma_n[None,:,None,None] + gamma_n[None,None,:,None] + gamma_n[None,None,None,:]
+    return (1.0/np.pi) * (gamma / (arg**2 + gamma**2))
+
 def Ry(theta):
     """ Compute 3D rotation matrix around y-axis of angle theta """
     R = np.zeros((3,3))

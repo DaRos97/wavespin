@@ -56,6 +56,10 @@ class latticeClass:
     Raises
     ------
     ValueError
+        If ``Lx`` or ``Ly`` is smaller than 1.
+    ValueError
+        If all sites are excluded via ``offSiteList`` (``Ns == 0``).
+    ValueError
         If ``boundary == 'periodic'`` and either ``offSiteList`` is non-empty
         or ``Lx``/``Ly`` is odd.
     """
@@ -64,6 +68,10 @@ class latticeClass:
         self.p = copy.copy(p)
         self.Lx: int = self.p.lat_Lx
         self.Ly: int = self.p.lat_Ly
+        if self.Lx < 1 or self.Ly < 1:
+            raise ValueError(
+                f"Lx and Ly must be >= 1, got Lx={self.Lx}, Ly={self.Ly}"
+            )
         self.offSiteList: tuple = self.p.lat_offSiteList
         self.offSiteSet: set = set(self.offSiteList)
         self.indexToSite: list[tuple[int, int]] = self._mapIndexSite()
@@ -71,6 +79,12 @@ class latticeClass:
             site: idx for idx, site in enumerate(self.indexToSite)
         }
         self.Ns: int = self.Lx * self.Ly - len(self.offSiteList)
+        if self.Ns < 1:
+            raise ValueError(
+                f"Lattice must contain at least one active site, "
+                f"got Ns={self.Ns} (Lx={self.Lx}, Ly={self.Ly}, "
+                f"offSiteList={len(self.offSiteList)})"
+            )
         self.boundary: str = self.p.lat_boundary
         if self.boundary == 'periodic':
             if len(self.offSiteList) != 0:

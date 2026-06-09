@@ -13,7 +13,9 @@ class latticeClass():
         self.Lx = self.p.lat_Lx
         self.Ly = self.p.lat_Ly
         self.offSiteList = self.p.lat_offSiteList
+        self.offSiteSet = set(self.offSiteList)
         self.indexToSite = self._mapIndexSite()
+        self.siteToIndex = {site: idx for idx, site in enumerate(self.indexToSite)}
         self.Ns = self.Lx*self.Ly - len(self.offSiteList)
         self.boundary = self.p.lat_boundary
         if self.boundary == 'periodic':
@@ -37,7 +39,7 @@ class latticeClass():
         return self.indexToSite[i]
 
     def _idx(self, x, y):
-        return self.indexToSite.index( (x,y) )
+        return self.siteToIndex[(x, y)]
 
     def _build_nn(self):
         """ Construct a list of nn indexes for each site index.
@@ -63,14 +65,14 @@ class latticeClass():
         Ly = self.Ly
         ix, iy = self._xy(ind)
         result= []
-        if ix != Lx-1 and not (ix+1,iy) in self.offSiteList:        #right neighbor
-            result.append( self.indexToSite.index((ix+1,iy)) )
-        if ix != 0 and not (ix-1,iy) in self.offSiteList:        #left neighbor
-            result.append( self.indexToSite.index((ix-1,iy)) )
-        if iy != Ly-1 and not (ix,iy+1) in self.offSiteList:        #upper neighbor
-            result.append( self.indexToSite.index((ix,iy+1)) )
-        if iy != 0 and not (ix,iy-1) in self.offSiteList:        #lower neighbor
-            result.append( self.indexToSite.index((ix,iy-1)) )
+        if ix != Lx-1 and (ix+1, iy) not in self.offSiteSet:
+            result.append(self.siteToIndex[(ix+1, iy)])
+        if ix != 0 and (ix-1, iy) not in self.offSiteSet:
+            result.append(self.siteToIndex[(ix-1, iy)])
+        if iy != Ly-1 and (ix, iy+1) not in self.offSiteSet:
+            result.append(self.siteToIndex[(ix, iy+1)])
+        if iy != 0 and (ix, iy-1) not in self.offSiteSet:
+            result.append(self.siteToIndex[(ix, iy-1)])
         return result
 
     def _build_nnn(self):
@@ -97,14 +99,14 @@ class latticeClass():
         Ly = self.Ly
         ix, iy = self._xy(ind)
         result= []
-        if ix != Lx-1 and iy != Ly-1 and not (ix+1,iy+1) in self.offSiteList:        #right-up neighbor
-            result.append( self.indexToSite.index((ix+1,iy+1)) )
-        if ix != 0 and iy != Ly-1 and not (ix-1,iy+1) in self.offSiteList:        #left-up neighbor
-            result.append( self.indexToSite.index((ix-1,iy+1)) )
-        if ix != Lx-1 and iy != 0 and not (ix+1,iy-1) in self.offSiteList:        #right-down neighbor
-            result.append( self.indexToSite.index((ix+1,iy-1)) )
-        if ix != 0 and iy != 0 and not (ix-1,iy-1) in self.offSiteList:        #left-down neighbor
-            result.append( self.indexToSite.index((ix-1,iy-1)) )
+        if ix != Lx-1 and iy != Ly-1 and (ix+1, iy+1) not in self.offSiteSet:
+            result.append(self.siteToIndex[(ix+1, iy+1)])
+        if ix != 0 and iy != Ly-1 and (ix-1, iy+1) not in self.offSiteSet:
+            result.append(self.siteToIndex[(ix-1, iy+1)])
+        if ix != Lx-1 and iy != 0 and (ix+1, iy-1) not in self.offSiteSet:
+            result.append(self.siteToIndex[(ix+1, iy-1)])
+        if ix != 0 and iy != 0 and (ix-1, iy-1) not in self.offSiteSet:
+            result.append(self.siteToIndex[(ix-1, iy-1)])
         return result
 
     def _mapIndexSite(self):
@@ -119,7 +121,7 @@ class latticeClass():
         indexesMap = []
         for ix in range(self.Lx):
             for iy in range(self.Ly):
-                if (ix,iy) not in self.offSiteList:
+                if (ix,iy) not in self.offSiteSet:
                     indexesMap.append((ix,iy))
         return indexesMap
 
@@ -133,7 +135,7 @@ class latticeClass():
             formattedFunc = np.zeros((self.Lx,self.Ly))
             for ix in range(self.Lx):
                 for iy in range(self.Ly):
-                    if (ix,iy) in self.offSiteList:
+                    if (ix,iy) in self.offSiteSet:
                         formattedFunc[ix,iy] = np.nan
                     else:
                         formattedFunc[ix,iy] = func[self._idx(ix,iy)]

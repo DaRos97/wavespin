@@ -50,6 +50,7 @@ def plotLatticeWithAngles(lattice, thetas, *,
                           indices=False,
                           sublatticeColors=False,
                           perturbationSite=None,
+                          boundary='auto',
                           figsize=(12, 12),
                           ax=None,
                           filename=None,
@@ -70,6 +71,8 @@ def plotLatticeWithAngles(lattice, thetas, *,
         Colour sites by sublattice.
     perturbationSite : (int, int) or None
         Highlight this coordinate.
+    boundary : bool or 'auto'
+        Passed through to :func:`latticePlots.plotLattice`.
     figsize : (float, float)
         Figure size.
     ax : matplotlib Axes or None
@@ -88,6 +91,7 @@ def plotLatticeWithAngles(lattice, thetas, *,
         indices=indices,
         sublatticeColors=sublatticeColors,
         perturbationSite=perturbationSite,
+        boundary=boundary,
         figsize=figsize,
         ax=ax,
         show=False,

@@ -9,6 +9,7 @@ def plotLattice(lattice, *,
                 indices=False,
                 sublatticeColors=False,
                 perturbationSite=None,
+                boundary='auto',
                 figsize=(12, 12),
                 ax=None,
                 filename=None,
@@ -25,6 +26,10 @@ def plotLattice(lattice, *,
         If True, colour sites by sublattice (A/B checkerboard).
     perturbationSite : (int, int) or None
         If given, highlight this coordinate as a perturbation site.
+    boundary : bool or 'auto'
+        If ``'auto'`` (default), show periodic-boundary ghost sites and
+        wrap bonds when ``lattice.boundary == 'periodic'``.
+        Set to ``True`` or ``False`` to override.
     figsize : (float, float)
         Figure size in inches (only used when *ax* is None).
     ax : matplotlib Axes or None
@@ -78,6 +83,31 @@ def plotLattice(lattice, *,
     if perturbationSite is not None:
         ax.scatter(perturbationSite[0], perturbationSite[1],
                    c='w', edgecolor='m', lw=2, marker='o', s=300, zorder=1)
+
+    if boundary == 'auto':
+        show_boundary = (lattice.boundary == 'periodic')
+    else:
+        show_boundary = bool(boundary)
+
+    if show_boundary and not lattice.offSiteList:
+        ghost_alpha = 0.25
+        ghost_color = 'grey'
+        # Ghost copies of column 0 at x = Lx, with wrap bonds
+        for iy in range(Ly):
+            if (0, iy) not in offSiteSet and (Lx - 1, iy) not in offSiteSet:
+                ax.scatter(Lx, iy, c=ghost_color, marker='o', s=80,
+                           alpha=ghost_alpha, zorder=1)
+                ax.plot([Lx - 1, Lx], [iy, iy],
+                        c=ghost_color, ls=':', lw=1, alpha=ghost_alpha,
+                        zorder=-1)
+        # Ghost copies of row 0 at y = Ly, with wrap bonds
+        for ix in range(Lx):
+            if (ix, 0) not in offSiteSet and (ix, Ly - 1) not in offSiteSet:
+                ax.scatter(ix, Ly, c=ghost_color, marker='o', s=80,
+                           alpha=ghost_alpha, zorder=1)
+                ax.plot([ix, ix], [Ly - 1, Ly],
+                        c=ghost_color, ls=':', lw=1, alpha=ghost_alpha,
+                        zorder=-1)
 
     ax.set_aspect('equal')
     ax.axis('off')

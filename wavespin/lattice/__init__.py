@@ -1,2 +1,5 @@
-""" Here we keep code defining the base class of our simulations, the lattice.
+""" Lattice geometry, site indexing, nearest-neighbor construction, and preset shapes.
 """
+
+from wavespin.lattice.lattice import latticeClass
+from wavespin.lattice.presets import PRESETS, get_preset

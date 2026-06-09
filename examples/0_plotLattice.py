@@ -11,15 +11,14 @@ bonds, and the off-site (removed) regions for shaped geometries.
 
 Usage
 -----
-    python 0_plotLatticeDemo.py
+    python 0_plotLattice.py
 
 No input file or command-line arguments are required --- lattice parameters are
 hard-coded for demonstration purposes.
 """
 
-from wavespin.lattice.presets import PRESETS, get_preset
-from wavespin.tools.inputUtils import LatticeParams
-from wavespin.lattice.lattice import latticeClass
+from wavespin.lattice import latticeClass, PRESETS, get_preset
+from wavespin.tools import LatticeParams
 from wavespin.plots import latticePlots
 
 

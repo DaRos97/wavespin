@@ -2,8 +2,7 @@
 """
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importPeriodicParameters as importParameters
 from wavespin.static.periodic import periodicSystem, periodicRamp
 from wavespin.plots import fancyLattice
@@ -51,16 +50,5 @@ if parameters.plotCorrelatorKW:
                              'showFigure' : True,
                          }
                          )
-
-
-
-
-
-
-
-
-
-
-
 
 

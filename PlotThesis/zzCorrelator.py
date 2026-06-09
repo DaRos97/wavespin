@@ -1,8 +1,6 @@
 """ Here I plot the zz correlator for the thesis.
 """
 import numpy as np
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.static.open import openHamiltonian, openSystem
 from wavespin.plots.rampPlots import SqrtNorm
 from wavespin.tools.inputUtils import importParameters
@@ -177,51 +175,5 @@ if final:
         bbox_inches="tight",
         dpi=600
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

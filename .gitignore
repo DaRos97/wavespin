@@ -7,3 +7,10 @@ __pycache__/
 */__pycache__/
 */*/__pycache__/
 */*/*/__pycache__/
+
+.venv/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

@@ -4,7 +4,6 @@ Use with input_4.txt
 
 import numpy as np
 import sys, os, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 from wavespin.static.open import openSystem, openRamp
@@ -410,51 +409,5 @@ if 0:
     ax.set_ylim(y_min,y_max)
     ax.legend(fontsize=20)
     plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -3,8 +3,6 @@ Since there are no other magnetic orders then the canted-Neel and canted-Stripe,
 """
 
 import numpy as np
-import os,sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.classicSpins.RMO import *
 from wavespin.tools import pathFinder
 
@@ -142,7 +140,6 @@ if 0:
 if 1:
     """ Plot some of the spin configurations """
     import sys, os, argparse
-    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
     from wavespin.tools.inputUtils import importParameters
     from wavespin.static.periodic import quantizationAxis
     from wavespin.static.open import openHamiltonian
@@ -175,23 +172,5 @@ if 1:
                   "sublatticeColors":J2>J1/2,
                   "filename":fn}
         fancyLattice.plotSitesGrid(system,**kwargs)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

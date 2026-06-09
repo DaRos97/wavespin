@@ -1,8 +1,7 @@
 """ Here I compute the bands for the two branches of parameters from LSW.
 """
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 import matplotlib.pyplot as plt

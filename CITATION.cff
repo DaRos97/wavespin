@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "wavespin"
+type: software
+authors:
+  - given-names: Dario
+    family-names: Rossi
+    email: dario.rossim@gmail.com
+url: "https://github.com/DaRos97/wavespin"

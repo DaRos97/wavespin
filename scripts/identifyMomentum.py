@@ -3,7 +3,6 @@ Use with inputRec.txt
 """
 import numpy as np
 import sys, os, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 import matplotlib.pyplot as plt
@@ -194,39 +193,5 @@ if 0:
         )
     ax.invert_xaxis()
     plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

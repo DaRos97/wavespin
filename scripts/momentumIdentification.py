@@ -2,8 +2,7 @@
 """
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 from wavespin.lattice.lattice import latticeClass
@@ -194,11 +193,6 @@ ax = ax.twinx()
 ax.scatter(np.arange(1,Ns),system.evals[1:],label='evals Bog',c='b')
 ax.set_ylabel("evals Bog")
 ax.legend(loc='upper right')
-
-
-
-
-
 
 
 plt.show()

@@ -2,8 +2,7 @@
 """
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importParameters
 import wavespin.tools.pathFinder as pf
 from wavespin.static.open import openHamiltonian
@@ -234,11 +233,5 @@ sm = ScalarMappable(norm=norm, cmap=cmap)
 fig.colorbar(sm, cax=cax, label="Bath energy")
 #fig.tight_layout()
 plt.show()
-
-
-
-
-
-
 
 

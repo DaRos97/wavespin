@@ -2,8 +2,7 @@
 """
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importClassicParameters as importParameters
 from wavespin.classicSpins.minimization import *
 from wavespin.plots import fancyLattice
@@ -41,9 +40,5 @@ for pValue in np.linspace(0.1,1,10):
                'verbose':verbose
                }
     fancyLattice.plotQuantizationAngles(sim,thetas,phis,**options)
-
-
-
-
 
 

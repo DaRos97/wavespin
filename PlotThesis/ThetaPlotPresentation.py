@@ -2,8 +2,6 @@
 """
 
 import numpy as np
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import matplotlib.pyplot as plt
 from pathlib import Path
 
@@ -42,7 +40,6 @@ else:
         ths[i] = ham.theta
         gaps[i] = ham.gap
     np.savez(dataFn,theta=ths,gaps=gaps)
-
 
 
 fig = plt.figure(figsize=(8,6))

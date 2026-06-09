@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wavespin"
+version = "0.1.0"
+description = "Mean field simulations of quantum simulators using spin-wave approximation"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Dario Rossi", email = "dario.rossim@gmail.com"},
+]
+keywords = ["spin-waves", "quantum-simulation", "mean-field", "holstein-primakoff", "XY-model"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "tqdm",
+    "matplotlib",
+    "typeguard",
+]
+
+[project.urls]
+Homepage = "https://github.com/DaRos97/wavespin"
+Repository = "https://github.com/DaRos97/wavespin"
+
+[tool.setuptools.packages.find]
+include = ["wavespin*"]

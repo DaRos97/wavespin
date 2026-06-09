@@ -2,8 +2,7 @@
 """
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importClassicParameters as importParameters
 from wavespin.lattice.lattice import latticeClass
 from wavespin.classicSpins.montecarlo import *
@@ -44,9 +43,5 @@ print(f"m_staggered_z = {ms:.6f}")
 
 kwargs = {'saveFigure':parameters.savePlotSolution}
 fancyLattice.solutionMC(sim,**kwargs)
-
-
-
-
 
 

@@ -2,8 +2,7 @@
 """
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 import matplotlib.pyplot as plt
@@ -363,7 +362,5 @@ if 0:       # Compute rate for J2=h=0, different types of first order at various
     #fig.savefig("Figures/broad%.1f.png"%broadening)
     #plt.close()
     plt.show()
-
-
 
 

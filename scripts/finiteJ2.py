@@ -2,8 +2,7 @@
 """
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 from wavespin.static.open import openSystem, openRamp

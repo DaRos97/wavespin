@@ -1,8 +1,6 @@
 """ Here I plot the amazing functions in comparison with the cosine functions.
 """
 import numpy as np
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.static.open import openHamiltonian
 from wavespin.tools.inputUtils import importParameters
 import wavespin.tools.pathFinder as pf
@@ -39,7 +37,6 @@ else:
     phi = system.Phi
     if save:
         np.savez(dataFn,phi=phi)
-
 
 
 X,Y = np.meshgrid(np.arange(Lx),np.arange(Ly),indexing='ij')
@@ -191,51 +188,5 @@ if final:
         "Figures/awesomeFunctions.pdf",
         bbox_inches="tight"
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

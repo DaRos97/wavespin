@@ -4,7 +4,6 @@ Use with input_5.txt
 
 import numpy as np
 import sys, os, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 

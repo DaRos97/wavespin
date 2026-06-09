@@ -4,8 +4,7 @@ Use with input_4.txt
 
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importOpenParameters as importParameters
 from wavespin.lattice.lattice import latticeClass
 from wavespin.static.open import openSystem, openRamp
@@ -122,19 +121,5 @@ ax.set_ylabel("lorentzian width")
 ax.legend()
 
 plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

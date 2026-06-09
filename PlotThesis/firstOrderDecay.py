@@ -2,8 +2,6 @@
 """
 
 import numpy as np
-import os, sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from wavespin.static.open import openHamiltonian
 from wavespin.tools.inputUtils import importParameters
 import wavespin.tools.pathFinder as pf
@@ -286,33 +284,5 @@ if final:
         "Figures/firstOrderDecay.pdf",
         bbox_inches="tight"
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

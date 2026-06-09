@@ -4,8 +4,7 @@ Different geometries are considered.
 """
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 import matplotlib.pyplot as plt
@@ -154,18 +153,5 @@ ax.set_xlabel('Temperature',size=20)
 ax.set_ylabel("Energy",size=20)
 ax.set_title(lat,size=25)
 plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

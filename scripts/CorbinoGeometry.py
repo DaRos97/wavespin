@@ -2,8 +2,7 @@
 """
 import numpy as np
 import matplotlib.pyplot as plt
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.lattice.lattice import latticeClass
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian

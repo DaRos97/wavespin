@@ -1,8 +1,7 @@
 """ Here I compute the decay rates self-consistently starting from the usual way and looping the decay rates for each mode.
 """
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 import matplotlib.pyplot as plt

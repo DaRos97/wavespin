@@ -2,8 +2,7 @@
 """
 
 import numpy as np
-import os, sys, argparse
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import argparse
 from wavespin.tools.inputUtils import importParameters
 from wavespin.static.open import openHamiltonian
 import matplotlib.pyplot as plt
@@ -663,7 +662,5 @@ if inp=='10':           # Site-dependent critical branch in gapped side for a ra
         cbar.set_label("Occupation",fontsize=15)
     fig.tight_layout()
     plt.show()
-
-
 
 

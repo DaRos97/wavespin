@@ -44,7 +44,7 @@ class openHamiltonian(latticeClass):
 
 # Periodic functions
     def _momentumGrid(self):
-        """ Compute momenta in the Brillouin zone for a (periodic) rectangular shape.
+        """ Compute momenta in the Brillouin zone for a (periodic) square shape.
 
         Parameters
         ----------

@@ -18,7 +18,7 @@ class latticeClass():
         self.boundary = self.p.lat_boundary
         if self.boundary == 'periodic':
             if len(self.offSiteList) != 0:
-                raise ValueError("Periodic and non-rectangular lattice not implemented")
+                raise ValueError("Periodic and non-square lattice not implemented")
             if self.Lx%2 or self.Ly%2:
                 raise ValueError("For a periodic boundary you need even Lx and Ly!")
         # Precompute neighbors
@@ -26,13 +26,9 @@ class latticeClass():
         self.NNN = self._build_nnn()
         # Directory names
         self.dataDn = pf.getHomeDirname(str(Path.cwd()),'/Data/')
-        if not Path(self.dataDn).is_dir():
-            print("Creating 'Data/' folder in home directory.")
-            os.system('mkdir '+self.dataDn)
+        Path(self.dataDn).mkdir(parents=True, exist_ok=True)
         self.figureDn = pf.getHomeDirname(str(Path.cwd()),'/Figures/')
-        if not Path(self.figureDn).is_dir():
-            print("Creating 'Figures/' folder in home directory.")
-            os.system('mkdir '+self.figureDn)
+        Path(self.figureDn).mkdir(parents=True, exist_ok=True)
         # Plotting
         if p.lat_plotLattice:
             fancyLattice.plotSitesGrid(self)
@@ -128,7 +124,7 @@ class latticeClass():
         return indexesMap
 
     def patchFunction(self,func):
-        """ Tool for masking a function defined over a non-rectangular geometry.
+        """ Tool for masking a function defined over a non-square geometry.
         func has to have size Ns
         """
         if len(self.offSiteList)==0:

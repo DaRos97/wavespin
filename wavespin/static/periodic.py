@@ -124,7 +124,7 @@ class periodicHamiltonian(latticeClass):
         self.nOmega = 2000
 
     def _momentumGrid(self):
-        """ Compute momenta in the Brillouin zone for a (periodic) rectangular shape.
+        """ Compute momenta in the Brillouin zone for a (periodic) square shape.
 
         Parameters
         ----------

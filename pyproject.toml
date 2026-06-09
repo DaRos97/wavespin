@@ -29,6 +29,9 @@ dependencies = [
     "typeguard",
 ]
 
+[project.optional-dependencies]
+test = ["pytest"]
+
 [project.urls]
 Homepage = "https://github.com/DaRos97/wavespin"
 Repository = "https://github.com/DaRos97/wavespin"

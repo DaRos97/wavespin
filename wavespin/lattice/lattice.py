@@ -1,144 +1,231 @@
-""" Functions defining the lattice.
+"""Square lattice with nearest-neighbor and next-nearest-neighbor adjacency.
+
+Defines ``latticeClass``, the base class for all simulations.  It builds an
+:math:`L_x \\times L_y` grid of sites with optional missing (off-site)
+positions, and precomputes nearest-neighbor (NN) and next-nearest-neighbor
+(NNN) index lists for open or periodic boundary conditions.
 """
 
-import numpy as np
-from wavespin.tools import pathFinder as pf
-from pathlib import Path
-from wavespin.plots import fancyLattice
-import copy
+from __future__ import annotations
 
-class latticeClass():
-    def __init__(self,p):
-        self.p = copy.deepcopy(p)
-        self.Lx = self.p.lat_Lx
-        self.Ly = self.p.lat_Ly
-        self.offSiteList = self.p.lat_offSiteList
-        self.offSiteSet = set(self.offSiteList)
-        self.indexToSite = self._mapIndexSite()
-        self.siteToIndex = {site: idx for idx, site in enumerate(self.indexToSite)}
-        self.Ns = self.Lx*self.Ly - len(self.offSiteList)
-        self.boundary = self.p.lat_boundary
+import copy
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import numpy as np
+
+from wavespin.plots import fancyLattice
+from wavespin.tools import pathFinder as pf
+
+if TYPE_CHECKING:
+    from wavespin.tools.inputUtils import myParameters
+
+
+class latticeClass:
+    """Square-lattice geometry with site indexing and precomputed neighbor lists.
+
+    Parameters
+    ----------
+    p : myParameters
+        Parameter dataclass containing at least ``lat_Lx``, ``lat_Ly``,
+        ``lat_offSiteList``, ``lat_boundary``, and ``lat_plotLattice``.
+
+    Attributes
+    ----------
+    Lx, Ly : int
+        Number of sites along x and y directions.
+    Ns : int
+        Total number of *active* sites (``Lx * Ly - len(offSiteList)``).
+    offSiteList : tuple of (int, int)
+        Coordinates of sites excluded from the lattice.
+    offSiteSet : set of (int, int)
+        Set version of ``offSiteList`` for O(1) membership checks.
+    indexToSite : list of (int, int)
+        Maps site index ``0..Ns-1`` → ``(x, y)`` coordinate.
+    siteToIndex : dict mapping (int, int) → int
+        Inverse of ``indexToSite``; O(1) coordinate → index lookup.
+    boundary : str
+        ``'open'`` or ``'periodic'``.
+    NN : list of list of int
+        ``NN[i]`` — nearest-neighbour indices of site *i*.
+    NNN : list of list of int
+        ``NNN[i]`` — next-nearest-neighbour indices of site *i*.
+    dataDn, figureDn : str
+        Absolute paths to ``Data/`` and ``Figures/`` output directories.
+
+    Raises
+    ------
+    ValueError
+        If ``boundary == 'periodic'`` and either ``offSiteList`` is non-empty
+        or ``Lx``/``Ly`` is odd.
+    """
+
+    def __init__(self, p: myParameters) -> None:
+        self.p = copy.copy(p)
+        self.Lx: int = self.p.lat_Lx
+        self.Ly: int = self.p.lat_Ly
+        self.offSiteList: tuple = self.p.lat_offSiteList
+        self.offSiteSet: set = set(self.offSiteList)
+        self.indexToSite: list[tuple[int, int]] = self._mapIndexSite()
+        self.siteToIndex: dict[tuple[int, int], int] = {
+            site: idx for idx, site in enumerate(self.indexToSite)
+        }
+        self.Ns: int = self.Lx * self.Ly - len(self.offSiteList)
+        self.boundary: str = self.p.lat_boundary
         if self.boundary == 'periodic':
             if len(self.offSiteList) != 0:
-                raise ValueError("Periodic and non-square lattice not implemented")
-            if self.Lx%2 or self.Ly%2:
-                raise ValueError("For a periodic boundary you need even Lx and Ly!")
-        # Precompute neighbors
-        self.NN = self._build_nn()
-        self.NNN = self._build_nnn()
-        # Directory names
-        self.dataDn = pf.getHomeDirname(str(Path.cwd()),'/Data/')
+                raise ValueError(
+                    "Periodic and non-square lattice not implemented"
+                )
+            if self.Lx % 2 or self.Ly % 2:
+                raise ValueError(
+                    "For a periodic boundary you need even Lx and Ly!"
+                )
+
+        self.NN: list[list[int]] = self._build_nn()
+        self.NNN: list[list[int]] = self._build_nnn()
+
+        self.dataDn: str = pf.getHomeDirname(str(Path.cwd()), '/Data/')
         Path(self.dataDn).mkdir(parents=True, exist_ok=True)
-        self.figureDn = pf.getHomeDirname(str(Path.cwd()),'/Figures/')
+        self.figureDn: str = pf.getHomeDirname(str(Path.cwd()), '/Figures/')
         Path(self.figureDn).mkdir(parents=True, exist_ok=True)
-        # Plotting
+
         if p.lat_plotLattice:
             fancyLattice.plotSitesGrid(self)
 
-    def _xy(self, i):
+    def _xy(self, i: int) -> tuple[int, int]:
+        """Return the ``(x, y)`` coordinate of site *i*."""
         return self.indexToSite[i]
 
-    def _idx(self, x, y):
+    def _idx(self, x: int, y: int) -> int:
+        """Return the site index for coordinate ``(x, y)``."""
         return self.siteToIndex[(x, y)]
 
-    def _build_nn(self):
-        """ Construct a list of nn indexes for each site index.
-        """
-        NN = [[] for _ in range(self.Ns)]
+    # ------------------------------------------------------------------
+    # Nearest neighbours
+    # ------------------------------------------------------------------
+
+    def _build_nn(self) -> list[list[int]]:
+        """Build the nearest-neighbour adjacency list for every site."""
+        NN: list[list[int]] = [[] for _ in range(self.Ns)]
         for ind in range(self.Ns):
-            if self.boundary=='periodic':
-                x,y = self._xy(ind)
+            if self.boundary == 'periodic':
+                x, y = self._xy(ind)
                 NN[ind] = [
-                    self._idx((x+1)%self.Lx, y),
-                    self._idx((x-1)%self.Lx, y),
-                    self._idx(x, (y+1)%self.Ly),
-                    self._idx(x, (y-1)%self.Ly),
+                    self._idx((x + 1) % self.Lx, y),
+                    self._idx((x - 1) % self.Lx, y),
+                    self._idx(x, (y + 1) % self.Ly),
+                    self._idx(x, (y - 1) % self.Ly),
                 ]
             else:
                 NN[ind] = self._open_nn(ind)
         return NN
 
-    def _open_nn(self,ind):
-        """ Compute indices of nearest neighbors of site ind.
+    def _open_nn(self, ind: int) -> list[int]:
+        """Nearest neighbours of site *ind* with open boundary conditions.
+
+        Boundary and off-site checks exclude neighbours that would lie
+        outside the lattice or on a removed site.
         """
-        Lx = self.Lx
-        Ly = self.Ly
+        Lx, Ly = self.Lx, self.Ly
         ix, iy = self._xy(ind)
-        result= []
-        if ix != Lx-1 and (ix+1, iy) not in self.offSiteSet:
-            result.append(self.siteToIndex[(ix+1, iy)])
-        if ix != 0 and (ix-1, iy) not in self.offSiteSet:
-            result.append(self.siteToIndex[(ix-1, iy)])
-        if iy != Ly-1 and (ix, iy+1) not in self.offSiteSet:
-            result.append(self.siteToIndex[(ix, iy+1)])
-        if iy != 0 and (ix, iy-1) not in self.offSiteSet:
-            result.append(self.siteToIndex[(ix, iy-1)])
+        result: list[int] = []
+        off = self.offSiteSet
+        sti = self.siteToIndex
+
+        if ix != Lx - 1 and (ix + 1, iy) not in off:          # right
+            result.append(sti[(ix + 1, iy)])
+        if ix != 0 and (ix - 1, iy) not in off:               # left
+            result.append(sti[(ix - 1, iy)])
+        if iy != Ly - 1 and (ix, iy + 1) not in off:          # up
+            result.append(sti[(ix, iy + 1)])
+        if iy != 0 and (ix, iy - 1) not in off:               # down
+            result.append(sti[(ix, iy - 1)])
         return result
 
-    def _build_nnn(self):
-        """ Construct a list of nnn indexes for each site index.
-        """
-        NNN = [[] for _ in range(self.Ns)]
+    # ------------------------------------------------------------------
+    # Next-nearest neighbours
+    # ------------------------------------------------------------------
+
+    def _build_nnn(self) -> list[list[int]]:
+        """Build the next-nearest-neighbour adjacency list for every site."""
+        NNN: list[list[int]] = [[] for _ in range(self.Ns)]
         for ind in range(self.Ns):
-            if self.boundary=='periodic':
-                x,y = self._xy(ind)
+            if self.boundary == 'periodic':
+                x, y = self._xy(ind)
                 NNN[ind] = [
-                    self._idx((x+1)%self.Lx, (y+1)%self.Ly),
-                    self._idx((x-1)%self.Lx, (y+1)%self.Ly),
-                    self._idx((x+1)%self.Lx, (y-1)%self.Ly),
-                    self._idx((x-1)%self.Lx, (y-1)%self.Ly),
+                    self._idx((x + 1) % self.Lx, (y + 1) % self.Ly),
+                    self._idx((x - 1) % self.Lx, (y + 1) % self.Ly),
+                    self._idx((x + 1) % self.Lx, (y - 1) % self.Ly),
+                    self._idx((x - 1) % self.Lx, (y - 1) % self.Ly),
                 ]
             else:
                 NNN[ind] = self._open_nnn(ind)
         return NNN
 
-    def _open_nnn(self,ind):
-        """ Compute indices of next-nearest neighbors of site ind.
+    def _open_nnn(self, ind: int) -> list[int]:
+        """Next-nearest neighbours of site *ind* with open boundary conditions.
+
+        Boundary and off-site checks exclude NNNs that would lie outside
+        the lattice or on a removed site.
         """
-        Lx = self.Lx
-        Ly = self.Ly
+        Lx, Ly = self.Lx, self.Ly
         ix, iy = self._xy(ind)
-        result= []
-        if ix != Lx-1 and iy != Ly-1 and (ix+1, iy+1) not in self.offSiteSet:
-            result.append(self.siteToIndex[(ix+1, iy+1)])
-        if ix != 0 and iy != Ly-1 and (ix-1, iy+1) not in self.offSiteSet:
-            result.append(self.siteToIndex[(ix-1, iy+1)])
-        if ix != Lx-1 and iy != 0 and (ix+1, iy-1) not in self.offSiteSet:
-            result.append(self.siteToIndex[(ix+1, iy-1)])
-        if ix != 0 and iy != 0 and (ix-1, iy-1) not in self.offSiteSet:
-            result.append(self.siteToIndex[(ix-1, iy-1)])
+        result: list[int] = []
+        off = self.offSiteSet
+        sti = self.siteToIndex
+
+        if ix != Lx - 1 and iy != Ly - 1 and (ix + 1, iy + 1) not in off:
+            result.append(sti[(ix + 1, iy + 1)])               # right-up
+        if ix != 0 and iy != Ly - 1 and (ix - 1, iy + 1) not in off:
+            result.append(sti[(ix - 1, iy + 1)])               # left-up
+        if ix != Lx - 1 and iy != 0 and (ix + 1, iy - 1) not in off:
+            result.append(sti[(ix + 1, iy - 1)])               # right-down
+        if ix != 0 and iy != 0 and (ix - 1, iy - 1) not in off:
+            result.append(sti[(ix - 1, iy - 1)])               # left-down
         return result
 
-    def _mapIndexSite(self):
-        """ Here we define a map: from an index between 0 and Ns-1 to (ix,iy) between 0 and Lx/y-1.
-        To each index in the actual used qubits assign the corresponding site ix,iy.
+    # ------------------------------------------------------------------
+    # Index ↔ coordinate mapping
+    # ------------------------------------------------------------------
+
+    def _mapIndexSite(self) -> list[tuple[int, int]]:
+        """Build the ordered index → coordinate mapping.
+
+        Iterates over the full :math:`L_x \\times L_y` grid, skipping
+        coordinates that appear in ``offSiteSet``, and returns a list
+        whose *i*-th entry is the ``(x, y)`` coordinate of site *i*.
+        """
+        return [
+            (ix, iy)
+            for ix in range(self.Lx)
+            for iy in range(self.Ly)
+            if (ix, iy) not in self.offSiteSet
+        ]
+
+    # ------------------------------------------------------------------
+    # Utilities
+    # ------------------------------------------------------------------
+
+    def patchFunction(self, func: np.ndarray) -> np.ndarray:
+        """Reshape a site-indexed array to the :math:`L_x \\times L_y` grid.
+
+        Pads missing sites with ``NaN`` when ``offSiteList`` is non-empty.
+
+        Parameters
+        ----------
+        func : np.ndarray of shape ``(Ns,)``
+            Function defined on the active sites of the lattice.
 
         Returns
         -------
-        indexesMap : list of 2-tuple.
-            Coordinates of sites which are been considered, in order of their index.
+        np.ndarray
+            ``(Lx, Ly)``-shaped array with ``NaN`` at off-site positions.
         """
-        indexesMap = []
-        for ix in range(self.Lx):
-            for iy in range(self.Ly):
-                if (ix,iy) not in self.offSiteSet:
-                    indexesMap.append((ix,iy))
-        return indexesMap
+        if not self.offSiteList:
+            return func.reshape(self.Lx, self.Ly)
 
-    def patchFunction(self,func):
-        """ Tool for masking a function defined over a non-square geometry.
-        func has to have size Ns
-        """
-        if len(self.offSiteList)==0:
-            formattedFunc = func.reshape(self.Lx,self.Ly)
-        else:
-            formattedFunc = np.zeros((self.Lx,self.Ly))
-            for ix in range(self.Lx):
-                for iy in range(self.Ly):
-                    if (ix,iy) in self.offSiteSet:
-                        formattedFunc[ix,iy] = np.nan
-                    else:
-                        formattedFunc[ix,iy] = func[self._idx(ix,iy)]
-        return formattedFunc
-
-
+        formatted = np.full((self.Lx, self.Ly), np.nan)
+        for i, (x, y) in enumerate(self.indexToSite):
+            formatted[x, y] = func[i]
+        return formatted

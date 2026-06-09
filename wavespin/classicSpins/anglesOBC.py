@@ -5,7 +5,6 @@ import numpy as np
 from numpy.random import default_rng
 from pathlib import Path
 from wavespin.lattice.lattice import latticeClass
-import wavespin.tools.inputUtils as iu
 from wavespin.static.periodic import quantizationAxis
 import wavespin.tools.pathFinder as pf
 from scipy.optimize import minimize

@@ -2,6 +2,7 @@
 """
 
 import os
+import copy
 import scipy
 import numpy as np
 from pathlib import Path
@@ -10,7 +11,7 @@ from time import time
 
 from wavespin.lattice.lattice import latticeClass
 from wavespin.tools import pathFinder as pf
-from wavespin.tools import inputUtils as iu
+from wavespin.tools.inputUtils import SimParams
 from wavespin.tools.functions import lorentz, Ry
 from wavespin.static import correlators
 from wavespin.static import momentumTransformation
@@ -21,10 +22,11 @@ from wavespin.static.decayProcesses import dic_processes
 import itertools
 
 class openHamiltonian(latticeClass):
-    def __init__(self, p: iu.myParameters):
-        super().__init__(p)
+    def __init__(self, p: SimParams):
+        super().__init__(p.lattice)
+        self.p = copy.copy(p)
         # Hamiltonian parameters
-        self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = self.p.dia_Hamiltonian
+        self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = self.p.diag.Hamiltonian
         self.order = 'canted-Neel' if self.g2<=self.g1/2 else 'canted-stripe'
         self.S = 0.5     #spin value
         self.g_i = (self._NNterms(self.g1), self._NNNterms(self.g2))
@@ -209,7 +211,7 @@ class openHamiltonian(latticeClass):
         """
         self.theta, self.phi = quantizationAxis(self.S,self.g_i,self.D_i,self.h_i)
         self.phis = np.zeros(self.Ns)
-        if self.p.dia_uniformQA:
+        if self.p.diag.uniformQA:
             self.thetas = np.ones(self.Ns)*self.theta
             if self.order == 'canted-Neel':
                 for i in range(self.Ns):
@@ -229,7 +231,7 @@ class openHamiltonian(latticeClass):
                 kwargs = {'indices':False, 'angles':True}
                 fancyLattice.plotSitesGrid(self,**kwargs)
         else:
-            argsFn = ('quantAngle',self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian)
+            argsFn = ('quantAngle',self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian)
             anglesFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
             if not Path(anglesFn).is_file():
                 print("File of quantization axis angles not found: "+anglesFn)
@@ -242,7 +244,7 @@ class openHamiltonian(latticeClass):
                     fancyLattice.plotSitesGrid(self,**kwargs)
                     exit()
                 if input("Save result?[y/N]")=='y':
-                    argsFn = ('anglesOBC',self.Lx,self.Ly,self.Ns,self.dia_Hamiltonian)
+                    argsFn = ('anglesOBC',self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian)
                     solutionFn = pf.getFilename(*argsFn,dirname=obj.dataDn,extension='.npy')
                     np.save(solutionFn,self.thetas)
             else:
@@ -327,7 +329,7 @@ class openHamiltonian(latticeClass):
         """ Compute the Bogoliubov transformation for the real-space Hamiltonian.
         Initialize U_, V_ and evals : bogoliubov transformation matrices U and V and eigenvalues.
         """
-        argsFn = ('bogWf',self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian,self.boundary)
+        argsFn = ('bogWf',self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian,self.boundary)
         transformationFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
         hamiltonian = self._realSpaceHamiltonian(verbose)
         if not Path(transformationFn).is_file():
@@ -344,7 +346,7 @@ class openHamiltonian(latticeClass):
                     print("Zero mode(s)")
                 K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-10)
             lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
-            if self.p.dia_excludeZeroMode:
+            if self.p.diag.excludeZeroMode:
                 mask0modes = lam2<1e-8
                 lam2[mask0modes] = 1
             self.evals = np.sqrt(lam2)         #dispersion -> positive
@@ -354,7 +356,7 @@ class openHamiltonian(latticeClass):
             psi_ = (A+B)@phi_/self.evals       # Problem also here
             self.U_ = 1/2*(phi_+psi_)
             self.V_ = 1/2*(phi_-psi_)
-            if self.p.dia_excludeZeroMode:
+            if self.p.diag.excludeZeroMode:
                 self.evals[mask0modes] = 0               # Set again to 0 the gapless mode
             self.Phi = np.real(self.U_-self.V_)
             # Re-rotate back to normal basis
@@ -376,7 +378,7 @@ class openHamiltonian(latticeClass):
                     if x%2==1 and y%2==1:
                         self.Phi[ind,:] *= 2/np.pi*(-1)**(x+y)
                     #raise ValueError("Not implemented")
-            if self.p.dia_saveWf:
+            if self.p.diag.saveWf:
                 if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in directory: "+self.dataDn)
                     os.system('mkdir '+self.dataDn)
@@ -389,22 +391,22 @@ class openHamiltonian(latticeClass):
             self.Phi = np.load(transformationFn)['Phi']
             self.evals = np.load(transformationFn)['evals']
 
-        if self.p.dia_excludeZeroMode:       #Put to 0 the eigenstate corresponding to the zero energy mode -> a bit far fetched
+        if self.p.diag.excludeZeroMode:       #Put to 0 the eigenstate corresponding to the zero energy mode -> a bit far fetched
             self.U_[:,0] *= 0
             self.V_[:,0] *= 0
-        if self.p.dia_plotWf:
+        if self.p.diag.plotWf:
             #plotWf3D(self)
             plotWf2D(self,nModes=self.Ns if self.Ns<=30 else 30)
             #plotWfCos(self)
-        if self.p.dia_plotMomenta:
+        if self.p.diag.plotMomenta:
             plotBogoliubovMomenta(self,**kwargs)
 
     def computeRate(self,verbose=False):
         """ Compute the required decay/scattering rate for each mode.
         """
         self.rates = {}
-        for process in self.p.sca_types:
-            argsDecayFn = ['decay',process,self.p.sca_temperature,self.p.sca_broadening,self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary,self.p.sca_broadening]
+        for process in self.p.scattering.types:
+            argsDecayFn = ['decay',process,self.p.scattering.temperature,self.p.scattering.broadening,self.p.diag.Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary,self.p.scattering.broadening]
             decayFn = pf.getFilename(*tuple(argsDecayFn),dirname=self.dataDn,extension='.npy',floatPrecision=8)
             if Path(decayFn).is_file():
                 self.rates[process] = np.load(decayFn)
@@ -414,15 +416,15 @@ class openHamiltonian(latticeClass):
             if not hasattr(self,'vertex'+process[:4]):
                 self.computeVertex(process[:4],verbose=verbose)
             self.rates[process] = dic_processes[process](self)
-            if self.p.sca_saveRate:
+            if self.p.scattering.saveRate:
                 np.save(decayFn,self.rates[process])
-        if self.p.sca_plotRate:
+        if self.p.scattering.plotRate:
             plotRate(self)
 
     def computeVertex(self,vertex,verbose=False):
         """ Compute the vertex of the interaction, may be 1->2, 1->3 or 2->2.
         """
-        argsVertexFn = ['vertex',vertex,self.p.dia_Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary]
+        argsVertexFn = ['vertex',vertex,self.p.diag.Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary]
         vertexFn = pf.getFilename(*tuple(argsVertexFn),dirname=self.dataDn,extension='.npy')
         if Path(vertexFn).is_file():
             result = np.load(vertexFn)
@@ -536,7 +538,7 @@ class openHamiltonian(latticeClass):
                 result = sum( np.transpose(Vn_lmp, (0,) + tuple(1 + np.array(perm))) for perm in perms ) / len(perms)
                 # i <-> j counterpart
                 result *= 2
-            if self.p.sca_saveVertex:
+            if self.p.scattering.saveVertex:
                     print("Saving vertex %s"%vertex)
                     np.save(vertexFn,result)
             setattr(self,'vertex'+vertex,result)
@@ -545,11 +547,11 @@ class openHamiltonian(latticeClass):
 ##########################################################
 
 class openSystem(openHamiltonian):
-    def __init__(self, p: iu.myParameters):
+    def __init__(self, p: SimParams):
         # Construct lattice and Hamiltonian
         super().__init__(p)
         #XT correlator parameters
-        self.perturbationSite = p.cor_perturbationSite
+        self.perturbationSite = p.correlator.perturbationSite
         self.perturbationIndex = self._idx(*self.perturbationSite)
         #
         self.site0 = 0 #if h_t_i[0,0,0]<0 else 1     #decide sublattice A and B of reference lattice site
@@ -567,11 +569,11 @@ class openSystem(openHamiltonian):
     def realSpaceCorrelator(self,verbose=False):
         """ Here we compute the correlator in real space.
         """
-        temperature = self._temperature(self.p.cor_energy)
+        temperature = self._temperature(self.p.correlator.energy)
         print("Temperature: %.3f MHz"%temperature)
-        txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn = ('correlatorXT',self.p.cor_correlatorType,self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian,
-                  txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
+        txtZeroEnergy = 'without0energy' if self.p.diag.excludeZeroMode else 'with0energy'
+        argsFn = ('correlatorXT',self.p.correlator.correlatorType,self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian,
+                  txtZeroEnergy,'magnonModes',self.p.correlator.magnonModes,self.p.correlator.energy)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorXT = np.zeros((self.Ns,self.nTimes),dtype=complex)
@@ -648,8 +650,8 @@ class openSystem(openHamiltonian):
                 plt.show()
             #
             for ind_i in range(self.Ns):
-                self.correlatorXT[ind_i] = correlators.dicCorrelators[self.p.cor_correlatorType](self,ind_i,Af,Bf,Gf,Hf)
-            if self.p.cor_saveXT:
+                self.correlatorXT[ind_i] = correlators.dicCorrelators[self.p.correlator.correlatorType](self,ind_i,Af,Bf,Gf,Hf)
+            if self.p.correlator.saveXT:
                 np.save(correlatorFn,self.correlatorXT)
         else:
             if verbose:
@@ -659,13 +661,13 @@ class openSystem(openHamiltonian):
     def realSpaceCorrelatorBond(self,verbose=False):
         """ Here we compute the correlator in real space for each bond, like for the jj.
         """
-        temperature = self._temperature(self.p.cor_energy)
+        temperature = self._temperature(self.p.correlator.energy)
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
-        txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn_h = ('correlator_horizontal_bonds',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite,self.p.cor_energy)
-        argsFn_v = ('correlator_vertical_bonds',self.p.cor_correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.perturbationSite,self.p.cor_energy)
+        txtZeroEnergy = 'without0energy' if self.p.diag.excludeZeroMode else 'with0energy'
+        argsFn_h = ('correlator_horizontal_bonds',self.p.correlator.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.correlator.magnonModes,self.perturbationSite,self.p.correlator.energy)
+        argsFn_v = ('correlator_vertical_bonds',self.p.correlator.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.correlator.magnonModes,self.perturbationSite,self.p.correlator.energy)
         correlatorFn_h = pf.getFilename(*argsFn_h,dirname=self.dataDn,extension='.npy')
         correlatorFn_v = pf.getFilename(*argsFn_v,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn_h).is_file() or not Path(correlatorFn_v).is_file():
@@ -709,7 +711,7 @@ class openSystem(openHamiltonian):
                 for ivy in range(Ly-1):
                     ind_i = self._idx(ivx,ivy)
                     self.correlatorXT_v[ivx,ivy] = correlators.jjCorrelatorBond(self,ind_i,Af,Bf,Gf,Hf,'v')
-            if self.p.cor_saveXTbonds:
+            if self.p.correlator.saveXTbonds:
                 if not Path(self.dataDn).is_dir():
                     print("Creating 'Data/' folder in directory: "+self.dataDn)
                     os.system('mkdir '+self.dataDn)
@@ -724,14 +726,14 @@ class openSystem(openHamiltonian):
     def momentumSpaceCorrelator(self,verbose=False):
         """ Here we simply Fourier transform the correlator.
         """
-        temperature = self._temperature(self.p.cor_energy)
-        txtZeroEnergy = 'without0energy' if self.p.dia_excludeZeroMode else 'with0energy'
-        argsFn = ('correlatorKW',self.p.cor_correlatorType,self.p.cor_transformType,self.Lx,self.Ly,self.Ns,self.p.dia_Hamiltonian,
-                  txtZeroEnergy,'magnonModes',self.p.cor_magnonModes,self.p.cor_energy)
+        temperature = self._temperature(self.p.correlator.energy)
+        txtZeroEnergy = 'without0energy' if self.p.diag.excludeZeroMode else 'with0energy'
+        argsFn = ('correlatorKW',self.p.correlator.correlatorType,self.p.correlator.transformType,self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian,
+                  txtZeroEnergy,'magnonModes',self.p.correlator.magnonModes,self.p.correlator.energy)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
         if not Path(correlatorFn).is_file():
-            self.correlatorKW, self.momentum = momentumTransformation.dicTransformType[self.p.cor_transformType](self)
-            if self.p.cor_saveKW:
+            self.correlatorKW, self.momentum = momentumTransformation.dicTransformType[self.p.correlator.transformType](self)
+            if self.p.correlator.saveKW:
                 np.savez(correlatorFn,correlator=self.correlatorKW,momentum=self.momentum)
         else:
             if verbose:

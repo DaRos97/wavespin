@@ -18,7 +18,7 @@ from wavespin.plots import fancyLattice
 from wavespin.tools import pathFinder as pf
 
 if TYPE_CHECKING:
-    from wavespin.tools.inputUtils import myParameters
+    from wavespin.tools.inputUtils import LatticeParams
 
 
 class latticeClass:
@@ -26,9 +26,9 @@ class latticeClass:
 
     Parameters
     ----------
-    p : myParameters
-        Parameter dataclass containing at least ``lat_Lx``, ``lat_Ly``,
-        ``lat_offSiteList``, ``lat_boundary``, and ``lat_plotLattice``.
+    p : LatticeParams
+        Parameter dataclass containing ``Lx``, ``Ly``, ``offSiteList``,
+        ``boundary``, and ``plotLattice``.
 
     Attributes
     ----------
@@ -64,15 +64,15 @@ class latticeClass:
         or ``Lx``/``Ly`` is odd.
     """
 
-    def __init__(self, p: myParameters) -> None:
+    def __init__(self, p: LatticeParams) -> None:
         self.p = copy.copy(p)
-        self.Lx: int = self.p.lat_Lx
-        self.Ly: int = self.p.lat_Ly
+        self.Lx: int = self.p.Lx
+        self.Ly: int = self.p.Ly
         if self.Lx < 1 or self.Ly < 1:
             raise ValueError(
                 f"Lx and Ly must be >= 1, got Lx={self.Lx}, Ly={self.Ly}"
             )
-        self.offSiteList: tuple = self.p.lat_offSiteList
+        self.offSiteList: tuple = self.p.offSiteList
         self.offSiteSet: set = set(self.offSiteList)
         self.indexToSite: list[tuple[int, int]] = self._mapIndexSite()
         self.siteToIndex: dict[tuple[int, int], int] = {
@@ -85,7 +85,7 @@ class latticeClass:
                 f"got Ns={self.Ns} (Lx={self.Lx}, Ly={self.Ly}, "
                 f"offSiteList={len(self.offSiteList)})"
             )
-        self.boundary: str = self.p.lat_boundary
+        self.boundary: str = self.p.boundary
         if self.boundary == 'periodic':
             if len(self.offSiteList) != 0:
                 raise ValueError(
@@ -104,7 +104,7 @@ class latticeClass:
         self.figureDn: str = pf.getHomeDirname(str(Path.cwd()), '/Figures/')
         Path(self.figureDn).mkdir(parents=True, exist_ok=True)
 
-        if p.lat_plotLattice:
+        if p.plotLattice:
             fancyLattice.plotSitesGrid(self)
 
     def _xy(self, i: int) -> tuple[int, int]:

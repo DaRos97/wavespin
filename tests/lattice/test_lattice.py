@@ -1,16 +1,16 @@
 import numpy as np
 import pytest
-from wavespin.tools.inputUtils import myParameters
+from wavespin.tools.inputUtils import LatticeParams
 from wavespin.lattice.lattice import latticeClass
 
 
 def _make_params(Lx=3, Ly=4, boundary="open", offSiteList=()):
-    p = myParameters()
-    p.lat_Lx = Lx
-    p.lat_Ly = Ly
-    p.lat_boundary = boundary
-    p.lat_offSiteList = offSiteList
-    return p
+    return LatticeParams(
+        Lx=Lx,
+        Ly=Ly,
+        boundary=boundary,
+        offSiteList=offSiteList,
+    )
 
 
 class TestSquareOpen:
@@ -252,6 +252,6 @@ class TestValidation:
     def test_p_is_independent(self):
         p = _make_params(Lx=3, Ly=4)
         lattice = latticeClass(p)
-        p.lat_Lx = 100
+        p.Lx = 100
         assert lattice.Lx == 3
         assert lattice.Ns == 12

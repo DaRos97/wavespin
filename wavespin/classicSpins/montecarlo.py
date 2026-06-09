@@ -6,17 +6,16 @@ from numpy.random import default_rng
 from pathlib import Path
 
 from wavespin.lattice.lattice import latticeClass
-from wavespin.tools.inputUtils import classicParameters
+from wavespin.tools.inputUtils import SimParams
 import wavespin.tools.pathFinder as pf
 from wavespin.static.periodic import quantizationAxis
 
 rng = default_rng()
 
 class XXZJ1J2MC(latticeClass):
-    def __init__(self, p: classicParameters, termsHamiltonian):
+    def __init__(self, p: SimParams, termsHamiltonian):
         self.p = p
-        # Construct lattice and Hamiltonian
-        super().__init__(p,boundary=p.boundary)
+        super().__init__(p.lattice)
         # Random number generator
         self.rng = default_rng(np.random.randint(1000))      #p.seed
         # Hamiltonian parameters

@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from wavespin.lattice.lattice import latticeClass
 from wavespin.tools import pathFinder as pf
-from wavespin.tools import inputUtils as iu
+from wavespin.tools.inputUtils import SimParams
 from wavespin.static import momentumTransformation
 import copy
 
@@ -99,14 +99,15 @@ def computeTs(theta,phi):
     return result
 
 class periodicHamiltonian(latticeClass):
-    def __init__(self, p: iu.myParameters):
-        super().__init__(p)
+    def __init__(self, p: SimParams):
+        super().__init__(p.lattice)
+        self.p = copy.copy(p)
         #Lattice parameters
         self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
         self._momentumGrid()
         self.gamma = self._gamma()
         #Hamiltonian parameters
-        self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = p.dia_Hamiltonian
+        self.g1,self.g2,self.d1,self.d2,self.h,self.h_disorder = p.diag.Hamiltonian
         self.g = (self.g1,self.g2)
         self.D = (self.d1,self.d2)
         self.S = 0.5     #spin value

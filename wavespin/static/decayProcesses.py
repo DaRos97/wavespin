@@ -83,7 +83,7 @@ def rate_2to2_1(system):
     if T != 0:
         beta = 1/T
         bose_factor = (1-np.exp(-beta*en)) * np.exp(beta*(em+ep)) / (np.exp(beta*el)-1) / (np.exp(beta*em)-1) / (np.exp(beta*ep)-1)
-        Gamma_n = 4 * np.pi * np.einsum('nlmp,nlmp,nlmp->n',Vnl_mp**2,delta_vals,bose_factor)       # Factor 4??
+        Gamma_n = 4 * np.pi * np.einsum('nlmp,nlmp,nlmp->n',Vnl_mp**2,delta_vals,bose_factor)
     else:
         Gamma_n = np.zeros(system.Ns-1)
     return Gamma_n

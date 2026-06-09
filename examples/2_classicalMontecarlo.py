@@ -6,7 +6,7 @@ import argparse
 from wavespin.tools.inputUtils import importClassicParameters as importParameters
 from wavespin.lattice.lattice import latticeClass
 from wavespin.classicSpins.montecarlo import *
-from wavespin.plots import fancyLattice
+from wavespin.plots import latticePlots
 
 """ Parameters and options """
 parser = argparse.ArgumentParser(description="Static correlator calculation in OBC")
@@ -18,7 +18,7 @@ parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 if parameters.plotSites:
     lattice = latticeClass(parameters)
-    fancyLattice.plotSitesGrid(lattice)
+    latticePlots.plotLattice(lattice)
 
 """ Hamiltonian parameters """
 gInitial = 0
@@ -42,6 +42,6 @@ print(f"m = {m}")
 print(f"m_staggered_z = {ms:.6f}")
 
 kwargs = {'saveFigure':parameters.savePlotSolution}
-fancyLattice.solutionMC(sim,**kwargs)
+latticePlots.solutionMC(sim,**kwargs)
 
 

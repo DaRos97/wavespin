@@ -5,7 +5,8 @@ import numpy as np
 import argparse
 from wavespin.tools.inputUtils import importClassicParameters as importParameters
 from wavespin.classicSpins.minimization import *
-from wavespin.plots import fancyLattice
+from wavespin.plots import latticePlots
+from wavespin.plots import classicPlots
 
 """ Parameters and options """
 parser = argparse.ArgumentParser(description="Static correlator calculation in OBC")
@@ -17,7 +18,7 @@ parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 if parameters.plotSites:
     lattice = latticeClass(parameters)
-    fancyLattice.plotSitesGrid(lattice)
+    latticePlots.plotLattice(lattice)
 
 """ Hamiltonian parameters """
 gInitial = 0
@@ -39,6 +40,6 @@ for pValue in np.linspace(0.1,1,10):
     options = {'showFigure':True,
                'verbose':verbose
                }
-    fancyLattice.plotQuantizationAngles(sim,thetas,phis,**options)
+    classicPlots.plotQuantizationAngles(sim,thetas,phis,**options)
 
 

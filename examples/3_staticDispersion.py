@@ -8,7 +8,7 @@ from wavespin.tools.inputUtils import importParameters
 #from wavespin.static.periodic import periodicHamiltonian, periodicRamp
 from wavespin.static.open import openHamiltonian
 from wavespin.static.open import openSystem, openRamp
-from wavespin.plots import fancyLattice
+from wavespin.plots import latticePlots
 from wavespin.plots import rampPlots
 
 """ Parameters and options """

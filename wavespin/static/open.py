@@ -1,7 +1,6 @@
 """ Functions used for the open boundary conditions' calculations.
 """
 
-import os
 import copy
 import scipy
 import numpy as np
@@ -17,7 +16,8 @@ from wavespin.static import correlators
 from wavespin.static import momentumTransformation
 from wavespin.static.periodic import quantizationAxis
 from wavespin.plots.rampPlots import *
-from wavespin.plots import fancyLattice
+from wavespin.plots import latticePlots
+from wavespin.plots import classicPlots
 from wavespin.static.decayProcesses import dic_processes
 import itertools
 
@@ -228,8 +228,7 @@ class openHamiltonian(latticeClass):
                     if x%2==1 and y%2==1:
                         self.thetas[i] *= -1
             if 0:   # Plot solution
-                kwargs = {'indices':False, 'angles':True}
-                fancyLattice.plotSitesGrid(self,**kwargs)
+                classicPlots.plotLatticeWithAngles(self, self.thetas)
         else:
             argsFn = ('quantAngle',self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian)
             anglesFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
@@ -240,8 +239,7 @@ class openHamiltonian(latticeClass):
                 result = classicMagnetization(self,verbose)
                 self.thetas = result.bestAngles
                 if 1:   # Plot solution
-                    kwargs = {'indices':False, 'angles':True}
-                    fancyLattice.plotSitesGrid(self,**kwargs)
+                    classicPlots.plotLatticeWithAngles(self, self.thetas)
                     exit()
                 if input("Save result?[y/N]")=='y':
                     argsFn = ('anglesOBC',self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian)
@@ -379,10 +377,8 @@ class openHamiltonian(latticeClass):
                         self.Phi[ind,:] *= 2/np.pi*(-1)**(x+y)
                     #raise ValueError("Not implemented")
             if self.p.diag.saveWf:
-                if not Path(self.dataDn).is_dir():
-                    print("Creating 'Data/' folder in directory: "+self.dataDn)
-                    os.system('mkdir '+self.dataDn)
-                np.savez(transformationFn,awesomeU=self.U_,awesomeV=self.V_,evals=self.evals,Phi=self.Phi)
+                Path(self.dataDn).mkdir(parents=True, exist_ok=True)
+                np.savez(transformationFn, awesomeU=self.U_, awesomeV=self.V_, evals=self.evals, Phi=self.Phi)
         else:
             if verbose:
                 print("Loading Bogoliubov transformation from file: "+transformationFn)
@@ -712,11 +708,9 @@ class openSystem(openHamiltonian):
                     ind_i = self._idx(ivx,ivy)
                     self.correlatorXT_v[ivx,ivy] = correlators.jjCorrelatorBond(self,ind_i,Af,Bf,Gf,Hf,'v')
             if self.p.correlator.saveXTbonds:
-                if not Path(self.dataDn).is_dir():
-                    print("Creating 'Data/' folder in directory: "+self.dataDn)
-                    os.system('mkdir '+self.dataDn)
-                np.save(correlatorFn_h,self.correlatorXT_h)
-                np.save(correlatorFn_v,self.correlatorXT_v)
+                Path(self.dataDn).mkdir(parents=True, exist_ok=True)
+                np.save(correlatorFn_h, self.correlatorXT_h)
+                np.save(correlatorFn_v, self.correlatorXT_v)
         else:
             if verbose:
                 print("Loading real-space bond correlator from file: "+correlatorFn_h)

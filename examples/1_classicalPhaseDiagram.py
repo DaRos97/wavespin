@@ -143,7 +143,8 @@ if 1:
     from wavespin.tools.inputUtils import importParameters
     from wavespin.static.periodic import quantizationAxis
     from wavespin.static.open import openHamiltonian
-    from wavespin.plots import fancyLattice
+    from wavespin.plots import latticePlots
+    from wavespin.plots import classicPlots
     """ Parameters and options """
     parser = argparse.ArgumentParser(description="Static correlator calculation using Holstein-Primakoff formalism")
     parser.add_argument("inputFile", help="Name of the file where computation parameters and options are stored")
@@ -164,13 +165,11 @@ if 1:
         system = openHamiltonian(parameters)
         system.quantizationAxisAngles()
         fn = "Figures/lattice_"+str(J2)+"_"+str(h)+".png"
-        kwargs = {'indices':False,
-                  'angles':True,
-                  'arrowColor':color,
-                  'order':'c-Neel' if J2<J1/2 else 'c-stripe',
-                  "savePlot":1,
-                  "sublatticeColors":J2>J1/2,
-                  "filename":fn}
-        fancyLattice.plotSitesGrid(system,**kwargs)
+        classicPlots.plotLatticeWithAngles(
+            system, system.thetas,
+            arrowColor=color,
+            sublatticeColors=J2>J1/2,
+            filename=fn,
+        )
 
 

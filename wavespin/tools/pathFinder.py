@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import numpy as np
 
@@ -40,26 +39,25 @@ def getFilename(*args,dirname='',extension='',floatPrecision=4):
     filename += extension
     return filename
 
-def getHomeDirname(cwd,subfolder=''):
-    """ Find the home folder.
+def getHomeDirname(cwd, subfolder=''):
+    """Return a directory path relative to *cwd*.
 
     Parameters
     ----------
-    cwd : str, current woring directory.
-    subfolder : str, should end in '/'.
+    cwd : str
+        Current working directory (usually the project root).
+    subfolder : str
+        Subdirectory path, must end with ``'/'``.
 
     Returns
     -------
-    dirname : str, path of desired directory.
+    dirname : str
     """
-    scriptPath = os.path.dirname(os.path.abspath(__file__))
-    if len(subfolder)>0 and subfolder[-1]!='/':
-        raise ValueError("sub-directory name  %s must end with '/'"%subfolder)
-    if Path(scriptPath+'/homePath.txt').is_file():
-        with open(scriptPath+'/homePath.txt','r') as f:
-            homeDn = f.readline()[:-1]
-    else:
-        homeDn = cwd
-    return homeDn + subfolder
+    if subfolder and subfolder[-1] != '/':
+        raise ValueError("sub-directory name  %s must end with '/'" % subfolder)
+    result = str(Path(cwd) / subfolder)
+    if subfolder and not result.endswith('/'):
+        result += '/'
+    return result
 
 

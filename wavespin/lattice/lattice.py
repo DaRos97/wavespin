@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from wavespin.plots import fancyLattice
+from wavespin.plots import latticePlots
 from wavespin.tools import pathFinder as pf
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ class latticeClass:
     NNN : list of list of int
         ``NNN[i]`` — next-nearest-neighbour indices of site *i*.
     dataDn, figureDn : str
-        Absolute paths to ``Data/`` and ``Figures/`` output directories.
+        Absolute paths to ``data/`` and ``data/figures/`` output directories.
 
     Raises
     ------
@@ -99,13 +99,13 @@ class latticeClass:
         self.NN: list[list[int]] = self._build_nn()
         self.NNN: list[list[int]] = self._build_nnn()
 
-        self.dataDn: str = pf.getHomeDirname(str(Path.cwd()), '/Data/')
+        self.dataDn: str = pf.getHomeDirname(str(Path.cwd()), 'data/')
         Path(self.dataDn).mkdir(parents=True, exist_ok=True)
-        self.figureDn: str = pf.getHomeDirname(str(Path.cwd()), '/Figures/')
+        self.figureDn: str = pf.getHomeDirname(str(Path.cwd()), 'data/figures/')
         Path(self.figureDn).mkdir(parents=True, exist_ok=True)
 
         if p.plotLattice:
-            fancyLattice.plotSitesGrid(self)
+            latticePlots.plotLattice(self)
 
     def _xy(self, i: int) -> tuple[int, int]:
         """Return the ``(x, y)`` coordinate of site *i*."""

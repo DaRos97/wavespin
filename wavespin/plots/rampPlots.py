@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from scipy.fft import fftfreq, fftshift
 import math
-import os
 from pathlib import Path
 from wavespin.static.momentumTransformation import extractMomentum, extractMomentum2
 from wavespin.tools import pathFinder as pf
@@ -185,9 +184,7 @@ def plotRampKW(ramp, **kwargs):
     if saveFigure:
         argsFn = ('fig_correlatorKW_rs',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
         figureFn = pf.getFilename(*argsFn,dirname=self.figureDn,extension='.png')
-        if not Path(self.figureDn).is_dir():
-            print("Creating 'Figures/' folder in home directory.")
-            os.system('mkdir '+self.figureDn)
+        Path(self.figureDn).mkdir(parents=True, exist_ok=True)
         fig.savefig(figureFn)
         if transformType=='dat':
             argsFn = ('fig_correlatorKW_rs_momenta',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
@@ -548,9 +545,7 @@ def plotRampDAT(ramp, **kwargs):
     if saveFigure:
         argsFn = ('fig_correlatorKW_rs',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)
         figureFn = pf.getFilename(*argsFn,dirname=self.figureDn,extension='.png')
-        if not Path(self.figureDn).is_dir():
-            print("Creating 'Figures/' folder in home directory.")
-            os.system('mkdir '+self.figureDn)
+        Path(self.figureDn).mkdir(parents=True, exist_ok=True)
         fig.savefig(figureFn)
         if transformType=='dat':
             argsFn = ('fig_correlatorKW_rs_momenta',sys0.correlatorType,sys0.transformType,sys0.Lx,sys0.Ly,sys0.Ns)

@@ -208,8 +208,8 @@ class periodicHamiltonian(latticeClass):
         Lx = self.Lx
         Ly = self.Ly
         argsFn = ('correlatorXT',self.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly)
-        dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
-        correlatorFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npy')
+        dataDn = pf.getHomeDirname(str(Path.cwd()), 'data/')
+        correlatorFn = pf.getFilename(*argsFn, dirname=dataDn, extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorXT = np.zeros((Lx,Ly,self.nTimes),dtype=complex)
             exp_e = np.exp(-1j*2*np.pi*self.measureTimeList[None,None,:]*self.dispersion[:,:,None])
@@ -243,10 +243,8 @@ class periodicHamiltonian(latticeClass):
                                                            optimize=True)*2 )
                 self.correlatorXT[ix,iy] = 2*1j*np.imag(corr1 + corr2 + corr3)
             if self.saveCorrelatorXT:
-                if not Path(dataDn).is_dir():
-                    print("Creating 'Data/' folder in home directory.")
-                    os.system('mkdir '+dataDn)
-                np.save(correlatorFn,self.correlatorXT)
+                Path(dataDn).mkdir(parents=True, exist_ok=True)
+                np.save(correlatorFn, self.correlatorXT)
         else:
             if verbose:
                 print("Loading real-space correlator from file: "+correlatorFn)
@@ -258,15 +256,13 @@ class periodicHamiltonian(latticeClass):
         Lx = self.Lx
         Ly = self.Ly
         argsFn = ('correlatorKW',self.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly)
-        dataDn = pf.getHomeDirname(str(Path.cwd()),'Data/')
-        correlatorFn = pf.getFilename(*argsFn,dirname=dataDn,extension='.npy')
+        dataDn = pf.getHomeDirname(str(Path.cwd()), 'data/')
+        correlatorFn = pf.getFilename(*argsFn, dirname=dataDn, extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorKW = momentumTransformation.dicTransformType['fft'](self)
             if self.saveCorrelatorKW:
-                if not Path(dataDn).is_dir():
-                    print("Creating 'Data/' folder in home directory.")
-                    os.system('mkdir '+dataDn)
-                np.save(correlatorFn,self.correlatorKW)
+                Path(dataDn).mkdir(parents=True, exist_ok=True)
+                np.save(correlatorFn, self.correlatorKW)
         else:
             if verbose:
                 print("Loading moemntum-space correlator from file: "+correlatorFn)

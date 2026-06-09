@@ -59,7 +59,7 @@ def computeClassicalGroundState(phaseDiagramParameters,**kwargs):
     save = kwargs.get('save',False)
 
     filenameArgs = ('energies_',) + phaseDiagramParameters
-    dataFn = getFilename(*filenameArgs,dirname=getHomeDirname(str(Path.cwd()),'Data/'),extension='.npy')
+    dataFn = getFilename(*filenameArgs, dirname=getHomeDirname(str(Path.cwd()), 'data/'), extension='.npy')
 
     if not Path(dataFn).is_file():
         en = np.zeros((nJ2,nH,4))   #energy and 3 angles
@@ -112,7 +112,7 @@ def plotClassicalPhaseDiagram(en,phaseDiagramParameters,**kwargs):
     save = kwargs.get('save',False)
 
     filenameArgs = ('phaseDiagram_',) + phaseDiagramParameters
-    figureFn = getFilename(*filenameArgs,dirname=getHomeDirname(str(Path.cwd()),'Figures/classicalPhaseDiagram/'),extension='.png')
+    figureFn = getFilename(*filenameArgs, dirname=getHomeDirname(str(Path.cwd()), 'data/figures/classicalPhaseDiagram/'), extension='.png')
 
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot()
@@ -135,14 +135,7 @@ def plotClassicalPhaseDiagram(en,phaseDiagramParameters,**kwargs):
     # Missing the legend
 
     if save:
-        figureDn = Path(getHomeDirname(str(Path.cwd())),'Figures/')
-        if not figureDn.is_dir():
-            print("Creating 'Figures/' folder in home directory.")
-            os.system('mkdir '+figureDn)
-        figureDn = Path(getHomeDirname(str(Path.cwd())),'Figures/classicalPhaseDiagram/')
-        if not figureDn.is_dir():
-            print("Creating 'classicalPhaseDiagram/' folder in 'Figures/' directory.")
-            os.system('mkdir '+figureDn)
+        Path(figureFn).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(figureFn)
     if show:
         plt.show()
@@ -168,7 +161,7 @@ def plotClassicalPhaseDiagramParameters(en,phaseDiagramParameters,**kwargs):
     save = kwargs.get('save',False)
 
     filenameArgs = ('parametersPhaseDiagram_',) + phaseDiagramParameters
-    figureFn = getFilename(*filenameArgs,dirname=getHomeDirname(str(Path.cwd()),'Figures/classicalPhaseDiagram/'),extension='.png')
+    figureFn = getFilename(*filenameArgs, dirname=getHomeDirname(str(Path.cwd()), 'data/figures/classicalPhaseDiagram/'), extension='.png')
 
     fig = plt.figure(figsize=(12,12))
     X,Y = np.meshgrid(listJ2,listH)
@@ -181,14 +174,7 @@ def plotClassicalPhaseDiagramParameters(en,phaseDiagramParameters,**kwargs):
     # Missing legend
 
     if save:
-        figureDn = Path(getHomeDirname(str(Path.cwd())),'Figures/')
-        if not figureDn.is_dir():
-            print("Creating 'Figures/' folder in home directory.")
-            os.system('mkdir '+figureDn)
-        figureDn = Path(getHomeDirname(str(Path.cwd())),'Figures/classicalPhaseDiagram/')
-        if not figureDn.is_dir():
-            print("Creating 'classicalPhaseDiagram/' folder in 'Figures/' directory.")
-            os.system('mkdir '+figureDn)
+        Path(figureFn).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(figureFn)
     if show:
         plt.show()

@@ -211,10 +211,8 @@ class XXZJ1J2MC(latticeClass):
                 self.Spins = best_S
             history = np.array(history)
             if self.p.saveSolution:
-                if not Path(self.dataDn).is_dir():
-                    print("Creating 'Data/' folder in home directory.")
-                    os.system('mkdir '+self.dataDn)
-                np.savez(solutionFn,Spins=self.Spins,history=history)
+                Path(self.dataDn).mkdir(parents=True, exist_ok=True)
+                np.savez(solutionFn, Spins=self.Spins, history=history)
         else:
             self.Spins = np.load(solutionFn)['Spins']
             history = np.load(solutionFn)['history']

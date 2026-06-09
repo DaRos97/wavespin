@@ -5,7 +5,7 @@ import numpy as np
 import argparse
 from wavespin.tools.inputUtils import importPeriodicParameters as importParameters
 from wavespin.static.periodic import periodicSystem, periodicRamp
-from wavespin.plots import fancyLattice
+from wavespin.plots import latticePlots
 from wavespin.plots import rampPlots
 
 """ Parameters and options """
@@ -18,7 +18,7 @@ parameters = importParameters(inputArguments.inputFile,**{'verbose':verbose})
 
 if parameters.plotSites:
     simulation = openSystem(parameters)
-    fancyLattice.plotSitesGrid(simulation)
+    latticePlots.plotLattice(simulation)
 
 """ Define the parameters of the system at different 'times' """
 nP = 10     #number of parameters computed in the "ramp" -> analogue to stop ratio

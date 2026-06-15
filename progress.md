@@ -5,6 +5,10 @@
 - Make examples real examples and move else to scripts
 - Make cleare in README.md the folder structure and where files are saved (setup)
 
+## Lattice
+- Add other types of lattices
+- Add further neghbors
+
 ## Classical
 
 - Add legends to plots

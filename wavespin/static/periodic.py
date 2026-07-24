@@ -35,11 +35,11 @@ def quantizationAxis(S,g_i,D_i,h_i):
         D = []
         for i in range(2):
             if not (g_i[i] == np.zeros(g_i[i].shape)).all():
-                g.append(abs(float(np.sum(g_i[i])/(g_i[i][np.nonzero(g_i[i])]).shape)))
+                g.append(abs(np.mean(g_i[i][np.nonzero(g_i[i])])))
             else:
                 g.append(0)
             if not (D_i[i] == np.zeros(D_i[i].shape)).all():
-                D.append(float(np.sum(D_i[i])/(D_i[i][np.nonzero(D_i[i])]).shape))
+                D.append(np.mean(D_i[i][np.nonzero(D_i[i])]))
             else:
                 D.append(0)
         if g[0]!=0:
@@ -47,9 +47,10 @@ def quantizationAxis(S,g_i,D_i,h_i):
         if g[1]!=0:
             D[1] = D[1]/g[1]        #As we defined in notes
         if not (h_i == np.zeros(h_i.shape)).all():
-            h_av = float(np.sum(h_i)/(h_i[np.nonzero(h_i)]).shape)
-            h_stag = np.absolute(h_i[np.nonzero(h_i)]-h_av)
-            h = float(np.sum(h_stag)/(h_stag[np.nonzero(h_stag)]).shape)
+            nonzero_h = h_i[np.nonzero(h_i)]
+            h_av = np.mean(nonzero_h)
+            h_stag = np.absolute(nonzero_h - h_av)
+            h = np.mean(h_stag)
         else:
             h = 0
     if g[1]<=g[0]/2:
@@ -99,6 +100,46 @@ def computeTs(theta,phi):
     return result
 
 class periodicHamiltonian(latticeClass):
+    """Analytic Bogoliubov theory in momentum space for periodic boundaries.
+
+    The Hamiltonian is diagonalized analytically at each k-point rather
+    than through a real-space matrix.  All quantities are scalars
+    (uniform couplings, single canting angle).
+
+    Parameters
+    ----------
+    p : SimParams
+        Simulation parameters.  Requires ``p.lattice.boundary ==
+        'periodic'``.  ``p.lattice.Lx`` and ``p.lattice.Ly`` must be
+        even.
+
+    Attributes
+    ----------
+    gridRealSpace : (Lx,Ly,2) ndarray
+        Real-space coordinates.
+    gridk : (Lx,Ly,2) ndarray
+        Brillouin-zone k-points.
+    gamma : tuple of (Lx,Ly) ndarray
+        :math:`\\Gamma_1(k)` and :math:`\\Gamma_2(k)` dispersion
+        factors.
+    g1, g2, d1, d2, h : float
+        Hamiltonian parameters (unpacked from ``p.diag.Hamiltonian``).
+    S : float
+        Spin magnitude (fixed at 0.5).
+    theta, phi : float
+        Canting and azimuthal angles.
+    ts : (2,3,3) ndarray
+        Rotation vectors for sublattice A (index 0) and B (index 1).
+    dispersion : (Lx,Ly) ndarray
+        Spin-wave dispersion :math:`\\varepsilon(k_x, k_y)`.
+    gsEnergy : float
+        Ground-state energy per site.
+    rk : (Lx,Ly) ndarray
+        Bogoliubov rotation angle :math:`r_k`.
+    phik : (Lx,Ly) complex ndarray
+        Phase factor :math:`e^{i\\varphi_k}`.
+    """
+
     def __init__(self, p: SimParams):
         super().__init__(p.lattice)
         self.p = copy.copy(p)
@@ -184,9 +225,12 @@ class periodicHamiltonian(latticeClass):
         """
         N_11 = self._N11()
         N_12 = self._N12()
-        frac = np.divide(np.absolute(N_12),N_11,where=(N_11!=0))
-        result = -1/2*np.arctanh(frac,where=(frac<1))
-        result[frac>=1] = np.nan
+        frac = np.full_like(N_11, np.nan, dtype=float)
+        mask = N_11 != 0
+        frac[mask] = np.abs(N_12[mask]) / N_11[mask]
+        result = np.full_like(frac, np.nan, dtype=float)
+        mask = frac < 1
+        result[mask] = -1/2 * np.arctanh(frac[mask])
         return result
 
     def _phik(self):

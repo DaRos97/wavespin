@@ -22,6 +22,56 @@ from wavespin.static.decayProcesses import dic_processes
 import itertools
 
 class openHamiltonian(latticeClass):
+    """Real-space Bogoliubov diagonalization for open boundary conditions.
+
+    Builds the quadratic bosonic Hamiltonian from Holstein-Primakoff
+    expansion coefficients, then para-diagonalizes it via Cholesky
+    decomposition to obtain quasiparticle energies, wavefunctions, and
+    Bogoliubov transformation matrices.
+
+    Parameters
+    ----------
+    p : SimParams
+        Simulation parameters.  Only ``p.lattice`` and ``p.diag`` are
+        consumed; ``p.correlator`` and ``p.scattering`` are ignored.
+
+    Attributes
+    ----------
+    g1, g2, d1, d2, h, h_disorder : float
+        Unpacked from ``p.diag.Hamiltonian``.
+    order : str
+        ``'canted-Neel'`` if ``g2 <= g1/2`` else ``'canted-stripe'``.
+    S : float
+        Spin magnitude (fixed at 0.5).
+    g_i, D_i : tuple of (Ns,Ns) ndarray
+        Nearest-neighbour and next-nearest-neighbour coupling matrices.
+    h_i : (Ns,Ns) ndarray
+        Staggered-field matrix (diagonal).
+    theta : float
+        Base canting angle (radians).
+    phis : (Ns,) ndarray
+        Azimuthal angles (all zero for the planar model).
+    thetas : (Ns,) ndarray
+        Per-site canting angles, patterned after the magnetic order.
+    ts : (Ns,3,3) ndarray
+        Rotation vectors :math:`t_z, t_x, t_y` at each site.
+    Ps : (2,Ns,Ns,3,3) ndarray
+        Holstein-Primakoff :math:`P^{\\alpha\\beta}_{ij}` coefficients
+        for nearest-neighbour (index 0) and next-nearest-neighbour
+        (index 1).
+    evals : (Ns,) ndarray
+        Quasiparticle eigen-energies :math:`E_n`.
+    U_, V_ : (Ns,Ns) ndarray
+        Bogoliubov transformation matrices.
+    Phi : (Ns,Ns) ndarray
+        Real-space wavefunctions (:math:`\\Phi = U - V`).
+    GSE : float
+        Ground-state energy per bond (set only if ``g1 != 0``).
+    rates : dict
+        Decay rates keyed by process type (populated after
+        :meth:`computeRate`).
+    """
+
     def __init__(self, p: SimParams):
         super().__init__(p.lattice)
         self.p = copy.copy(p)
@@ -36,108 +86,20 @@ class openHamiltonian(latticeClass):
         self.diagonalize()
         if self.g1!=0:
             self.GSE = self.get_GSE()
-            #print("J2=%.2f, boundary: %s, GSE:%.4f"%(self.g2*2,self.boundary,self.GSE))
-        if self.boundary == 'periodic':
-            self.gridRealSpace = np.stack(np.meshgrid(np.arange(self.Lx), np.arange(self.Ly), indexing="ij"), axis=-1)
-            self.gridk = self._momentumGrid()
-            self.gamma = self._gamma()
-            self.dispersion = self._dispersion()
-            self.gap = np.min(self.dispersion)
 
-# Periodic functions
-    def _momentumGrid(self):
-        """ Compute momenta in the Brillouin zone for a (periodic) square shape.
+
+    def _NNterms(self,val):
+        """Build an Ns×Ns matrix with ``val`` on every nearest-neighbour bond.
 
         Parameters
         ----------
-        Lx,Ly : int, linear size.
-
-        """
-        dx = 2*np.pi/self.Lx
-        dy = 2*np.pi/self.Ly
-        result = np.zeros((self.Lx,self.Ly,2))
-        for i1 in range(self.Lx):
-            for i2 in range(self.Ly):
-                result[i1,i2,0] = dx*(1+i1) #- np.pi
-                result[i1,i2,1] = dy*(1+i2) #- np.pi
-        return result
-
-    def _gamma(self):
-        r""" Compute the '$\Gamma$' dispersion at first and second nearest neighbor.
+        val : float
+            Coupling value to place on NN bonds.
 
         Returns
         -------
-        Gamma : 2-tuple
-            Dispersions at 1st and 2nd nearest neighbor.
-        """
-        gridk = self.gridk
-        Gamma1 = 1/2*( np.cos(gridk[:,:,0])+np.cos(gridk[:,:,1]) ) #cos(kx) + cos(ky)
-        Gamma2 = 1/2*( np.cos(gridk[:,:,0]+gridk[:,:,1])+np.cos(gridk[:,:,0]-gridk[:,:,1]))  #cos(kx+ky) + cos(kx-ky)
-        return (Gamma1,Gamma2)
-
-    def _dispersion(self):
-        """
-        Compute dispersion epsilon as in notes.
-        Controls are neded for ZZ in k.
-        """
-        self.quantizationAxisAngles()
-        self.computeTs()
-        self.computePs()
-        N_11 = self._N11()
-        N_12 = self._N12()
-        result = np.zeros(N_11.shape)
-        mask = (N_11**2>=np.absolute(N_12)**2)
-        result[mask] = np.sqrt(N_11[mask]**2-np.absolute(N_12[mask])**2)
-        return result*2     #*2 put to have same result with diagonalize -> why?
-
-    def _E0(self):
-        r""" Compute $E_0$ as in notes.
-        """
-        pzz_nn = np.sum(self.Ps[0,0,:,0,0]) / 4
-        pzz_nnn = np.sum(self.Ps[1,0,:,0,0]) / 4
-        result = 2*self.S*(self.S+1) * (pzz_nn + pzz_nnn)
-        result += - self.h * np.cos(self.theta) * (self.S + 1/2)
-        return result
-
-    def _N11(self):
-        """ Compute N_11 as in notes. """
-        #nn
-        pxx_nn = np.sum(self.Ps[0,0,:,1,1]) / 4
-        pyy_nn = np.sum(self.Ps[0,0,:,2,2]) / 4
-        pzz_nn = np.sum(self.Ps[0,0,:,0,0]) / 4
-        #pyy_nn = self.Ps[0,0,1,2,2]
-        #pzz_nn = self.Ps[0,0,1,0,0]
-        result = 1/2/self.S * ( (pxx_nn+pyy_nn)*self.gamma[0] - 2*pzz_nn)
-        #nnn
-        if 0:
-            for i in range(100,150):
-                x,y = self._xy(i)
-                if x+1!=self.Lx and y!=0:
-                    innn = self._idx(x+1,y-1)
-                    print(self.Ps[1,i,innn,1,1],self.Ps[1,i,innn,2,2],self.Ps[1,i,innn,0,0])
-            input()
-        pxx_nnn = np.sum(self.Ps[1,0,:,1,1]) / 4
-        pyy_nnn = np.sum(self.Ps[1,0,:,2,2]) / 4
-        pzz_nnn = np.sum(self.Ps[1,0,:,0,0]) / 4
-        result += 1/2/self.S * ( (pxx_nnn+pyy_nnn)*self.gamma[1] - 2*pzz_nnn)
-        #z
-        result += self.h/2*np.cos(self.theta)
-        return result
-
-    def _N12(self):
-        """ Compute N_12 as in notes. """
-        #nn
-        pxx_nn = np.sum(self.Ps[0,0,:,1,1]) / 4
-        pyy_nn = np.sum(self.Ps[0,0,:,2,2]) / 4
-        result = 1/2/self.S * self.gamma[0] * (pxx_nn - pyy_nn)
-        #nnn
-        pxx_nnn = np.sum(self.Ps[1,0,:,1,1]) / 4
-        pyy_nnn = np.sum(self.Ps[1,0,:,2,2]) / 4
-        result += 1/2/self.S * self.gamma[1] * (pxx_nnn - pyy_nnn)
-        return result
-
-    def _NNterms(self,val):
-        """ Construct Ns,Ns matrix for real space Hamiltonian using the lattice nn.
+        (Ns,Ns) ndarray
+            Matrix where ``result[i, j] = val`` for each NN pair.
         """
         vals = np.zeros((self.Ns,self.Ns))
         for i in range(self.Ns):
@@ -145,7 +107,17 @@ class openHamiltonian(latticeClass):
         return vals
 
     def _NNNterms(self,val):
-        """ Construct Ns,Ns matrix for real space Hamiltonian using the lattice nnn.
+        """Build an Ns×Ns matrix with ``val`` on every next-nearest-neighbour bond.
+
+        Parameters
+        ----------
+        val : float
+            Coupling value to place on NNN bonds.
+
+        Returns
+        -------
+        (Ns,Ns) ndarray
+            Matrix where ``result[i, j] = val`` for each NNN pair.
         """
         vals = np.zeros((self.Ns,self.Ns))
         for i in range(self.Ns):
@@ -153,6 +125,21 @@ class openHamiltonian(latticeClass):
         return vals
 
     def _Hterms(self,val,disorder_val):
+        """Build the diagonal staggered-field matrix.
+
+        Parameters
+        ----------
+        val : float
+            Staggered field strength ``h``.
+        disorder_val : float
+            Disorder strength (uniform random ±``disorder_val``).
+
+        Returns
+        -------
+        (Ns,Ns) ndarray
+            Diagonal matrix with :math:`(-1)^{x+y+1} h + \\delta_i`
+            at site *i*.
+        """
         vals = np.zeros((self.Ns,self.Ns))
         disorder = (np.random.rand(self.Ns)-0.5)*2 * disorder_val
         for i in range(self.Ns):
@@ -161,15 +148,30 @@ class openHamiltonian(latticeClass):
         return vals
 
     def get_GSE(self):
-        """ Compute ground state energy
+        """Ground-state energy per bond.
+
+        Returns
+        -------
+        float
+            :math:`E_\\text{GS} = -3/2 + \\sum_n E_n / N_\\text{bonds} / (2g_1)`.
         """
         Nbonds = np.sum(self._NNterms(1)) // 2
         GS_energy = -3/2 + np.sum(self.evals) / Nbonds / self.g1 / 2
         return GS_energy
 
     def _temperature(self,Eref):
-        """ Compute temperature given the energy.
-        Since the E(T) function is not invertible we have to compute E for a bunch of Ts and extract graphically the T.
+        """Invert the energy-temperature relation to find the temperature
+        corresponding to a given mean energy ``Eref``.
+
+        Parameters
+        ----------
+        Eref : float
+            Target mean energy (must be ≥ ``GSE``).
+
+        Returns
+        -------
+        float
+            Temperature in the same units as ``evals``.
         """
         if Eref == self.GSE or Eref==-100:
             return 0
@@ -206,8 +208,24 @@ class openHamiltonian(latticeClass):
         return Tlist[indT]
 
     def quantizationAxisAngles(self,verbose=False):
-        """ Here we get the quantization axis angles to use for the diagonalization.
-        phi is 0, we would need it just when the dynamics is implemented.
+        """Determine the per-site quantization-axis angles.
+
+        Computes the base canting angle :math:`\\theta` from the averaged
+        Hamiltonian parameters, then spatially patterns it across the
+        lattice according to the magnetic order (canted-Néel or
+        canted-stripe).
+
+        Sets
+        ----
+        theta : float
+            Base canting angle (radians).
+        phi : float
+            Azimuthal angle (0 for the planar XY model).
+        phis : (Ns,) ndarray
+            Per-site azimuthal angles (all zero).
+        thetas : (Ns,) ndarray
+            Per-site polar angles :math:`\\theta_i` with the appropriate
+            sublattice pattern.
         """
         self.theta, self.phi = quantizationAxis(self.S,self.g_i,self.D_i,self.h_i)
         self.phis = np.zeros(self.Ns)
@@ -230,27 +248,29 @@ class openHamiltonian(latticeClass):
             if 0:   # Plot solution
                 classicPlots.plotLatticeWithAngles(self, self.thetas)
         else:
-            argsFn = ('quantAngle',self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian)
-            anglesFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
-            if not Path(anglesFn).is_file():
-                print("File of quantization axis angles not found: "+anglesFn)
-                print("computing it now..")
-                from wavespin.classicSpins.anglesOBC import classicMagnetization
-                result = classicMagnetization(self,verbose)
-                self.thetas = result.bestAngles
-                if 1:   # Plot solution
-                    classicPlots.plotLatticeWithAngles(self, self.thetas)
-                    exit()
-                if input("Save result?[y/N]")=='y':
-                    argsFn = ('anglesOBC',self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian)
-                    solutionFn = pf.getFilename(*argsFn,dirname=obj.dataDn,extension='.npy')
-                    np.save(solutionFn,self.thetas)
-            else:
-                self.thetas = np.load(anglesFn)
+            raise NotImplementedError(
+                "Non-uniform quantization angles (uniformQA=False) are not "
+                "yet implemented. The classicMagnetization minimization via "
+                "scipy is available in classicSpins/anglesOBC.py for future "
+                "integration."
+            )
 
     def computeTs(self):
-        """ Compute the vector parameters t_z, t_x and t_y as in notes for sublattice A and B.
-        Sublattice A has negative magnetic feld.
+        """Build the per-site rotation vectors.
+
+        For each site *i*, rotates the reference axes (z, x, y) by the
+        canting angle :math:`\\theta_i` around the y-axis:
+
+        .. math::
+            t_z = R_y(\\theta_i) \\cdot \\hat{z}, \\quad
+            t_x = R_y(\\theta_i) \\cdot \\hat{x}, \\quad
+            t_y = R_y(\\theta_i) \\cdot \\hat{y}.
+
+        Sets
+        ----
+        ts : (Ns,3,3) ndarray
+            ``ts[i, 0]`` = rotated z, ``ts[i, 1]`` = rotated x,
+            ``ts[i, 2]`` = rotated y.
         """
         self.ts = np.zeros((self.Ns,3,3))
         for i in range(self.Ns):
@@ -262,14 +282,21 @@ class openHamiltonian(latticeClass):
             self.ts[i,2] = rot @ np.array([0,1,0])#t_yx,t_yy,t_yz
 
     def computePs(self):
-        """ Compute coefficient p_gamma^{alpha,beta}_ij for a given classical order.
-        alpha,beta=0,1,2 -> z,x,y like for ts.
+        """Compute the Holstein-Primakoff expansion coefficients
+        :math:`P^{\\alpha\\beta}_{ij}` for each bond.
 
-        Parameters
-        ----------
+        .. math::
+            P^{\\alpha\\beta}_{ij} =
+            \\sum_\\gamma g^\\gamma_{ij} \\, t^\\alpha_{i\\gamma} \\,
+            t^\\beta_{j\\gamma}
 
-        Returns
-        -------
+        where :math:`\\alpha,\\beta,\\gamma \\in \\{z, x, y\\}` and
+        :math:`g^\\gamma_{ij}` are the bond-dependent coupling components.
+
+        Sets
+        ----
+        Ps : (2,Ns,Ns,3,3) ndarray
+            ``Ps[0, i, j]`` for NN bonds, ``Ps[1, i, j]`` for NNN bonds.
         """
         self.Ps = np.zeros((2,self.Ns,self.Ns,3,3))     # number of nearest-neighbor(2), Ns, Ns, zxy, xyz 
         vecGnn = np.array([self.g_i[0],self.g_i[0],self.g_i[0]*self.D_i[0]])        #3,Ns,Ns
@@ -324,8 +351,32 @@ class openHamiltonian(latticeClass):
         return ham
 
     def diagonalize(self,verbose=False,**kwargs):
-        """ Compute the Bogoliubov transformation for the real-space Hamiltonian.
-        Initialize U_, V_ and evals : bogoliubov transformation matrices U and V and eigenvalues.
+        """Bogoliubov para-diagonalization of the real-space Hamiltonian.
+
+        Builds the :math:`2N_s \\times 2N_s` Bogoliubov-de Gennes
+        matrix, then solves the generalized eigenvalue problem via
+        Cholesky decomposition:
+
+        1. ``A, B`` = upper-left / upper-right blocks of H
+        2. ``K = chol(A - B)``
+        3. Solve ``K (A+B) K^T`` for :math:`\\omega_n^2` and
+           eigenvectors :math:`\\chi_n`
+        4. :math:`E_n = \\sqrt{\\omega_n^2}`,
+           :math:`\\phi_n = K^T \\chi_n / \\sqrt{E_n}`,
+           :math:`\\psi_n = (A+B) \\phi_n / E_n`
+        5. ``U = (φ + ψ) / 2``, ``V = (φ - ψ) / 2``,
+           ``Φ = U - V``
+
+        Results are cached to disk via ``Data/*.npz``.
+
+        Sets
+        ----
+        evals : (Ns,) ndarray
+            Quasiparticle eigen-energies :math:`E_n`.
+        U_, V_ : (Ns,Ns) ndarray
+            Bogoliubov transformation matrices.
+        Phi : (Ns,Ns) ndarray
+            Real-space wavefunctions.
         """
         argsFn = ('bogWf',self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian,self.boundary)
         transformationFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
@@ -398,7 +449,19 @@ class openHamiltonian(latticeClass):
             plotBogoliubovMomenta(self,**kwargs)
 
     def computeRate(self,verbose=False):
-        """ Compute the required decay/scattering rate for each mode.
+        """Compute magnon decay/scattering rates via Fermi's Golden Rule.
+
+        For each process type listed in ``p.scattering.types``, the
+        corresponding vertex is computed (or loaded from disk) and the
+        rate is evaluated via the dispatch function in
+        :mod:`wavespin.static.decayProcesses`.
+
+        Rates are cached to disk using deterministic filenames.
+
+        Sets
+        ----
+        rates : dict
+            ``{process_type: array_of_shape_(Ns,)}``.
         """
         self.rates = {}
         for process in self.p.scattering.types:
@@ -418,7 +481,28 @@ class openHamiltonian(latticeClass):
             plotRate(self)
 
     def computeVertex(self,vertex,verbose=False):
-        """ Compute the vertex of the interaction, may be 1->2, 1->3 or 2->2.
+        """Compute the interaction vertex tensor for a given process.
+
+        Parameters
+        ----------
+        vertex : str
+            One of ``'1to2'``, ``'2to2'``, ``'1to3'``.
+        verbose : bool
+            If True, prints progress messages.
+
+        Returns
+        -------
+        ndarray
+            Vertex tensor whose shape depends on the process:
+            ``(Ns,Ns,Ns)`` for 1→2, ``(Ns,Ns,Ns,Ns)`` for 2→2 and 1→3.
+
+        Notes
+        -----
+        The tensor is computed via :func:`numpy.einsum` contractions
+        over the Bogoliubov matrices ``U_``, ``V_`` and the
+        site-dependent coupling factors.  The result is attached as
+        ``self.vertex1to2`` (or ``self.vertex2to2``, ``self.vertex1to3``)
+        and cached to disk.
         """
         argsVertexFn = ['vertex',vertex,self.p.diag.Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary]
         vertexFn = pf.getFilename(*tuple(argsVertexFn),dirname=self.dataDn,extension='.npy')

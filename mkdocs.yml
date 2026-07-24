@@ -57,3 +57,4 @@ nav:
     - tools: api/tools.md
     - plots: api/plots.md
   - Examples: examples.md
+  - Roadmap: roadmap.md

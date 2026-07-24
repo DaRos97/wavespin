@@ -387,14 +387,27 @@ class openHamiltonian(latticeClass):
             # Para-diagonalization
             Ns = self.Ns
             A = hamiltonian[:Ns,:Ns]
-            B = hamiltonian[:Ns,Ns:]
+            B_off = hamiltonian[:Ns,Ns:]
             try:
-                K = scipy.linalg.cholesky(A-B)
-            except:
+                K = scipy.linalg.cholesky(A - B_off)
+            except np.linalg.LinAlgError:
                 if verbose:
-                    print("Zero mode(s)")
-                K = scipy.linalg.cholesky(A-B+np.identity(Ns)*1e-10)
-            lam2,chi_ = scipy.linalg.eigh(K@(A+B)@K.T.conj())
+                    print("Cholesky failed, regularizing ...")
+                reg = 1e-4
+                while reg < 1.0:
+                    try:
+                        K = scipy.linalg.cholesky(A - B_off + np.identity(Ns) * reg)
+                        if verbose:
+                            print(f"    converged with reg = {reg:.1e}")
+                        break
+                    except np.linalg.LinAlgError:
+                        reg *= 10
+                else:
+                    raise np.linalg.LinAlgError(
+                        "A - B_off is not positive definite even with "
+                        f"regularisation up to {reg}"
+                    )
+            lam2,chi_ = scipy.linalg.eigh(K@(A+B_off)@K.T.conj())
             if self.p.diag.excludeZeroMode:
                 mask0modes = lam2<1e-8
                 lam2[mask0modes] = 1
@@ -402,7 +415,7 @@ class openHamiltonian(latticeClass):
             #
             chi = chi_ / self.evals**(1/2)     #normalized eigenvectors: divide each column of chi_ by the corresponding eigenvalue -> of course for the gapless mode there is a problem here
             phi_ = K.T.conj()@chi
-            psi_ = (A+B)@phi_/self.evals       # Problem also here
+            psi_ = (A+B_off)@phi_/self.evals       # Problem also here
             self.U_ = 1/2*(phi_+psi_)
             self.V_ = 1/2*(phi_-psi_)
             if self.p.diag.excludeZeroMode:

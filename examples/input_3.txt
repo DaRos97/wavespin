@@ -1,8 +1,0 @@
-# Input file for static correlator
-# Use '#' to comment a line and ':' to assign a value
-
-Lx: 20
-Ly: 20
-boundary: periodic
-
-plotLattice: False

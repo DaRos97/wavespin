@@ -1,0 +1,59 @@
+site_name: wavespin
+site_description: Mean-field simulations of quantum simulators using the Holstein-Primakoff approximation
+repo_url: https://github.com/DaRos97/wavespin
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.indexes
+    - navigation.sections
+    - search.suggest
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
+            show_root_toc_entry: false
+            docstring_style: google
+            members_order: source
+            show_signature_annotations: true
+            separate_signature: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Physics Background: physics.md
+  - User Guide:
+    - Lattice & Geometry: user-guide/lattice.md
+    - Parameters: user-guide/parameters.md
+    - Classical Ground State: user-guide/classical.md
+    - Diagonalization: user-guide/diagonalization.md
+    - Correlators: user-guide/correlators.md
+    - Decay Rates: user-guide/decay-rates.md
+    - Plotting: user-guide/plotting.md
+  - API Reference:
+    - lattice: api/lattice.md
+    - classicSpins: api/classicSpins.md
+    - static: api/static.md
+    - tools: api/tools.md
+    - plots: api/plots.md
+  - Examples: examples.md

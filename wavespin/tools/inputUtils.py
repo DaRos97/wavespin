@@ -134,9 +134,6 @@ class SimParams:
     scattering: ScatteringParams = field(default_factory=ScatteringParams)
 
 
-myParameters = SimParams
-
-
 def _build_field_map():
     """Build a mapping from input file key to (sub_attr, field_name)."""
     mapping = {}

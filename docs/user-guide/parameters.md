@@ -83,10 +83,3 @@ boundary: periodic
 Hamiltonian: (5, 0, 0, 0, 0, 0)
 ```
 
-## Backward Compatibility
-
-`myParameters` is an alias for `SimParams`:
-
-```python
-from wavespin.tools.inputUtils import myParameters  # same as SimParams
-```

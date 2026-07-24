@@ -9,7 +9,6 @@ from wavespin.tools.inputUtils import (
     CorrelatorParams,
     ScatteringParams,
     SimParams,
-    myParameters,
     importParameters,
     checkParameters,
     _build_field_map,
@@ -256,20 +255,6 @@ class TestSimParams:
         assert sp.lattice.Lx == 5
         assert sp.lattice.boundary == 'periodic'
         assert sp.scattering.temperature == 2.5
-
-
-# ---------------------------------------------------------------------------
-# myParameters alias
-# ---------------------------------------------------------------------------
-
-class TestMyParametersAlias:
-    def test_my_parameters_is_sim_params(self):
-        assert myParameters is SimParams
-
-    def test_my_parameters_constructs_sim_params(self):
-        p = myParameters()
-        assert isinstance(p, SimParams)
-        assert p.lattice.Lx == 7
 
 
 # ---------------------------------------------------------------------------

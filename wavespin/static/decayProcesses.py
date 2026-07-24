@@ -8,7 +8,28 @@ import numpy as np
 from wavespin.tools.functions import lorentz, lorentz_n
 
 def rate_1to2_1(system):
-    """ Decay rate of 1 to 2 process at first order.
+    """Decay rate of 1 magnon to 2 magnons at first order.
+
+    Applies Fermi's Golden Rule:
+
+    .. math::
+        \\Gamma_n = 2\\pi \\sum_{l,m} |V_{nlm}|^2 \\, \\delta(E_n - E_l - E_m)
+        \\, (1 + n_l + n_m)
+
+    plus the reverse process :math:`2 \\to 1`.  The energy-conserving delta
+    is broadened with a Lorentzian whose width is proportional to the mean
+    level spacing.
+
+    Parameters
+    ----------
+    system : openHamiltonian
+        Must have ``evals``, ``U_``, ``V_``, and ``vertex1to2`` populated
+        (the vertex is a rank-3 tensor of shape ``(Ns, Ns, Ns)``).
+
+    Returns
+    -------
+    (Ns-1,) ndarray
+        Decay rate :math:`\\Gamma_n` for each mode (zero mode excluded).
     """
     # Vertex, T and evals
     Vn_lm = system.vertex1to2[1:,1:,1:]
@@ -42,7 +63,20 @@ def rate_1to2_1(system):
     return Gamma_n
 
 def rate_1to2_2(system):
-    """ Decay rate of 1 to 2 process at second order.
+    """Decay rate of 1 magnon to 2 magnons at second order.
+
+    A single-channel process :math:`2 \\to 1` at second order in the
+    interaction vertex.
+
+    Parameters
+    ----------
+    system : openHamiltonian
+        Must have ``evals`` and ``vertex1to2``.
+
+    Returns
+    -------
+    (Ns-1,) ndarray
+        Decay rate :math:`\\Gamma_n` per mode.
     """
     # Vertex, T and evals
     Vn_lm = system.vertex1to2[1:,1:,1:]
@@ -64,7 +98,25 @@ def rate_1to2_2(system):
     return Gamma_n
 
 def rate_2to2_1(system):
-    """ Decay rate of 2 to 2 process at first order.
+    """Decay rate of 2 magnons to 2 magnons at first order.
+
+    .. math::
+        \\Gamma_n = 4\\pi \\sum_{l,m,p} |V_{nlmp}|^2
+        \\, \\delta(E_n + E_l - E_m - E_p)
+        \\, (1 + n_n)(1 + n_l) n_m n_p / (\\ldots)
+
+    Contributions vanish at T = 0.
+
+    Parameters
+    ----------
+    system : openHamiltonian
+        Must have ``evals`` and ``vertex2to2``
+        (rank-4 tensor, shape ``(Ns, Ns, Ns, Ns)``).
+
+    Returns
+    -------
+    (Ns-1,) ndarray
+        Decay rate :math:`\\Gamma_n` per mode.
     """
     # Vertex, T and evals
     Vnl_mp = system.vertex2to2[1:,1:,1:,1:]
@@ -89,7 +141,19 @@ def rate_2to2_1(system):
     return Gamma_n
 
 def rate_2to2_2(system):
-    """ Decay rate of 2 to 2 process at second order.
+    """Decay rate of 2 magnons to 2 magnons at second order.
+
+    Single-channel process :math:`2n \\to l + m` at second order.
+
+    Parameters
+    ----------
+    system : openHamiltonian
+        Must have ``evals`` and ``vertex2to2``.
+
+    Returns
+    -------
+    (Ns-1,) ndarray
+        Decay rate :math:`\\Gamma_n` per mode.
     """
     # Vertex, T and evals
     Vnl_mp = system.vertex2to2[1:,1:,1:,1:]
@@ -112,7 +176,25 @@ def rate_2to2_2(system):
     return Gamma_n
 
 def rate_1to3_1(system):
-    """ Decay rate of 1 to 3 process at first order.
+    """Decay rate of 1 magnon to 3 magnons at first order.
+
+    .. math::
+        \\Gamma_n = 6\\pi \\sum_{l,m,p} |V_{nlmp}|^2
+        \\, \\delta(E_n - E_l - E_m - E_p)
+        \\, (1 + n_l + n_m + n_p)
+
+    plus the reverse process :math:`3 \\to 1`.
+
+    Parameters
+    ----------
+    system : openHamiltonian
+        Must have ``evals`` and ``vertex1to3``
+        (rank-4 tensor, shape ``(Ns, Ns, Ns, Ns)``).
+
+    Returns
+    -------
+    (Ns-1,) ndarray
+        Decay rate :math:`\\Gamma_n` per mode.
     """
     # Vertex, T and evals
     Vn_lmp = system.vertex1to3[1:,1:,1:,1:]     #remove 0-energy mode from each mode index
@@ -147,7 +229,19 @@ def rate_1to3_1(system):
     return Gamma_n
 
 def rate_1to3_2(system):
-    """ Decay rate of 1 to 3 process at second order.
+    """Decay rate of 1 magnon to 3 magnons at second order.
+
+    Single-channel process :math:`3 \\to 1` at second order.
+
+    Parameters
+    ----------
+    system : openHamiltonian
+        Must have ``evals`` and ``vertex1to3``.
+
+    Returns
+    -------
+    (Ns-1,) ndarray
+        Decay rate :math:`\\Gamma_n` per mode.
     """
     # Vertex, T and evals
     Vn_lmp = system.vertex1to3[1:,1:,1:,1:]
@@ -170,7 +264,19 @@ def rate_1to3_2(system):
     return Gamma_n
 
 def rate_1to3_3(system):
-    """ Decay rate of 1 to 3 process at third order.
+    """Decay rate of 1 magnon to 3 magnons at third order.
+
+    Single-channel process :math:`3 \\to 1` at third order.
+
+    Parameters
+    ----------
+    system : openHamiltonian
+        Must have ``evals`` and ``vertex1to3``.
+
+    Returns
+    -------
+    (Ns-1,) ndarray
+        Decay rate :math:`\\Gamma_n` per mode.
     """
     # Vertex, T and evals
     Vn_lmp = system.vertex1to3[1:,1:,1:,1:]
@@ -192,8 +298,20 @@ def rate_1to3_3(system):
     return Gamma_n
 
 def rate_2to2_1_sc(system):
-    """ Decay rate of 2 to 2 process at first order.
-    Compute self-consistently the rate -> start from constant broadening for each mode.
+    """Self-consistent 2-to-2 rate at first order.
+
+    Iterates the rate formula, using the rate itself as the broadening
+    width for the Lorentzian energy delta, until convergence.
+
+    Parameters
+    ----------
+    system : openHamiltonian
+        Must have ``evals`` and ``vertex2to2``.
+
+    Returns
+    -------
+    (Ns-1,) ndarray
+        Self-consistent decay rate :math:`\\Gamma_n` per mode.
     """
     # Vertex, T and evals
     Vnl_mp = system.vertex2to2[1:,1:,1:,1:]

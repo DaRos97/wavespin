@@ -10,7 +10,7 @@ from pathlib import Path
 from wavespin.static.momentumTransformation import extractMomentum, extractMomentum2
 from wavespin.tools import pathFinder as pf
 
-if 1:
+if 0:
     plt.rcParams.update({
         "text.usetex": True,              # Use LaTeX for all text
         "font.family": "serif",           # Set font family

@@ -39,8 +39,16 @@ SimParams
 | `correlatorType` | `str` | `'zz'` | `'zz'`, `'xx'`, `'ee'`, `'jj'`, `'ze'`, `'ez'` |
 | `transformType` | `str` | `'dct'` | `'fft'`, `'dst'`, `'dct'`, `'dat'`, `'dat2'` |
 | `perturbationSite` | `tuple` | `(0,0)` | Site where perturbation is applied |
-| `magnonModes` | `tuple` | `(1,2,3,4)` | Magnon expansion terms to include |
-| `energy` | `float` | `-100` | Energy offset for correlator evaluation |
+| `magnonOrder` | `tuple` | `(1,2,3,4)` | Magnon expansion terms to include |
+| `energy` | `float` | `-100` | Energy offset for finite-T correlators |
+| `fullTimeMeasure` | `float` | `16.0` | Total measurement time window |
+| `nTimes` | `int` | `401` | Number of time points |
+| `nOmega` | `int` | `2000` | Frequency resolution for FFT |
+| `saveXT` | `bool` | `False` | Cache real-space correlator to disk |
+| `saveXTbonds` | `bool` | `False` | Cache bond correlators to disk |
+| `saveKW` | `bool` | `False` | Cache momentum-space correlator to disk |
+| `plotKW` | `bool` | `False` | Plot the (k,ω) map |
+| `savePlotKW` | `bool` | `False` | Save the (k,ω) plot to file |
 
 ### `ScatteringParams`
 

@@ -56,7 +56,7 @@ def plotRampKW(ramp, **kwargs):
     W_mesh_p = []
     for iP in range(nP):
         sys0 = ramp.rampElements[iP]
-        transformType = sys0.p.cor_transformType
+        transformType = sys0.p.correlator.transformType
         if transformType == 'dat2':
             plotRampDAT(ramp,**kwargs)
             return
@@ -104,15 +104,15 @@ def plotRampKW(ramp, **kwargs):
     # Figure
     fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))
     #fig, axes = plt.subplots(1,5,figsize=(14,4))
-    if hasattr(sys0,'magnonModes'):
+    if hasattr(sys0.p, 'correlator'):
         txtMagnon = ', magnons mode(s): '
-        for i in sys0.magnonModes:
+        for i in sys0.p.correlator.magnonOrder:
             txtMagnon += str(i)
-            if not i==sys0.magnonModes[-1]:
+            if not i==sys0.p.correlator.magnonOrder[-1]:
                 txtMagnon += '-'
     else:
         txtMagnon = ''
-    title = 'Commutator: ' + sys0.p.cor_correlatorType + ', momentum transform: ' + transformType + txtMagnon
+    title = 'Commutator: ' + sys0.p.correlator.correlatorType + ', momentum transform: ' + transformType + txtMagnon
     #plt.suptitle(title,fontsize=20)
     ylim = 7#kwargs.get('ylim',7)
     vmax = np.max(np.array(P_k_omega_p)) #/10
@@ -479,7 +479,7 @@ def plotRampDAT(ramp, **kwargs):
     """ Plot frequency over mod k for the different ramp parameters for the DAT transform.
     """
     sys0 = ramp.rampElements[0]
-    transformType = sys0.p.cor_transformType
+    transformType = sys0.p.correlator.transformType
     nP = ramp.nP
     Lx = sys0.Lx
     Ly = sys0.Ly
@@ -504,15 +504,15 @@ def plotRampDAT(ramp, **kwargs):
                 P_k_omega_p[iP, i, :] = np.mean(np.abs(corr_flat[mask, :]), axis=0)
     # Figure
     fig, axes, rows, cols = createFigure(nP,subplotSize=(4,4))#,nRows=1,nCols=nP)
-    if hasattr(sys0,'magnonModes'):
+    if hasattr(sys0.p, 'correlator'):
         txtMagnon = ', magnons mode(s): '
-        for i in sys0.magnonModes:
+        for i in sys0.p.correlator.magnonOrder:
             txtMagnon += str(i)
-            if not i==sys0.magnonModes[-1]:
+            if not i==sys0.p.correlator.magnonOrder[-1]:
                 txtMagnon += '-'
     else:
         txtMagnon = ''
-    title = 'Commutator: ' + sys0.p.cor_correlatorType + ', momentum transform: ' + transformType + txtMagnon
+    title = 'Commutator: ' + sys0.p.correlator.correlatorType + ', momentum transform: ' + transformType + txtMagnon
     plt.suptitle(title,fontsize=20)
     ylim = kwargs.get('ylim',70)
     vmax = np.max(P_k_omega_p)

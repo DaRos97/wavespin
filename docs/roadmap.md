@@ -37,6 +37,7 @@
 - Clarify and document the `Phi` re-rotation convention for canted-Néel vs canted-stripe
 - Add NNN bond contributions (g2, D2) to vertex f-factors in `computeVertex()`
 - Address memory explosion for 2to2/1to3 vertex tensors (O(Ns⁴) dense arrays; explore sparse or factorised storage)
+- Verify and fix the finite-temperature correlator computation (Bose-Einstein factors in `realSpaceCorrelator`)
 
 ### ☐ P2 — Nice to have
 - Clean up the save-correlator-bonds logic (currently used only for saving, not plotting)

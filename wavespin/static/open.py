@@ -5,8 +5,6 @@ import copy
 import scipy
 import numpy as np
 from pathlib import Path
-from tqdm import tqdm
-from time import time
 
 from wavespin.lattice.lattice import latticeClass
 from wavespin.tools import pathFinder as pf
@@ -639,34 +637,66 @@ class openHamiltonian(latticeClass):
 ##########################################################
 ##########################################################
 
-class openSystem(openHamiltonian):
+class openCorrelators(openHamiltonian):
+    """Dynamical spin correlators on top of the Bogoliubov solution.
+
+    Extends :class:`openHamiltonian` with real-space and momentum-space
+    correlator computation via Wick contractions of the
+    Holstein-Primakoff expansion.
+
+    Parameters
+    ----------
+    p : SimParams
+        Uses ``p.correlator`` for the correlator configuration and
+        ``p.diag`` / ``p.lattice`` (forwarded to :class:`openHamiltonian`).
+
+    Attributes
+    ----------
+    perturbationSite, perturbationIndex
+        Where the perturbation operator acts.
+    measureTimeList : (nTimes,) ndarray
+        Time grid for real-space correlators.
+    fullTimeMeasure, nTimes, nOmega
+        From ``p.correlator``.
+    correlatorXT : (Ns, nTimes) complex ndarray
+        Real-space correlator (populated after
+        :meth:`realSpaceCorrelator`).
+    correlatorKW : ndarray
+        Momentum-space correlator (populated after
+        :meth:`momentumSpaceCorrelator`).
+    """
+
     def __init__(self, p: SimParams):
-        # Construct lattice and Hamiltonian
         super().__init__(p)
-        #XT correlator parameters
         self.perturbationSite = p.correlator.perturbationSite
         self.perturbationIndex = self._idx(*self.perturbationSite)
-        #
-        self.site0 = 0 #if h_t_i[0,0,0]<0 else 1     #decide sublattice A and B of reference lattice site
-        #self.fullTimeMeasure, self.nTimes, self.nOmega = (0.8,401,2000)
-        self.fullTimeMeasure, self.nTimes, self.nOmega = (16,401,2000)
-        print("Using fullTimeMeasure=%d"%self.fullTimeMeasure)
-        #self.fullTimeMeasure = 0.8     #measure time in ms
-        #self.nTimes = 401        #time steps after ramp for the measurement
-        self.measureTimeList = np.linspace(0,self.fullTimeMeasure,self.nTimes)
-        #KW correlator parameters
-        #self.nOmega = 2000
-        # Diagonalize
-        #self.diagonalize()
+        self.fullTimeMeasure = p.correlator.fullTimeMeasure
+        self.nTimes = p.correlator.nTimes
+        self.nOmega = p.correlator.nOmega
+        self.measureTimeList = np.linspace(0, self.fullTimeMeasure, self.nTimes)
+        self.site0 = 0
 
     def realSpaceCorrelator(self,verbose=False):
-        """ Here we compute the correlator in real space.
+        """Compute the dynamical correlator in real space.
+
+        Builds the Bogoliubov propagators :math:`A_{ij}(t)`,
+        :math:`B_{ij}(t)`, :math:`G_{ij}(t)`, :math:`H_{ij}(t)` (each of
+        shape ``(Ns, Ns, nTimes)``), then dispatches to the appropriate
+        Wick-contraction function in :mod:`wavespin.static.correlators`
+        for every site.
+
+        The result is stored in ``self.correlatorXT`` (shape
+        ``(Ns, nTimes)``) and cached to disk if ``p.correlator.saveXT`` is
+        true.
+
+        Finite-temperature corrections are included when
+        ``p.correlator.energy > GSE``.
         """
         temperature = self._temperature(self.p.correlator.energy)
         print("Temperature: %.3f MHz"%temperature)
         txtZeroEnergy = 'without0energy' if self.p.diag.excludeZeroMode else 'with0energy'
         argsFn = ('correlatorXT',self.p.correlator.correlatorType,self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian,
-                  txtZeroEnergy,'magnonModes',self.p.correlator.magnonModes,self.p.correlator.energy)
+                  txtZeroEnergy,'magnonOrder',self.p.correlator.magnonOrder,self.p.correlator.energy)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn).is_file():
             self.correlatorXT = np.zeros((self.Ns,self.nTimes),dtype=complex)
@@ -752,15 +782,22 @@ class openSystem(openHamiltonian):
             self.correlatorXT = np.load(correlatorFn)
 
     def realSpaceCorrelatorBond(self,verbose=False):
-        """ Here we compute the correlator in real space for each bond, like for the jj.
+        """Compute the bond (J-operator) correlator.
+
+        Same propagator construction as :meth:`realSpaceCorrelator`, but
+        evaluates the ``jj`` correlator on every horizontal and vertical
+        bond separately.
+
+        Stores ``self.correlatorXT_h`` (shape ``(Lx-1, Ly, nTimes)``)
+        and ``self.correlatorXT_v`` (shape ``(Lx, Ly-1, nTimes)``).
         """
         temperature = self._temperature(self.p.correlator.energy)
         Lx = self.Lx
         Ly = self.Ly
         Ns = self.Ns
         txtZeroEnergy = 'without0energy' if self.p.diag.excludeZeroMode else 'with0energy'
-        argsFn_h = ('correlator_horizontal_bonds',self.p.correlator.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.correlator.magnonModes,self.perturbationSite,self.p.correlator.energy)
-        argsFn_v = ('correlator_vertical_bonds',self.p.correlator.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonModes',self.p.correlator.magnonModes,self.perturbationSite,self.p.correlator.energy)
+        argsFn_h = ('correlator_horizontal_bonds',self.p.correlator.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonOrder',self.p.correlator.magnonOrder,self.perturbationSite,self.p.correlator.energy)
+        argsFn_v = ('correlator_vertical_bonds',self.p.correlator.correlatorType,self.g1,self.g2,self.d1,self.d2,self.h,self.Lx,self.Ly,Ns,txtZeroEnergy,'magnonOrder',self.p.correlator.magnonOrder,self.perturbationSite,self.p.correlator.energy)
         correlatorFn_h = pf.getFilename(*argsFn_h,dirname=self.dataDn,extension='.npy')
         correlatorFn_v = pf.getFilename(*argsFn_v,dirname=self.dataDn,extension='.npy')
         if not Path(correlatorFn_h).is_file() or not Path(correlatorFn_v).is_file():
@@ -815,12 +852,19 @@ class openSystem(openHamiltonian):
             self.correlatorXT_v = np.load(correlatorFn_v)
 
     def momentumSpaceCorrelator(self,verbose=False):
-        """ Here we simply Fourier transform the correlator.
+        """Fourier-transform the real-space correlator to
+        :math:`(k, \\omega)` space.
+
+        Dispatches to the transform function specified by
+        ``p.correlator.transformType`` (see
+        :mod:`wavespin.static.momentumTransformation`).
+
+        Stores ``self.correlatorKW`` and ``self.momentum``.
         """
         temperature = self._temperature(self.p.correlator.energy)
         txtZeroEnergy = 'without0energy' if self.p.diag.excludeZeroMode else 'with0energy'
         argsFn = ('correlatorKW',self.p.correlator.correlatorType,self.p.correlator.transformType,self.Lx,self.Ly,self.Ns,self.p.diag.Hamiltonian,
-                  txtZeroEnergy,'magnonModes',self.p.correlator.magnonModes,self.p.correlator.energy)
+                  txtZeroEnergy,'magnonOrder',self.p.correlator.magnonOrder,self.p.correlator.energy)
         correlatorFn = pf.getFilename(*argsFn,dirname=self.dataDn,extension='.npz')
         if not Path(correlatorFn).is_file():
             self.correlatorKW, self.momentum = momentumTransformation.dicTransformType[self.p.correlator.transformType](self)
@@ -831,52 +875,6 @@ class openSystem(openHamiltonian):
                 print("Loading momentum-space correlator from file: "+correlatorFn)
             self.correlatorKW = np.load(correlatorFn)['correlator']
             self.momentum = np.load(correlatorFn)['momentum']
-
-##########################################################
-##########################################################
-
-class openRamp():
-    def __init__(self, systems = None):
-        """ systems should be a list of openSystem objects. """
-        self.rampElements = systems or []
-        self.nP = len(self.rampElements)
-
-    def addSystem(self,system):
-        """ Custom function to add an element to the ramp """
-        self.rampElements.append(system)
-        self.nP = len(self.rampElements)
-
-    def correlatorsXT(self,verbose=False):
-        """ Compute correlators in real space for each system in the ramp.
-        """
-        iterBog = tqdm(range(self.nP),desc="Computing Bogoliubov transformation and correlator") if verbose else range(self.nP)
-        for i in iterBog:
-            # Compute Bogoliubov transformation matrices and eigenvalues
-            #self.rampElements[i].diagonalize(verbose=verbose)
-            # Compute Correlators
-            self.rampElements[i].realSpaceCorrelator(verbose=verbose)
-            # Bond correlators
-            if self.rampElements[i].p.cor_saveXTbonds:
-                self.rampElements[i].realSpaceCorrelatorBond(verbose=verbose)
-
-    def correlatorsKW(self,verbose=False):
-        """ Here we Fourier transform the XT correlators and plot them nicely.
-        """
-        iterKW = tqdm(range(self.nP),desc="Computing Fourier transformation of correlator") if verbose else range(self.nP)
-        for i in iterKW:
-            self.rampElements[i].momentumSpaceCorrelator()
-
-        if self.rampElements[0].p.cor_plotKW:
-            """ Plot the Fourier-transformed correlators of the ramp """
-            plotRampKW(self,
-                       **{
-                           'numKbins' : 50,
-                           'ylim' : 7 if self.rampElements[0].g1==10 else 3.5,
-                           'saveFigure' : self.rampElements[0].p.cor_savePlotKW,
-                           'showFigure' : True,
-                       }
-                       )
-
 
 
 

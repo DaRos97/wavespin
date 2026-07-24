@@ -2,7 +2,7 @@
 transformations for both open and periodic boundary conditions.
 """
 
-from wavespin.static.open import openHamiltonian, openSystem, openRamp
+from wavespin.static.open import openHamiltonian, openCorrelators
 from wavespin.static.periodic import (
     periodicHamiltonian,
     periodicRamp,

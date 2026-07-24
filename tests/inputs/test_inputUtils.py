@@ -134,7 +134,7 @@ class TestCorrelatorParams:
         assert cp.correlatorType == 'zz'
         assert cp.transformType == 'dct'
         assert cp.perturbationSite == (0, 0)
-        assert cp.magnonModes == (1, 2, 3, 4)
+        assert cp.magnonOrder == (1, 2, 3, 4)
         assert cp.energy == -100
         assert cp.saveXT is False
         assert cp.saveXTbonds is False
@@ -162,11 +162,11 @@ class TestCorrelatorParams:
 
     def test_invalid_magnon_mode_raises(self):
         with pytest.raises(ValueError, match="not an acceptable"):
-            CorrelatorParams(magnonModes=(1, 5))
+            CorrelatorParams(magnonOrder=(1, 5))
 
     def test_all_valid_magnon_modes(self):
-        cp = CorrelatorParams(magnonModes=(1, 2, 3, 4))
-        assert cp.magnonModes == (1, 2, 3, 4)
+        cp = CorrelatorParams(magnonOrder=(1, 2, 3, 4))
+        assert cp.magnonOrder == (1, 2, 3, 4)
 
 
 # ---------------------------------------------------------------------------
@@ -269,7 +269,8 @@ class TestBuildFieldMap:
             'Hamiltonian', 'excludeZeroMode', 'uniformQA', 'saveWf',
             'plotWf', 'plotDiffusionSolutions', 'plotMomenta',
             'correlatorType', 'transformType', 'perturbationSite',
-            'magnonModes', 'energy', 'saveXT', 'saveXTbonds',
+            'magnonOrder', 'energy', 'fullTimeMeasure', 'nTimes', 'nOmega',
+            'saveXT', 'saveXTbonds',
             'saveKW', 'plotKW', 'savePlotKW',
             'types', 'temperature', 'broadening', 'saveVertex',
             'saveRate', 'plotRate',

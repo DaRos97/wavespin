@@ -72,8 +72,11 @@ class CorrelatorParams:
     correlatorType: str = 'zz'
     transformType: str = 'dct'
     perturbationSite: tuple = (0, 0)
-    magnonModes: tuple = (1, 2, 3, 4)
+    magnonOrder: tuple = (1, 2, 3, 4)
     energy: float = -100
+    fullTimeMeasure: float = 16.0
+    nTimes: int = 401
+    nOmega: int = 2000
     saveXT: bool = False
     saveXTbonds: bool = False
     saveKW: bool = False
@@ -87,10 +90,10 @@ class CorrelatorParams:
             raise ValueError(
                 f"Invalid momentum transform type: {self.transformType}"
             )
-        for t in self.magnonModes:
+        for t in self.magnonOrder:
             if t not in [1, 2, 3, 4]:
                 raise ValueError(
-                    "Term " + str(t) + " not an acceptable 'magnonModes' "
+                    "Term " + str(t) + " not an acceptable 'magnonOrder' "
                     "term: [1,2,3,4]."
                 )
 

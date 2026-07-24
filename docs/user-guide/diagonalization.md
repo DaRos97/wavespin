@@ -114,24 +114,4 @@ per = periodicHamiltonian(params)
 | `g1, g2, d1, d2, h` | float | Hamiltonian parameters |
 
 All results are pre-computed at construction time — no separate
-`diagonalize()` call needed.
-
-## Parameter Sweeps: `openRamp` / `periodicRamp`
-
-Container classes for sweeping over Hamiltonian parameters:
-
-```python
-from wavespin.static import openRamp, openSystem
-from wavespin.tools import SimParams
-
-ramp = openRamp()
-for h in [0, 1, 2, 3]:
-    params = SimParams()
-    params.lattice.Lx = 20
-    params.lattice.Ly = 20
-    params.diag.Hamiltonian = (5, 0, 0, 0, h, 0)
-    ramp.addSystem(openSystem(params))
-
-ramp.correlatorsXT()   # compute all real-space correlators
-ramp.correlatorsKW()   # compute and plot momentum-space correlators
-```
+``diagonalize()`` call needed.

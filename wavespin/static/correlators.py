@@ -12,7 +12,7 @@ def zzCorrelator(system,ind_i,A,B,G,H):
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
-    magnonModes = system.p.cor_magnonModes
+    magnonModes = system.p.correlator.magnonOrder
     #
     ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
@@ -38,7 +38,7 @@ def zeCorrelator(system,ind_i,A,B,G,H):
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
-    magnonModes = system.magnonModes
+    magnonModes = system.p.correlator.magnonOrder
     #
     ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
@@ -73,7 +73,7 @@ def ezCorrelator(system,ind_i,A,B,G,H):
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
-    magnonModes = system.magnonModes
+    magnonModes = system.p.correlator.magnonOrder
     #
     ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
@@ -111,7 +111,7 @@ def eeCorrelator(system,ind_i,A,B,G,H):
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
-    magnonModes = system.p.cor_magnonModes
+    magnonModes = system.p.correlator.magnonOrder
     #
     ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
@@ -156,7 +156,7 @@ def xxCorrelator(system,ind_i,A,B,G,H):
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
-    magnonModes = system.magnonModes
+    magnonModes = system.p.correlator.magnonOrder
     #
     ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
@@ -185,7 +185,7 @@ def jjCorrelator(system,ind_i,A,B,G,H):
     measurementIndex = indexesMap.index(system._xy(ind_i))
     perturbationIndex = system.perturbationIndex
     S = system.S
-    magnonModes = system.p.cor_magnonModes
+    magnonModes = system.p.correlator.magnonOrder
     #
     ts_i = ts[(site0+indexesMap[measurementIndex][0]+indexesMap[measurementIndex][1])%2]
     ts_j = ts[(site0+indexesMap[perturbationIndex][0]+indexesMap[perturbationIndex][1])%2]
@@ -233,7 +233,7 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
     perturbationIndex = system.perturbationIndex
     jx, jy = system.p.cor_perturbationSite
     S = system.S
-    magnonModes = system.p.cor_magnonModes
+    magnonModes = system.p.correlator.magnonOrder
     #
     ts_i = ts[(site0+ix+iy)%2]
     ts_j = ts[(site0+jx+jy)%2]

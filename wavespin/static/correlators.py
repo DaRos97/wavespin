@@ -231,7 +231,7 @@ def jjCorrelatorBond(system,ind_i,A,B,G,H,orientation):
     site0 = system.site0
     ix, iy = system._xy(ind_i)
     perturbationIndex = system.perturbationIndex
-    jx, jy = system.p.cor_perturbationSite
+    jx, jy = system.p.correlator.perturbationSite
     S = system.S
     magnonModes = system.p.correlator.magnonOrder
     #

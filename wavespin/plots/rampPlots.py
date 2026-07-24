@@ -260,7 +260,7 @@ def plotWf2D(system,nModes=50):
     plt.suptitle("Modes from bogoliubov transformation",size=20)
     fig.tight_layout()
 
-    if system.p.dia_plotDiffusionSolutions:
+    if system.p.diag.plotDiffusionSolutions:
         from wavespin.tools.functions import solve_diffusion_eigenmodes_xy
         sites = []
         for ix in range(system.Lx):
@@ -442,10 +442,10 @@ def plotRate(system,**kwargs):
     }
     best_modes = kwargs.get('best_modes',None)
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-    g_p,_,d_p,_,h_p,disorder = system.p.dia_Hamiltonian
-    T = system.p.sca_temperature
+    g_p,_,d_p,_,h_p,disorder = system.p.diag.Hamiltonian
+    T = system.p.scattering.temperature
     s_ = 20
-    types = system.p.sca_types
+    types = system.p.scattering.types
 
     nS = len(types)
     fig, axes, nRows, nCols = createFigure(nS,subplotSize=(8,8))
@@ -463,7 +463,7 @@ def plotRate(system,**kwargs):
             ax.scatter(best_modes,Gamma_n[best_modes-1]/1e3,marker='o',color=col_2[0],s=70)
         if st==0:
             tx,ty = (0.58,0.09) if rateType=='2to2a' else (0.03,0.6)
-            ax.text(tx,ty,"g=%s, H=%.1f\n"%(g_p,h_p)+r"$\Delta$=%.1f, $h_{dis}$=%.1f"%(d_p,disorder)+'\n'+r"$\gamma$=%.2f mEd"%system.p.sca_broadening,
+            ax.text(tx,ty,"g=%s, H=%.1f\n"%(g_p,h_p)+r"$\Delta$=%.1f, $h_{dis}$=%.1f"%(d_p,disorder)+'\n'+r"$\gamma$=%.2f mEd"%system.p.scattering.broadening,
                     size=s_-3,transform=ax.transAxes, bbox=props)
             txtT = "{:.2f}".format(T)+" MHz" if T!=0 else "inf"
             ax.text(0.03,0.88,"T="+txtT,

@@ -12,10 +12,10 @@ def rate_1to2_1(system):
     """
     # Vertex, T and evals
     Vn_lm = system.vertex1to2[1:,1:,1:]
-    T = system.p.sca_temperature
+    T = system.p.scattering.temperature
     evals = system.evals[1:]
     # Broadening
-    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
+    gamma = system.p.scattering.broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None,None]
     el = evals[None,:,None]
     em = evals[None,None,:]
@@ -46,10 +46,10 @@ def rate_1to2_2(system):
     """
     # Vertex, T and evals
     Vn_lm = system.vertex1to2[1:,1:,1:]
-    T = system.p.sca_temperature
+    T = system.p.scattering.temperature
     evals = system.evals[1:]
     # Broadening
-    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
+    gamma = system.p.scattering.broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None]
     el = evals[None,:]
     ### 2 -> 1
@@ -68,10 +68,10 @@ def rate_2to2_1(system):
     """
     # Vertex, T and evals
     Vnl_mp = system.vertex2to2[1:,1:,1:,1:]
-    T = system.p.sca_temperature
+    T = system.p.scattering.temperature
     evals = system.evals[1:]
     # Broadening
-    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
+    gamma = system.p.scattering.broadening * np.mean(evals[1:] - evals[:-1])
     #
     en = evals[:,None,None,None]
     el = evals[None,:,None,None]
@@ -93,10 +93,10 @@ def rate_2to2_2(system):
     """
     # Vertex, T and evals
     Vnl_mp = system.vertex2to2[1:,1:,1:,1:]
-    T = system.p.sca_temperature
+    T = system.p.scattering.temperature
     evals = system.evals[1:]
     # Broadening
-    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
+    gamma = system.p.scattering.broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None,None]
     el = evals[None,:,None]
     em = evals[None,None,:]
@@ -116,10 +116,10 @@ def rate_1to3_1(system):
     """
     # Vertex, T and evals
     Vn_lmp = system.vertex1to3[1:,1:,1:,1:]     #remove 0-energy mode from each mode index
-    T = system.p.sca_temperature
+    T = system.p.scattering.temperature
     evals = system.evals[1:]                    #remove 0-energy eigenvalue
     # Broadening
-    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
+    gamma = system.p.scattering.broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None,None,None]
     el = evals[None,:,None,None]
     em = evals[None,None,:,None]
@@ -151,10 +151,10 @@ def rate_1to3_2(system):
     """
     # Vertex, T and evals
     Vn_lmp = system.vertex1to3[1:,1:,1:,1:]
-    T = system.p.sca_temperature
+    T = system.p.scattering.temperature
     evals = system.evals[1:]
     # Broadening
-    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
+    gamma = system.p.scattering.broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None,None]
     el = evals[None,:,None]
     em = evals[None,None,:]
@@ -174,10 +174,10 @@ def rate_1to3_3(system):
     """
     # Vertex, T and evals
     Vn_lmp = system.vertex1to3[1:,1:,1:,1:]
-    T = system.p.sca_temperature
+    T = system.p.scattering.temperature
     evals = system.evals[1:]
     # Broadening
-    gamma = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1])
+    gamma = system.p.scattering.broadening * np.mean(evals[1:] - evals[:-1])
     en = evals[:,None]
     el = evals[None,:]
     ### 3 -> 1
@@ -197,7 +197,7 @@ def rate_2to2_1_sc(system):
     """
     # Vertex, T and evals
     Vnl_mp = system.vertex2to2[1:,1:,1:,1:]
-    T = system.p.sca_temperature
+    T = system.p.scattering.temperature
     evals = system.evals[1:]
     #
     en = evals[:,None,None,None]
@@ -210,7 +210,7 @@ def rate_2to2_1_sc(system):
     else:
         return np.zeros(system.Ns-1)
     # Broadening
-    gamma_0 = system.p.sca_broadening * np.mean(evals[1:] - evals[:-1]) * np.ones(system.Ns-1)
+    gamma_0 = system.p.scattering.broadening * np.mean(evals[1:] - evals[:-1]) * np.ones(system.Ns-1)
     ### 2 -> 2
     arg_delta = np.array(en + el - em - ep)
     gamma_story = []

@@ -35,6 +35,8 @@
 - Pipeline the momentum-space correlator computation — skip explicit real-space storage
 - Make the staggered-field disorder implementation consistent across modules
 - Clarify and document the `Phi` re-rotation convention for canted-Néel vs canted-stripe
+- Add NNN bond contributions (g2, D2) to vertex f-factors in `computeVertex()`
+- Address memory explosion for 2to2/1to3 vertex tensors (O(Ns⁴) dense arrays; explore sparse or factorised storage)
 
 ### ☐ P2 — Nice to have
 - Clean up the save-correlator-bonds logic (currently used only for saving, not plotting)

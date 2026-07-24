@@ -478,7 +478,7 @@ class openHamiltonian(latticeClass):
         """
         self.rates = {}
         for process in self.p.scattering.types:
-            argsDecayFn = ['decay',process,self.p.scattering.temperature,self.p.scattering.broadening,self.p.diag.Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary,self.p.scattering.broadening]
+            argsDecayFn = ['decay',process,self.p.scattering.temperature,self.p.scattering.broadening,self.p.diag.Hamiltonian,self.Lx,self.Ly,self.Ns,self.boundary]
             decayFn = pf.getFilename(*tuple(argsDecayFn),dirname=self.dataDn,extension='.npy',floatPrecision=8)
             if Path(decayFn).is_file():
                 self.rates[process] = np.load(decayFn)

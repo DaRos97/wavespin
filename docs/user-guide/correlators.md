@@ -71,17 +71,69 @@ horizontal and vertical bonds, producing ``correlatorXT_h`` and
 
 ## Momentum-Space Correlators
 
-Fourier-transforms the real-space correlators to :math:`(k, \\omega)` space:
+Transforms the real-space correlator :math:`\\chi_{ij}(t)` to
+:math:`\\chi(k, \\omega)`:
 
 ```python
-sys.momentumSpaceCorrelator()  # populates sys.correlatorKW
+sys.momentumSpaceCorrelator()
+# stores: sys.correlatorKW  — shape (Ns, nOmega)
+#         sys.momentum      — shape (Ns, 2), (kx, ky) per mode
 ```
 
-Available transforms (via ``CorrelatorParams.transformType``):
+The transformation is done by first applying a spatial transform
+(DCT/FFT/DST) to each time slice, then an FFT along the time axis per
+momentum point.
 
-| Transform | Description | Boundary |
-|-----------|-------------|----------|
-| `'fft'` | 2D Fast Fourier Transform | Periodic |
-| `'dct'` | 2D Discrete Cosine Transform | Open (Neumann-like) |
-| `'dst'` | 2D Discrete Sine Transform | Open (Dirichlet-like) |
-| `'dat'` | Uses Bogoliubov eigenfunctions as basis | Open |
+### Available Transforms
+
+| Key | Function | Description |
+|-----|----------|-------------|
+| `'fft'` | 2D FFT | Standard 2D FFT on Lx×Ly grid (periodic) |
+| `'dct'` | DCT-II | Discrete cosine transform — open boundaries, Neumann-like. ``ortho`` normalised |
+| `'dst'` | DST-I | Discrete sine transform — open boundaries, Dirichlet-like. ``ortho`` normalised |
+| `'dat'` | Bogoliubov basis | Projects onto Bogoliubov eigenfunctions |
+| `'dat2'` | same, alternative implementation | |
+
+### Result structure
+
+After ``momentumSpaceCorrelator()``:
+
+- ``correlatorKW`` — shape ``(Ns, nOmega)``.  Each row *i* is the
+  frequency-domain correlator at momentum :math:`\\mathbf{k}_i`.
+- ``momentum`` — shape ``(Ns, 2)``.  Each row is :math:`(k_x, k_y)`
+  for the corresponding mode.
+
+For ``'fft'`` the result has shape ``(Lx, Ly, nOmega)`` instead (the
+full 2D k-grid is preserved).
+
+### Plotting
+
+To produce a :math:`\\omega`-vs-:math:`|k|` colormap (as in
+:func:`~wavespin.plots.rampPlots.plotRampKW`):
+
+1. Compute :math:`|k| = \\sqrt{k_x^2 + k_y^2}` from ``momentum``
+2. Bin the ``correlatorKW`` rows by :math:`|k|` magnitude
+3. Compute the frequency axis via :func:`scipy.fft.fftfreq`
+4. Use ``pcolormesh`` to plot the binned intensity
+
+```python
+|k| = sqrt(momentum[:,0]**2 + momentum[:,1]**2)
+corr = abs(correlatorKW)
+freqs = fftshift(fftfreq(nOmega, fullTimeMeasure / nTimes))
+
+k_bins = linspace(0, sqrt(2)*pi, num_k_bins + 1)
+k_centers = 0.5 * (k_bins[:-1] + k_bins[1:])
+
+P = zeros((num_k_bins, nOmega))
+for i in range(num_k_bins):
+    mask = (|k| >= k_bins[i]) & (|k| < k_bins[i+1])
+    if mask.any():
+        P[i] = mean(corr[mask], axis=0)
+
+pcolormesh(k_centers, freqs, P, ...)
+```
+
+### Transform implementations
+
+.. seealso::
+   :mod:`wavespin.static.momentumTransformation` for the full source.

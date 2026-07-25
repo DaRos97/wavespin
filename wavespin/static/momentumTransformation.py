@@ -195,9 +195,26 @@ def DCTgeom2(system):
     return correlatorKW, momentum
 
 def discreteCosineTransform(system,dctType=2):
-    """
-    Compute the Discrete Cos Transform since we have open BC.
-    In time we always use fft.
+    """Discrete cosine transform for open boundary conditions.
+
+    Applies a DCT-II (with orthonormal normalization) to each time
+    slice of ``correlatorXT``, then an FFT along the time axis per
+    momentum point.
+
+    Parameters
+    ----------
+    system : openCorrelators
+        Must have ``correlatorXT`` (Ns, nTimes), ``nOmega``,
+        ``nTimes``, ``fullTimeMeasure``, and lattice geometry.
+    dctType : int
+        DCT type passed to :func:`scipy.fft.dctn` (default 2).
+
+    Returns
+    -------
+    correlatorKW : (Ns, nOmega) complex ndarray
+        Correlator in momentum-frequency space.
+    momentum : (Ns, 2) ndarray
+        ``(kx, ky)`` for each mode.
     """
     if len(system.offSiteList)>0:
         return DCTgeom(system)
@@ -240,9 +257,21 @@ def discreteCosineTransform(system,dctType=2):
     return correlatorKW, momentum
 
 def fastFourierTransform(system):
-    """
-    Compute the standard 2D Fourier transform.
-    In time we always use fft.
+    """Standard 2D Fourier transform for periodic boundaries.
+
+    Applies a 2D FFT to each time slice of ``correlatorXT``, then an
+    FFT along the time axis per momentum point.
+
+    Parameters
+    ----------
+    system : openCorrelators
+        Must have ``correlatorXT`` of shape ``(Lx, Ly, nTimes)``,
+        ``nOmega``, ``nTimes``, ``fullTimeMeasure``.
+
+    Returns
+    -------
+    correlatorKW : (Lx, Ly, nOmega) complex ndarray
+        Correlator in momentum-frequency space (full 2D k-grid).
     """
     nOmega = system.nOmega
     Lx = system.Lx
@@ -258,9 +287,24 @@ def fastFourierTransform(system):
     return correlatorKW
 
 def discreteSinTransform(system,dstType=1):
-    """
-    Compute the Discrete Sin Transform since we have open BC.
-    In time we always use fft.
+    """Discrete sine transform for open boundary conditions (Dirichlet-like).
+
+    Applies a DST-I (with orthonormal normalization) to each time
+    slice of ``correlatorXT``, then an FFT along the time axis per
+    momentum point.
+
+    Parameters
+    ----------
+    system : openCorrelators
+        Must have ``correlatorXT`` of shape ``(Lx, Ly, nTimes)``,
+        ``nOmega``, ``nTimes``, ``fullTimeMeasure``.
+    dstType : int
+        DST type passed to :func:`scipy.fft.dstn` (default 1).
+
+    Returns
+    -------
+    correlatorKW : (Lx, Ly, nOmega) complex ndarray
+        Correlator in momentum-frequency space (full 2D k-grid).
     """
     nOmega = system.nOmega
     Lx = system.Lx

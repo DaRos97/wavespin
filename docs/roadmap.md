@@ -38,6 +38,7 @@
 - Add NNN bond contributions (g2, D2) to vertex f-factors in `computeVertex()`
 - Address memory explosion for 2to2/1to3 vertex tensors (O(Ns⁴) dense arrays; explore sparse or factorised storage)
 - Verify and fix the finite-temperature correlator computation (Bose-Einstein factors in `realSpaceCorrelator`)
+- Fix the Discrete Awesome Transform (DAT/DAT2) in `momentumTransformation` — uses Bogoliubov U and V matrices to project real-space correlators to momentum space; needs verification and cleanup
 
 ### ☐ P2 — Nice to have
 - Clean up the save-correlator-bonds logic (currently used only for saving, not plotting)

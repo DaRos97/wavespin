@@ -74,7 +74,7 @@ class CorrelatorParams:
     perturbationSite: tuple = (0, 0)
     magnonOrder: tuple = (1, 2, 3, 4)
     energy: float = -100
-    fullTimeMeasure: float = 16.0
+    fullTimeMeasure: float = 0.8
     nTimes: int = 401
     nOmega: int = 2000
     saveXT: bool = False

@@ -336,15 +336,17 @@ def computeCombinations(op_list,ind_list,time_list,S):
             terms.append([
                 [np.sqrt(S/2),'a',[ind_list[i],], time_list[i]],
                 [np.sqrt(S/2),'b',[ind_list[i],], time_list[i]],
-                [-1/4/np.sqrt(2*S),'baa',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
-                [-1/4/np.sqrt(2*S),'bba',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
+                # TODO: cubic terms dramatically change results — needs physics verification
+                #[-1/4/np.sqrt(2*S),'baa',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
+                #[-1/4/np.sqrt(2*S),'bba',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
             ])
         if op_list[i]=='Y':
             terms.append([
                 [-1j*np.sqrt(S/2),'a',[ind_list[i],], time_list[i]],
                 [ 1j*np.sqrt(S/2),'b',[ind_list[i],], time_list[i]],
-                [1j/4/np.sqrt(2*S), 'baa',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
-                [-1j/4/np.sqrt(2*S),'bba',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
+                # TODO: cubic terms dramatically change results — needs physics verification
+                #[1j/4/np.sqrt(2*S), 'baa',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
+                #[-1j/4/np.sqrt(2*S),'bba',[ind_list[i],ind_list[i],ind_list[i]], time_list[i]+time_list[i]+time_list[i]],
             ])
         if op_list[i]=='Z':
             terms.append([

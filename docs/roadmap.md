@@ -37,6 +37,7 @@
 - Clarify and document the `Phi` re-rotation convention for canted-Néel vs canted-stripe
 - Add NNN bond contributions (g2, D2) to vertex f-factors in `computeVertex()`
 - Address memory explosion for 2to2/1to3 vertex tensors (O(Ns⁴) dense arrays; explore sparse or factorised storage)
+- Verify the cubic HP terms for X and Y in `computeCombinations` in `correlators.py` — currently commented out because they dramatically change the correlator results. The expansion coefficients need physics review
 - Verify and fix the finite-temperature correlator computation (Bose-Einstein factors in `realSpaceCorrelator`)
 - Fix the Discrete Awesome Transform (DAT/DAT2) in `momentumTransformation` — uses Bogoliubov U and V matrices to project real-space correlators to momentum space; needs verification and cleanup
 

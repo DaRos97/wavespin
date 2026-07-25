@@ -171,7 +171,7 @@ class openHamiltonian(latticeClass):
         float
             Temperature in the same units as ``evals``.
         """
-        if Eref == self.GSE or Eref==-100:
+        if Eref == self.GSE:
             return 0
         Nbonds = np.sum(self._NNterms(1)) // 2
         GS_energy = self.get_GSE()
